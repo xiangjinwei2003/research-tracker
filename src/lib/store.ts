@@ -5,7 +5,7 @@ import { uid } from './id'
 import { today } from './date'
 import { seedProjects } from './seed'
 
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 
 type UndoEntry =
   | { kind: 'project-removed'; project: Project; index: number; label: string }
@@ -131,6 +131,7 @@ export const useStore = create<Store>()(
                       startDate: today(),
                       endDate: today(),
                       done: false,
+                      stage: p.stage,
                       ...m,
                     },
                   ],
@@ -222,7 +223,7 @@ export const useStore = create<Store>()(
               ? p
               : {
                   ...p,
-                  milestones: p.milestones.map((m) => ({ ...m, stage: undefined })),
+                  milestones: p.milestones.map((m) => ({ ...m, stage: p.stage })),
                   updatedAt: stamp(),
                 },
           ),
@@ -384,6 +385,21 @@ export const useStore = create<Store>()(
       name: 'research-tracker-v1',
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ projects: s.projects, version: s.version }),
+      version: SCHEMA_VERSION,
+      migrate: (persisted: unknown) => {
+        const state = persisted as Partial<AppState> | undefined
+        if (!state || !Array.isArray(state.projects)) {
+          return { projects: [], version: SCHEMA_VERSION } as AppState
+        }
+        const projects = state.projects.map((p) => ({
+          ...p,
+          milestones: (p.milestones ?? []).map((m) => ({
+            ...m,
+            stage: m.stage ?? p.stage,
+          })),
+        }))
+        return { projects, version: SCHEMA_VERSION } as AppState
+      },
     },
   ),
 )

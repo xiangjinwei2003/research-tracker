@@ -105,7 +105,7 @@ function EditDialog({
 
   const onApplyStage = () => {
     applyStageToMilestones(project.id)
-    toast({ message: '已将所有里程碑改为项目当前阶段色' })
+    toast({ message: '已将所有里程碑对齐项目当前阶段' })
   }
 
   return (
@@ -285,12 +285,11 @@ function EditDialog({
           </legend>
           <div className="mb-2 flex justify-end">
             <Button type="button" variant="ghost" size="sm" onClick={onApplyStage}>
-              <Paintbrush size={12} /> 全部用项目阶段色
+              <Paintbrush size={12} /> 全部对齐项目阶段
             </Button>
           </div>
           <MilestoneList
             milestones={project.milestones}
-            projectStage={project.stage}
             onChange={(id, patch) => updateMilestone(project.id, id, patch)}
             onRemove={(id) => {
               const m = project.milestones.find((x) => x.id === id)
@@ -510,13 +509,11 @@ function CollaboratorRow({
 
 function MilestoneList({
   milestones,
-  projectStage,
   onChange,
   onRemove,
   onReorder,
 }: {
   milestones: Milestone[]
-  projectStage: Stage
   onChange: (id: string, patch: Partial<Milestone>) => void
   onRemove: (id: string) => void
   onReorder: (ids: string[]) => void
@@ -564,7 +561,6 @@ function MilestoneList({
         <MilestoneRow
           key={m.id}
           value={m}
-          projectStage={projectStage}
           isDropTarget={overId === m.id}
           onDragStart={(e) => handleDragStart(e, m.id)}
           onDragOver={(e) => handleDragOver(e, m.id)}
@@ -584,7 +580,6 @@ function MilestoneList({
 
 interface MilestoneRowProps {
   value: Milestone
-  projectStage: Stage
   isDropTarget: boolean
   onChange: (patch: Partial<Milestone>) => void
   onRemove: () => void
@@ -597,7 +592,6 @@ interface MilestoneRowProps {
 
 function MilestoneRow({
   value,
-  projectStage,
   isDropTarget,
   onChange,
   onRemove,
@@ -607,7 +601,7 @@ function MilestoneRow({
   onDragEnd,
   onDrop,
 }: MilestoneRowProps) {
-  const effectiveStage = STAGE_BY_VALUE[value.stage ?? projectStage]
+  const stage = STAGE_BY_VALUE[value.stage]
 
   return (
     <div
@@ -643,19 +637,17 @@ function MilestoneRow({
       >
         {value.done ? <Check size={14} /> : <Square size={14} />}
       </button>
-      <label className="relative inline-flex shrink-0 items-center" title="里程碑阶段（选「跟随项目」继承项目阶段色）">
-        <span
-          className="inline-block h-5 w-5 rounded-full ring-1 ring-inset ring-neutral-300 dark:ring-neutral-700"
-          style={{ background: `var(${effectiveStage.colorVar})` }}
-        />
+      <label
+        className="relative inline-flex shrink-0 cursor-pointer items-center rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+        title="里程碑研究阶段"
+      >
+        {stage.shortLabel}
         <select
           className="absolute inset-0 cursor-pointer opacity-0"
-          value={value.stage ?? ''}
-          onChange={(e) =>
-            onChange({ stage: e.target.value ? (e.target.value as Stage) : undefined })
-          }
+          value={value.stage}
+          onChange={(e) => onChange({ stage: e.target.value as Stage })}
+          aria-label="研究阶段"
         >
-          <option value="">跟随项目（{STAGE_BY_VALUE[projectStage].label}）</option>
           {STAGES.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}

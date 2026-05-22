@@ -9,16 +9,16 @@ export type Stage =
   | 'rebuttal'
   | 'done'
 
-export const STAGES: { value: Stage; label: string; colorVar: string }[] = [
-  { value: 'literature', label: '文献调研', colorVar: '--color-stage-lit' },
-  { value: 'design', label: '研究设计', colorVar: '--color-stage-design' },
-  { value: 'irb', label: 'IRB 审批', colorVar: '--color-stage-irb' },
-  { value: 'data', label: '数据采集', colorVar: '--color-stage-data' },
-  { value: 'analysis', label: '数据分析', colorVar: '--color-stage-analysis' },
-  { value: 'writing', label: '论文写作', colorVar: '--color-stage-writing' },
-  { value: 'submitted', label: '投稿/审稿', colorVar: '--color-stage-submit' },
-  { value: 'rebuttal', label: 'Rebuttal', colorVar: '--color-stage-rebuttal' },
-  { value: 'done', label: '完成/搁置', colorVar: '--color-stage-done' },
+export const STAGES: { value: Stage; label: string; shortLabel: string; colorVar: string }[] = [
+  { value: 'literature', label: '文献调研', shortLabel: '文献', colorVar: '--color-stage-lit' },
+  { value: 'design', label: '研究设计', shortLabel: '设计', colorVar: '--color-stage-design' },
+  { value: 'irb', label: 'IRB 审批', shortLabel: 'IRB', colorVar: '--color-stage-irb' },
+  { value: 'data', label: '数据采集', shortLabel: '数据', colorVar: '--color-stage-data' },
+  { value: 'analysis', label: '数据分析', shortLabel: '分析', colorVar: '--color-stage-analysis' },
+  { value: 'writing', label: '论文写作', shortLabel: '写作', colorVar: '--color-stage-writing' },
+  { value: 'submitted', label: '投稿/审稿', shortLabel: '投稿', colorVar: '--color-stage-submit' },
+  { value: 'rebuttal', label: 'Rebuttal', shortLabel: 'Rebuttal', colorVar: '--color-stage-rebuttal' },
+  { value: 'done', label: '完成/搁置', shortLabel: '完成', colorVar: '--color-stage-done' },
 ]
 
 export const STAGE_BY_VALUE: Record<Stage, (typeof STAGES)[number]> = Object.fromEntries(
@@ -50,8 +50,8 @@ export interface Milestone {
   /** ISO date string YYYY-MM-DD; must be >= startDate */
   endDate: string
   done: boolean
-  /** Optional stage override; when unset, inherits project's current stage. */
-  stage?: Stage
+  /** Which research stage this milestone belongs to. Required. */
+  stage: Stage
   notes?: string
 }
 

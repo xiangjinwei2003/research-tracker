@@ -93,7 +93,7 @@ export function ProjectCard({ project, onEdit }: Props) {
           <ul className="space-y-1">
             {upcoming.map((m) => {
               const overdue = m.endDate < t
-              const stage = STAGE_BY_VALUE[m.stage ?? project.stage]
+              const stage = STAGE_BY_VALUE[m.stage]
               return (
                 <li
                   key={m.id}
@@ -111,10 +111,9 @@ export function ProjectCard({ project, onEdit }: Props) {
                   >
                     <Check size={10} />
                   </button>
-                  <span
-                    className="inline-block h-2 w-2 shrink-0 rounded-full"
-                    style={{ background: `var(${stage.colorVar})` }}
-                  />
+                  <span className="inline-flex shrink-0 items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                    {stage.shortLabel}
+                  </span>
                   <span
                     className={cn(
                       'min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-300',

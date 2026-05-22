@@ -183,7 +183,7 @@ function ProjectRow({ project, dayOffset, onEdit }: RowProps) {
         if (startOff == null || endOff == null) return null
         const width = Math.max(1, (endOff - startOff + 1) * DAY_WIDTH)
         const isPastNotDone = !m.done && m.endDate < todayIso
-        const milestoneStage = STAGE_BY_VALUE[m.stage ?? project.stage]
+        const milestoneStage = STAGE_BY_VALUE[m.stage]
         return (
           <div
             key={m.id}
