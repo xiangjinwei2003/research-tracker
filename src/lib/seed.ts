@@ -21,11 +21,11 @@ export function seedProjects(): Project[] {
         { id: uid(), name: '导师 L', role: 'advisor', waitingFor: '初稿反馈' },
         { id: uid(), name: '合作者 W', role: 'coauthor', waitingFor: '' },
       ],
-      milestones: [
-        { id: uid(), title: '招募 20 位参与者', stage: 'data', startDate: d(-80), endDate: d(-40), done: true },
-        { id: uid(), title: '半结构化访谈', stage: 'data', startDate: d(-50), endDate: d(-15), done: true },
-        { id: uid(), title: '主题分析编码', stage: 'analysis', startDate: d(-20), endDate: d(10), done: false },
-        { id: uid(), title: '初稿撰写', stage: 'writing', startDate: d(0), endDate: d(35), done: false },
+      todos: [
+        { id: uid(), title: '招募 20 位参与者', stage: 'data', endDate: d(-40), done: true },
+        { id: uid(), title: '半结构化访谈', stage: 'data', endDate: d(-15), done: true },
+        { id: uid(), title: '主题分析编码', stage: 'analysis', endDate: d(10), done: false },
+        { id: uid(), title: '初稿撰写', stage: 'writing', endDate: d(35), done: false },
       ],
       notes: '导师 L 关心隐私维度的呈现，编码时单独抽一条主线。',
       archived: false,
@@ -43,11 +43,11 @@ export function seedProjects(): Project[] {
       collaborators: [
         { id: uid(), name: '学生 Z', role: 'student', waitingFor: 'pilot 任务设计' },
       ],
-      milestones: [
-        { id: uid(), title: '文献综述', stage: 'literature', startDate: d(-30), endDate: d(-5), done: true },
-        { id: uid(), title: '研究方案 + IRB', stage: 'irb', startDate: d(-5), endDate: d(30), done: false },
-        { id: uid(), title: 'Pilot 研究 (N=8)', stage: 'data', startDate: d(20), endDate: d(55), done: false },
-        { id: uid(), title: '主研究 (N=30)', stage: 'data', startDate: d(55), endDate: d(95), done: false },
+      todos: [
+        { id: uid(), title: '文献综述', stage: 'literature', endDate: d(-5), done: true },
+        { id: uid(), title: '研究方案 + IRB', stage: 'irb', endDate: d(30), done: false },
+        { id: uid(), title: 'Pilot 研究 (N=8)', stage: 'data', endDate: d(55), done: false },
+        { id: uid(), title: '主研究 (N=30)', stage: 'data', endDate: d(95), done: false },
       ],
       notes: '',
       archived: false,
@@ -65,11 +65,11 @@ export function seedProjects(): Project[] {
       collaborators: [
         { id: uid(), name: '合作者 H (临床)', role: 'coauthor', waitingFor: '' },
       ],
-      milestones: [
-        { id: uid(), title: '初稿', stage: 'writing', startDate: d(-180), endDate: d(-90), done: true },
-        { id: uid(), title: '同行预审', stage: 'writing', startDate: d(-90), endDate: d(-45), done: true },
-        { id: uid(), title: '投稿', stage: 'submitted', startDate: d(-30), endDate: d(-30), done: true },
-        { id: uid(), title: 'Rebuttal 准备', stage: 'rebuttal', startDate: d(10), endDate: d(30), done: false },
+      todos: [
+        { id: uid(), title: '初稿', stage: 'writing', endDate: d(-90), done: true },
+        { id: uid(), title: '同行预审', stage: 'writing', endDate: d(-45), done: true },
+        { id: uid(), title: '投稿', stage: 'submitted', endDate: d(-30), done: true },
+        { id: uid(), title: 'Rebuttal 准备', stage: 'rebuttal', endDate: d(30), done: false },
       ],
       notes: '审稿期间不要再大改方法部分。',
       archived: false,

@@ -17,7 +17,7 @@ import {
   defaultStages,
   findStage,
   type Collaborator,
-  type Milestone,
+  type Todo,
   type Project,
   type Stage,
   type StageDef,
@@ -66,11 +66,11 @@ function EditDialog({
   const updateProject = useStore((s) => s.updateProject)
   const removeProject = useStore((s) => s.removeProject)
   const archiveProject = useStore((s) => s.archiveProject)
-  const addMilestone = useStore((s) => s.addMilestone)
-  const updateMilestone = useStore((s) => s.updateMilestone)
-  const removeMilestone = useStore((s) => s.removeMilestone)
-  const reorderMilestones = useStore((s) => s.reorderMilestones)
-  const applyStageToMilestones = useStore((s) => s.applyProjectStageToMilestones)
+  const addTodo = useStore((s) => s.addTodo)
+  const updateTodo = useStore((s) => s.updateTodo)
+  const removeTodo = useStore((s) => s.removeTodo)
+  const reorderTodos = useStore((s) => s.reorderTodos)
+  const applyStageToTodos = useStore((s) => s.applyProjectStageToTodos)
   const addCollaborator = useStore((s) => s.addCollaborator)
   const updateCollaborator = useStore((s) => s.updateCollaborator)
   const removeCollaborator = useStore((s) => s.removeCollaborator)
@@ -111,8 +111,8 @@ function EditDialog({
   }
 
   const onApplyStage = () => {
-    applyStageToMilestones(project.id)
-    toast({ message: '已将所有里程碑对齐项目当前阶段' })
+    applyStageToTodos(project.id)
+    toast({ message: '已将所有待办对齐项目当前阶段' })
   }
 
   const onResetStages = () => {
@@ -132,11 +132,11 @@ function EditDialog({
       return
     }
     const usingProject = project.stage === stageId
-    const usingMilestones = project.milestones.filter((m) => m.stage === stageId)
+    const usingTodos = project.todos.filter((t) => t.stage === stageId)
     const usageNote =
-      usingMilestones.length === 0 && !usingProject
+      usingTodos.length === 0 && !usingProject
         ? ''
-        : `（当前${usingProject ? '项目主阶段' : ''}${usingProject && usingMilestones.length > 0 ? ' + ' : ''}${usingMilestones.length > 0 ? `${usingMilestones.length} 个里程碑` : ''}使用此阶段，删除后将自动改为列表首位的阶段）`
+        : `（当前${usingProject ? '项目主阶段' : ''}${usingProject && usingTodos.length > 0 ? ' + ' : ''}${usingTodos.length > 0 ? `${usingTodos.length} 个待办` : ''}使用此阶段，删除后将自动改为列表首位的阶段）`
     if (confirm(`删除此阶段？${usageNote}`)) {
       const reassignTo = project.stages.find((s) => s.id !== stageId)?.id
       if (reassignTo) removeProjectStage(project.id, stageId, reassignTo)
@@ -282,6 +282,41 @@ function EditDialog({
           ) : null}
         </fieldset>
 
+        {/* Todos (was 里程碑) — moved above stages + collaborators */}
+        <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+          <legend className="px-1 text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            待办
+          </legend>
+          <div className="mb-2 flex justify-end">
+            <Button type="button" variant="ghost" size="sm" onClick={onApplyStage}>
+              <Paintbrush size={12} /> 全部对齐项目阶段
+            </Button>
+          </div>
+          <TodoList
+            todos={project.todos}
+            stages={project.stages}
+            onChange={(id, patch) => updateTodo(project.id, id, patch)}
+            onRemove={(id) => {
+              const t = project.todos.find((x) => x.id === id)
+              removeTodo(project.id, id)
+              toast({
+                message: `已删除待办「${t?.title || '未命名'}」`,
+                action: { label: '撤销', onClick: () => undo() },
+              })
+            }}
+            onReorder={(ids) => reorderTodos(project.id, ids)}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="mt-2"
+            onClick={() => addTodo(project.id)}
+          >
+            <Plus size={14} /> 添加待办
+          </Button>
+        </fieldset>
+
         {/* Stage editor */}
         <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
           <legend className="px-1 text-xs font-medium text-neutral-600 dark:text-neutral-400">
@@ -342,41 +377,6 @@ function EditDialog({
           </div>
         </fieldset>
 
-        {/* Milestones */}
-        <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
-          <legend className="px-1 text-xs font-medium text-neutral-600 dark:text-neutral-400">
-            里程碑
-          </legend>
-          <div className="mb-2 flex justify-end">
-            <Button type="button" variant="ghost" size="sm" onClick={onApplyStage}>
-              <Paintbrush size={12} /> 全部对齐项目阶段
-            </Button>
-          </div>
-          <MilestoneList
-            milestones={project.milestones}
-            stages={project.stages}
-            onChange={(id, patch) => updateMilestone(project.id, id, patch)}
-            onRemove={(id) => {
-              const m = project.milestones.find((x) => x.id === id)
-              removeMilestone(project.id, id)
-              toast({
-                message: `已删除里程碑「${m?.title || '未命名'}」`,
-                action: { label: '撤销', onClick: () => undo() },
-              })
-            }}
-            onReorder={(ids) => reorderMilestones(project.id, ids)}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="mt-2"
-            onClick={() => addMilestone(project.id)}
-          >
-            <Plus size={14} /> 添加里程碑
-          </Button>
-        </fieldset>
-
         <div>
           <Label htmlFor="notes">备注</Label>
           <Textarea
@@ -425,7 +425,7 @@ function emptyDraft(): Draft {
     startDate: today(),
     venue: undefined,
     collaborators: [],
-    milestones: [],
+    todos: [],
     notes: '',
   }
 }
@@ -743,18 +743,18 @@ function StageRow({
   )
 }
 
-/* ---------- Milestones ---------- */
+/* ---------- Todos ---------- */
 
-function MilestoneList({
-  milestones,
+function TodoList({
+  todos,
   stages,
   onChange,
   onRemove,
   onReorder,
 }: {
-  milestones: Milestone[]
+  todos: Todo[]
   stages: StageDef[]
-  onChange: (id: string, patch: Partial<Milestone>) => void
+  onChange: (id: string, patch: Partial<Todo>) => void
   onRemove: (id: string) => void
   onReorder: (ids: string[]) => void
 }) {
@@ -779,7 +779,7 @@ function MilestoneList({
     setOverId(null)
     dragIdRef.current = null
     if (!draggedId || draggedId === targetId) return
-    const ids = milestones.map((m) => m.id)
+    const ids = todos.map((t) => t.id)
     const from = ids.indexOf(draggedId)
     const to = ids.indexOf(targetId)
     if (from < 0 || to < 0) return
@@ -789,39 +789,39 @@ function MilestoneList({
     onReorder(next)
   }
 
-  if (milestones.length === 0) {
-    return <p className="text-xs text-neutral-400">还没有里程碑。点下方按钮添加。</p>
+  if (todos.length === 0) {
+    return <p className="text-xs text-neutral-400">还没有待办。点下方按钮添加。</p>
   }
 
   return (
     <div className="space-y-1.5">
-      {milestones.map((m) => (
-        <MilestoneRow
-          key={m.id}
-          value={m}
+      {todos.map((todo) => (
+        <TodoRow
+          key={todo.id}
+          value={todo}
           stages={stages}
-          isDropTarget={overId === m.id}
-          onDragStart={(e) => handleDragStart(e, m.id)}
-          onDragOver={(e) => handleDragOver(e, m.id)}
-          onDragLeave={() => setOverId((cur) => (cur === m.id ? null : cur))}
+          isDropTarget={overId === todo.id}
+          onDragStart={(e) => handleDragStart(e, todo.id)}
+          onDragOver={(e) => handleDragOver(e, todo.id)}
+          onDragLeave={() => setOverId((cur) => (cur === todo.id ? null : cur))}
           onDragEnd={() => {
             setOverId(null)
             dragIdRef.current = null
           }}
-          onDrop={(e) => handleDrop(e, m.id)}
-          onChange={(patch) => onChange(m.id, patch)}
-          onRemove={() => onRemove(m.id)}
+          onDrop={(e) => handleDrop(e, todo.id)}
+          onChange={(patch) => onChange(todo.id, patch)}
+          onRemove={() => onRemove(todo.id)}
         />
       ))}
     </div>
   )
 }
 
-interface MilestoneRowProps {
-  value: Milestone
+interface TodoRowProps {
+  value: Todo
   stages: StageDef[]
   isDropTarget: boolean
-  onChange: (patch: Partial<Milestone>) => void
+  onChange: (patch: Partial<Todo>) => void
   onRemove: () => void
   onDragStart: (e: React.DragEvent) => void
   onDragOver: (e: React.DragEvent) => void
@@ -830,7 +830,7 @@ interface MilestoneRowProps {
   onDrop: (e: React.DragEvent) => void
 }
 
-function MilestoneRow({
+function TodoRow({
   value,
   stages,
   isDropTarget,
@@ -841,7 +841,7 @@ function MilestoneRow({
   onDragLeave,
   onDragEnd,
   onDrop,
-}: MilestoneRowProps) {
+}: TodoRowProps) {
   const stage = findStage(stages, value.stage)
 
   return (
@@ -880,7 +880,7 @@ function MilestoneRow({
       </button>
       <label
         className="relative inline-flex shrink-0 cursor-pointer items-center rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-        title="里程碑研究阶段"
+        title="所属研究阶段"
       >
         {stage.shortLabel || stage.name}
         <select
@@ -898,27 +898,23 @@ function MilestoneRow({
       </label>
       <Input
         className="min-w-0 flex-1"
-        placeholder="里程碑名称"
+        placeholder="待办内容"
         value={value.title}
         onChange={(e) => onChange({ title: e.target.value })}
       />
       <Input
         className="w-[8.5rem] shrink-0"
         type="date"
-        value={value.startDate}
-        onChange={(e) => onChange({ startDate: e.target.value })}
-      />
-      <Input
-        className="w-[8.5rem] shrink-0"
-        type="date"
         value={value.endDate}
         onChange={(e) => onChange({ endDate: e.target.value })}
+        aria-label="结束日期"
+        title="结束日期"
       />
       <Button
         type="button"
         variant="ghost"
         size="sm"
-        aria-label="移除里程碑"
+        aria-label="移除待办"
         onClick={onRemove}
       >
         <Trash2 size={14} />

@@ -53,12 +53,10 @@ export interface Collaborator {
   waitingFor: string
 }
 
-export interface Milestone {
+export interface Todo {
   id: string
   title: string
-  /** ISO date string YYYY-MM-DD */
-  startDate: string
-  /** ISO date string YYYY-MM-DD; must be >= startDate */
+  /** Due date — ISO YYYY-MM-DD. */
   endDate: string
   done: boolean
   /** Stage ID referencing one of the project's stages. */
@@ -87,7 +85,7 @@ export interface Project {
   startDate: string
   venue?: Venue
   collaborators: Collaborator[]
-  milestones: Milestone[]
+  todos: Todo[]
   /** Free-form notes */
   notes: string
   /** Hidden from main views (kept for history) */

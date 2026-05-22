@@ -1,7 +1,7 @@
 import { CalendarClock, Users, Check } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import { findStage } from '@/lib/types'
-import { nextDeadline, upcomingMilestones, useStore } from '@/lib/store'
+import { nextDeadline, stageProgress, upcomingTodos, useStore } from '@/lib/store'
 import { countdownLabel, daysUntil, fmtShort, today } from '@/lib/date'
 import { Card } from './ui/Card'
 import { StageBadge } from './StageBadge'
@@ -13,15 +13,14 @@ interface Props {
 }
 
 export function ProjectCard({ project, onEdit }: Props) {
-  const toggleMilestoneDone = useStore((s) => s.toggleMilestoneDone)
+  const toggleTodoDone = useStore((s) => s.toggleTodoDone)
   const nd = nextDeadline(project)
   const days = nd ? daysUntil(nd.date) : null
   const cd = days == null ? null : countdownLabel(days)
   const waiting = project.collaborators.filter((c) => c.waitingFor.trim())
-  const total = project.milestones.length
-  const done = project.milestones.filter((m) => m.done).length
-  const progress = total === 0 ? 0 : Math.round((done / total) * 100)
-  const upcoming = upcomingMilestones(project, 3)
+  const sp = stageProgress(project)
+  const currentStage = findStage(project.stages, project.stage)
+  const upcoming = upcomingTodos(project, 3)
   const t = today()
 
   return (
@@ -43,7 +42,7 @@ export function ProjectCard({ project, onEdit }: Props) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <StageBadge stage={findStage(project.stages, project.stage)} />
+        <StageBadge stage={currentStage} />
         {project.venue ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
             {project.venue.name}
@@ -77,49 +76,54 @@ export function ProjectCard({ project, onEdit }: Props) {
 
       <div className="mt-3">
         <div className="mb-1 flex items-center justify-between text-xs text-neutral-500">
-          <span>里程碑</span>
+          <span>研究阶段</span>
           <span>
-            {done}/{total}
+            <span className="text-neutral-700 dark:text-neutral-300">{currentStage.shortLabel || currentStage.name}</span>
+            <span className="ml-1.5 tabular-nums text-neutral-400">
+              {sp.current}/{sp.total}
+            </span>
           </span>
         </div>
-        <div className="mb-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
           <div
-            className="h-full rounded-full bg-neutral-900 transition-all dark:bg-neutral-100"
-            style={{ width: `${progress}%` }}
+            className="h-full rounded-full transition-all"
+            style={{ width: `${sp.percent}%`, background: currentStage.color }}
           />
         </div>
 
+        <div className="mb-1 flex items-center justify-between text-xs text-neutral-500">
+          <span>待办</span>
+          <span className="tabular-nums">
+            {project.todos.filter((x) => x.done).length}/{project.todos.length}
+          </span>
+        </div>
         {upcoming.length > 0 ? (
           <ul className="space-y-1">
-            {upcoming.map((m) => {
-              const overdue = m.endDate < t
-              const stage = findStage(project.stages, m.stage)
+            {upcoming.map((todo) => {
+              const overdue = todo.endDate < t
+              const stage = findStage(project.stages, todo.stage)
               return (
                 <li
-                  key={m.id}
+                  key={todo.id}
                   className="flex items-center gap-2 text-xs"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
-                    onClick={() => toggleMilestoneDone(project.id, m.id)}
+                    onClick={() => toggleTodoDone(project.id, todo.id)}
                     className={cn(
                       'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border',
                       'border-neutral-300 text-transparent hover:border-neutral-500 hover:text-neutral-400',
                       'dark:border-neutral-600 dark:hover:border-neutral-400',
                     )}
-                    aria-label={`标记「${m.title}」为已完成`}
+                    aria-label={`标记「${todo.title}」为已完成`}
                   >
                     <Check size={10} />
                   </button>
                   <span className="inline-flex shrink-0 items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                    {stage.shortLabel}
+                    {stage.shortLabel || stage.name}
                   </span>
-                  <span
-                    className={cn(
-                      'min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-300',
-                    )}
-                  >
-                    {m.title || <span className="italic text-neutral-400">未命名</span>}
+                  <span className="min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-300">
+                    {todo.title || <span className="italic text-neutral-400">未命名</span>}
                   </span>
                   <span
                     className={cn(
@@ -129,21 +133,21 @@ export function ProjectCard({ project, onEdit }: Props) {
                         : 'text-neutral-500 dark:text-neutral-500',
                     )}
                   >
-                    {fmtShort(m.endDate)}
+                    {fmtShort(todo.endDate)}
                   </span>
                 </li>
               )
             })}
-            {project.milestones.filter((m) => !m.done).length > upcoming.length ? (
+            {project.todos.filter((x) => !x.done).length > upcoming.length ? (
               <li className="text-[11px] text-neutral-400">
-                还有 {project.milestones.filter((m) => !m.done).length - upcoming.length} 个未完成…
+                还有 {project.todos.filter((x) => !x.done).length - upcoming.length} 个未完成…
               </li>
             ) : null}
           </ul>
-        ) : total > 0 ? (
-          <p className="text-[11px] text-neutral-400">所有里程碑已完成 🎉</p>
+        ) : project.todos.length > 0 ? (
+          <p className="text-[11px] text-neutral-400">所有待办已完成 🎉</p>
         ) : (
-          <p className="text-[11px] text-neutral-400">还没有里程碑</p>
+          <p className="text-[11px] text-neutral-400">还没有待办</p>
         )}
       </div>
 

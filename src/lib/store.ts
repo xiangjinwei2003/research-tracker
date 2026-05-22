@@ -1,17 +1,17 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { Project, Milestone, Collaborator, AppState, StageDef } from './types'
+import type { Project, Todo, Collaborator, AppState, StageDef } from './types'
 import { defaultStages } from './types'
 import { uid } from './id'
 import { today } from './date'
 import { seedProjects } from './seed'
 
-const SCHEMA_VERSION = 3
+const SCHEMA_VERSION = 4
 
 type UndoEntry =
   | { kind: 'project-removed'; project: Project; index: number; label: string }
   | { kind: 'project-archived'; id: string; prevArchived: boolean; label: string }
-  | { kind: 'milestone-removed'; projectId: string; milestone: Milestone; index: number; label: string }
+  | { kind: 'todo-removed'; projectId: string; todo: Todo; index: number; label: string }
   | { kind: 'collaborator-removed'; projectId: string; collaborator: Collaborator; index: number; label: string }
   | { kind: 'replace-state'; prev: AppState; label: string }
 
@@ -26,12 +26,12 @@ interface Store extends AppState {
   removeProject: (id: string) => void
   archiveProject: (id: string, archived: boolean) => void
 
-  addMilestone: (projectId: string, m?: Partial<Milestone>) => string
-  updateMilestone: (projectId: string, milestoneId: string, patch: Partial<Milestone>) => void
-  removeMilestone: (projectId: string, milestoneId: string) => void
-  reorderMilestones: (projectId: string, ids: string[]) => void
-  toggleMilestoneDone: (projectId: string, milestoneId: string) => void
-  applyProjectStageToMilestones: (projectId: string) => void
+  addTodo: (projectId: string, t?: Partial<Todo>) => string
+  updateTodo: (projectId: string, todoId: string, patch: Partial<Todo>) => void
+  removeTodo: (projectId: string, todoId: string) => void
+  reorderTodos: (projectId: string, ids: string[]) => void
+  toggleTodoDone: (projectId: string, todoId: string) => void
+  applyProjectStageToTodos: (projectId: string) => void
 
   addCollaborator: (projectId: string, c?: Partial<Collaborator>) => string
   updateCollaborator: (
@@ -122,7 +122,7 @@ export const useStore = create<Store>()(
         }))
       },
 
-      addMilestone: (projectId, m) => {
+      addTodo: (projectId, t) => {
         const id = uid()
         set((s) => ({
           projects: s.projects.map((p) =>
@@ -130,16 +130,15 @@ export const useStore = create<Store>()(
               ? p
               : {
                   ...p,
-                  milestones: [
-                    ...p.milestones,
+                  todos: [
+                    ...p.todos,
                     {
                       id,
                       title: '',
-                      startDate: today(),
                       endDate: today(),
                       done: false,
                       stage: p.stage,
-                      ...m,
+                      ...t,
                     },
                   ],
                   updatedAt: stamp(),
@@ -149,73 +148,68 @@ export const useStore = create<Store>()(
         return id
       },
 
-      updateMilestone: (projectId, milestoneId, patch) => {
+      updateTodo: (projectId, todoId, patch) => {
         set((s) => ({
           projects: s.projects.map((p) =>
             p.id !== projectId
               ? p
               : {
                   ...p,
-                  milestones: p.milestones.map((m) =>
-                    m.id === milestoneId ? { ...m, ...patch } : m,
-                  ),
+                  todos: p.todos.map((t) => (t.id === todoId ? { ...t, ...patch } : t)),
                   updatedAt: stamp(),
                 },
           ),
         }))
       },
 
-      removeMilestone: (projectId, milestoneId) => {
+      removeTodo: (projectId, todoId) => {
         const state = get()
         const project = state.projects.find((p) => p.id === projectId)
         if (!project) return
-        const idx = project.milestones.findIndex((m) => m.id === milestoneId)
+        const idx = project.todos.findIndex((t) => t.id === todoId)
         if (idx === -1) return
-        const milestone = project.milestones[idx]
+        const todo = project.todos[idx]
         set((s) => ({
           projects: s.projects.map((p) =>
             p.id !== projectId
               ? p
               : {
                   ...p,
-                  milestones: p.milestones.filter((m) => m.id !== milestoneId),
+                  todos: p.todos.filter((t) => t.id !== todoId),
                   updatedAt: stamp(),
                 },
           ),
           undoStack: pushUndo(s, {
-            kind: 'milestone-removed',
+            kind: 'todo-removed',
             projectId,
-            milestone,
+            todo,
             index: idx,
-            label: `已删除里程碑「${milestone.title || '未命名'}」`,
+            label: `已删除待办「${todo.title || '未命名'}」`,
           }),
         }))
       },
 
-      reorderMilestones: (projectId, ids) => {
+      reorderTodos: (projectId, ids) => {
         set((s) => ({
           projects: s.projects.map((p) => {
             if (p.id !== projectId) return p
-            const byId = new Map(p.milestones.map((m) => [m.id, m]))
-            const next = ids.map((id) => byId.get(id)).filter(Boolean) as Milestone[]
-            // Append any milestones not in `ids` (safety).
-            for (const m of p.milestones) {
-              if (!ids.includes(m.id)) next.push(m)
-            }
-            return { ...p, milestones: next, updatedAt: stamp() }
+            const byId = new Map(p.todos.map((t) => [t.id, t]))
+            const next = ids.map((id) => byId.get(id)).filter(Boolean) as Todo[]
+            for (const t of p.todos) if (!ids.includes(t.id)) next.push(t)
+            return { ...p, todos: next, updatedAt: stamp() }
           }),
         }))
       },
 
-      toggleMilestoneDone: (projectId, milestoneId) => {
+      toggleTodoDone: (projectId, todoId) => {
         set((s) => ({
           projects: s.projects.map((p) =>
             p.id !== projectId
               ? p
               : {
                   ...p,
-                  milestones: p.milestones.map((m) =>
-                    m.id === milestoneId ? { ...m, done: !m.done } : m,
+                  todos: p.todos.map((t) =>
+                    t.id === todoId ? { ...t, done: !t.done } : t,
                   ),
                   updatedAt: stamp(),
                 },
@@ -223,14 +217,14 @@ export const useStore = create<Store>()(
         }))
       },
 
-      applyProjectStageToMilestones: (projectId) => {
+      applyProjectStageToTodos: (projectId) => {
         set((s) => ({
           projects: s.projects.map((p) =>
             p.id !== projectId
               ? p
               : {
                   ...p,
-                  milestones: p.milestones.map((m) => ({ ...m, stage: p.stage })),
+                  todos: p.todos.map((t) => ({ ...t, stage: p.stage })),
                   updatedAt: stamp(),
                 },
           ),
@@ -329,8 +323,8 @@ export const useStore = create<Store>()(
               ...p,
               stages: p.stages.filter((s) => s.id !== stageId),
               stage: p.stage === stageId ? reassignTo : p.stage,
-              milestones: p.milestones.map((m) =>
-                m.stage === stageId ? { ...m, stage: reassignTo } : m,
+              todos: p.todos.map((t) =>
+                t.stage === stageId ? { ...t, stage: reassignTo } : t,
               ),
               updatedAt: stamp(),
             }
@@ -361,9 +355,9 @@ export const useStore = create<Store>()(
               ...p,
               stages: fresh,
               stage: valid.has(p.stage) ? p.stage : fallback,
-              milestones: p.milestones.map((m) => ({
-                ...m,
-                stage: valid.has(m.stage) ? m.stage : fallback,
+              todos: p.todos.map((t) => ({
+                ...t,
+                stage: valid.has(t.stage) ? t.stage : fallback,
               })),
               updatedAt: stamp(),
             }
@@ -447,13 +441,13 @@ export const useStore = create<Store>()(
                 undoStack: rest,
               }
             }
-            case 'milestone-removed': {
+            case 'todo-removed': {
               return {
                 projects: s.projects.map((p) => {
                   if (p.id !== entry.projectId) return p
-                  const next = [...p.milestones]
-                  next.splice(entry.index, 0, entry.milestone)
-                  return { ...p, milestones: next }
+                  const next = [...p.todos]
+                  next.splice(entry.index, 0, entry.todo)
+                  return { ...p, todos: next }
                 }),
                 undoStack: rest,
               }
@@ -497,15 +491,27 @@ export const useStore = create<Store>()(
           const validIds = new Set(stages.map((s) => s.id))
           const fallbackStage = stages[0].id
           const projectStage = validIds.has(p.stage) ? p.stage : fallbackStage
+          // Rename milestones -> todos and drop startDate.
+          type LegacyMilestone = Todo & { startDate?: string }
+          const legacy: LegacyMilestone[] = Array.isArray((p as { milestones?: unknown }).milestones)
+            ? ((p as { milestones?: LegacyMilestone[] }).milestones ?? [])
+            : []
+          const rawTodos: LegacyMilestone[] =
+            Array.isArray(p.todos) && p.todos.length > 0 ? p.todos : legacy
+          const todos: Todo[] = rawTodos.map((t) => {
+            const { startDate: _start, ...rest } = t
+            return {
+              ...rest,
+              stage: validIds.has(rest.stage ?? '') ? rest.stage : projectStage,
+            } as Todo
+          })
+          const { milestones: _m, ...prest } = p as { milestones?: unknown }
           return {
-            ...p,
+            ...prest,
             stages,
             stage: projectStage,
-            milestones: (p.milestones ?? []).map((m) => ({
-              ...m,
-              stage: validIds.has(m.stage ?? '') ? m.stage : projectStage,
-            })),
-          }
+            todos,
+          } as Project
         })
         return { projects, version: SCHEMA_VERSION } as AppState
       },
@@ -523,8 +529,8 @@ export function nextDeadline(p: Project): { date: string; label: string } | null
   if (p.venue?.rebuttalAt) {
     candidates.push({ date: p.venue.rebuttalAt, label: `${p.venue.name} rebuttal` })
   }
-  for (const m of p.milestones) {
-    if (!m.done) candidates.push({ date: m.endDate, label: m.title })
+  for (const t of p.todos) {
+    if (!t.done) candidates.push({ date: t.endDate, label: t.title })
   }
   if (candidates.length === 0) return null
   candidates.sort((a, b) => a.date.localeCompare(b.date))
@@ -532,10 +538,10 @@ export function nextDeadline(p: Project): { date: string; label: string } | null
   return future ?? candidates[candidates.length - 1]
 }
 
-/** Up to N incomplete milestones, overdue first then by endDate. */
-export function upcomingMilestones(p: Project, n = 3): Milestone[] {
+/** Up to N incomplete todos, overdue first then by endDate. */
+export function upcomingTodos(p: Project, n = 3): Todo[] {
   const t = today()
-  const incomplete = p.milestones.filter((m) => !m.done)
+  const incomplete = p.todos.filter((x) => !x.done)
   return [...incomplete]
     .sort((a, b) => {
       const aOver = a.endDate < t
@@ -545,6 +551,15 @@ export function upcomingMilestones(p: Project, n = 3): Milestone[] {
       return a.endDate.localeCompare(b.endDate)
     })
     .slice(0, n)
+}
+
+/** Stage-based progress: index of the current stage in the project's stages (1-based). */
+export function stageProgress(p: Project): { current: number; total: number; percent: number } {
+  const total = p.stages.length
+  if (total === 0) return { current: 0, total: 0, percent: 0 }
+  const idx = p.stages.findIndex((s) => s.id === p.stage)
+  const current = idx < 0 ? 0 : idx + 1
+  return { current, total, percent: Math.round((current / total) * 100) }
 }
 
 export function exportJSON(state: AppState): string {

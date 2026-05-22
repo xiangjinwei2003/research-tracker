@@ -1,8 +1,8 @@
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { addDays, addMonths, differenceInCalendarDays, format, startOfMonth } from 'date-fns'
-import { nextDeadline, useStore } from '@/lib/store'
+import { nextDeadline, stageProgress, useStore } from '@/lib/store'
 import { countdownLabel, daysUntil, monthGrid, parse, today } from '@/lib/date'
-import { findStage, type Project, type Milestone } from '@/lib/types'
+import { findStage, type Project, type Todo } from '@/lib/types'
 import { Card } from './ui/Card'
 import { cn } from '@/lib/cn'
 
@@ -16,17 +16,15 @@ interface Props {
 
 interface DragState {
   projectId: string
-  milestoneId: string
+  todoId: string
   startX: number
-  /** ISO startDate (clamp lower bound for endDate). */
-  minEnd: string
   /** ISO endDate at drag start. */
   initialEnd: string
 }
 
 export function Timeline({ onEdit }: Props) {
   const projects = useStore((s) => s.projects).filter((p) => !p.archived)
-  const updateMilestone = useStore((s) => s.updateMilestone)
+  const updateTodo = useStore((s) => s.updateTodo)
   const scrollRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
   const rafRef = useRef<number | null>(null)
@@ -39,9 +37,7 @@ export function Timeline({ onEdit }: Props) {
       dates.push(p.startDate)
       if (p.venue?.deadline) dates.push(p.venue.deadline)
       if (p.venue?.rebuttalAt) dates.push(p.venue.rebuttalAt)
-      for (const m of p.milestones) {
-        dates.push(m.startDate, m.endDate)
-      }
+      for (const t of p.todos) dates.push(t.endDate)
     }
     return monthGrid(dates)
   }, [projects])
@@ -69,7 +65,7 @@ export function Timeline({ onEdit }: Props) {
     el.scrollLeft = Math.max(0, target)
   }, [todayOffset])
 
-  // Global drag listeners
+  // Global drag listeners (drag a todo marker to reschedule its endDate)
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       const drag = dragRef.current
@@ -77,16 +73,14 @@ export function Timeline({ onEdit }: Props) {
       const deltaDays = Math.round((e.clientX - drag.startX) / DAY_WIDTH)
       const baseEnd = parse(drag.initialEnd)
       if (!baseEnd) return
-      let nextEnd = format(addDays(baseEnd, deltaDays), 'yyyy-MM-dd')
-      if (nextEnd < drag.minEnd) nextEnd = drag.minEnd
-      pendingEndRef.current = nextEnd
+      pendingEndRef.current = format(addDays(baseEnd, deltaDays), 'yyyy-MM-dd')
       if (rafRef.current == null) {
         rafRef.current = requestAnimationFrame(() => {
           rafRef.current = null
           const drag2 = dragRef.current
           const end = pendingEndRef.current
           if (drag2 && end) {
-            updateMilestone(drag2.projectId, drag2.milestoneId, { endDate: end })
+            updateTodo(drag2.projectId, drag2.todoId, { endDate: end })
           }
         })
       }
@@ -108,21 +102,20 @@ export function Timeline({ onEdit }: Props) {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
-  }, [updateMilestone])
+  }, [updateTodo])
 
-  const startResize = (e: React.MouseEvent, project: Project, m: Milestone) => {
+  const startDrag = (e: React.MouseEvent, project: Project, todo: Todo) => {
     e.stopPropagation()
     e.preventDefault()
     dragRef.current = {
       projectId: project.id,
-      milestoneId: m.id,
+      todoId: todo.id,
       startX: e.clientX,
-      minEnd: m.startDate,
-      initialEnd: m.endDate,
+      initialEnd: todo.endDate,
     }
-    setDraggingId(m.id)
+    setDraggingId(todo.id)
     document.body.style.userSelect = 'none'
-    document.body.style.cursor = 'ew-resize'
+    document.body.style.cursor = 'grabbing'
   }
 
   if (projects.length === 0) {
@@ -140,7 +133,7 @@ export function Timeline({ onEdit }: Props) {
       <div className="mb-3">
         <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">时间线</h2>
         <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
-          灰色背景 = 已过去；色块 = 里程碑（拖右沿可改结束日期）；红线 = 今天；▲ 投稿截止；◆ Rebuttal。
+          灰色背景 = 已过去；圆点 = 待办（按所属阶段着色，可拖动改截止日期）；红线 = 今天；▲ 投稿截止；◆ Rebuttal。
         </p>
       </div>
 
@@ -224,7 +217,7 @@ export function Timeline({ onEdit }: Props) {
                     dayOffset={dayOffset}
                     draggingId={draggingId}
                     onEdit={() => onEdit(p)}
-                    onStartResize={(e, m) => startResize(e, p, m)}
+                    onStartDrag={(e, t) => startDrag(e, p, t)}
                   />
                 ))}
               </div>
@@ -242,9 +235,8 @@ function LeftRow({ project, onClick }: { project: Project; onClick: () => void }
   const nd = nextDeadline(project)
   const days = nd ? daysUntil(nd.date) : null
   const cd = days == null ? null : countdownLabel(days)
-  const total = project.milestones.length
-  const done = project.milestones.filter((m) => m.done).length
-  const progress = total === 0 ? 0 : Math.round((done / total) * 100)
+  const sp = stageProgress(project)
+  const currentStage = findStage(project.stages, project.stage)
 
   return (
     <button
@@ -274,16 +266,16 @@ function LeftRow({ project, onClick }: { project: Project; onClick: () => void }
       <div className="flex items-center gap-2">
         <div className="h-1 flex-1 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
           <div
-            className="h-full rounded-full bg-neutral-900 dark:bg-neutral-100"
-            style={{ width: `${progress}%` }}
+            className="h-full rounded-full"
+            style={{ width: `${sp.percent}%`, background: currentStage.color }}
           />
         </div>
         <span className="shrink-0 text-[10px] tabular-nums text-neutral-500">
-          {done}/{total}
+          {sp.current}/{sp.total}
         </span>
       </div>
       <div className="truncate text-[11px] text-neutral-500">
-        {findStage(project.stages, project.stage).name}
+        {currentStage.name}
         {project.venue ? ` · ${project.venue.name}` : ''}
       </div>
     </button>
@@ -295,10 +287,12 @@ interface RowProps {
   dayOffset: (iso: string) => number | null
   draggingId: string | null
   onEdit: () => void
-  onStartResize: (e: React.MouseEvent, m: Milestone) => void
+  onStartDrag: (e: React.MouseEvent, t: Todo) => void
 }
 
-function ProjectRow({ project, dayOffset, draggingId, onEdit, onStartResize }: RowProps) {
+const DOT_SIZE = 12
+
+function ProjectRow({ project, dayOffset, draggingId, onEdit, onStartDrag }: RowProps) {
   const todayIso = today()
 
   return (
@@ -306,43 +300,46 @@ function ProjectRow({ project, dayOffset, draggingId, onEdit, onStartResize }: R
       className="relative border-b border-neutral-100 dark:border-neutral-800"
       style={{ height: ROW_HEIGHT }}
     >
-      {project.milestones.map((m) => {
-        const startOff = dayOffset(m.startDate)
-        const endOff = dayOffset(m.endDate)
-        if (startOff == null || endOff == null) return null
-        const width = Math.max(8, (endOff - startOff + 1) * DAY_WIDTH)
-        const isPastNotDone = !m.done && m.endDate < todayIso
-        const milestoneStage = findStage(project.stages, m.stage)
-        const isDragging = draggingId === m.id
+      {project.todos.map((todo) => {
+        const off = dayOffset(todo.endDate)
+        if (off == null) return null
+        const isPastNotDone = !todo.done && todo.endDate < todayIso
+        const stage = findStage(project.stages, todo.stage)
+        const isDragging = draggingId === todo.id
+        const top = (ROW_HEIGHT - DOT_SIZE) / 2 + 4
         return (
           <div
-            key={m.id}
+            key={todo.id}
             onClick={onEdit}
-            title={`${m.title} · ${m.startDate} → ${m.endDate}${m.done ? ' (已完成)' : ''}`}
+            onMouseDown={(e) => onStartDrag(e, todo)}
+            title={`${todo.title || '未命名'} · ${todo.endDate}${todo.done ? ' (已完成)' : ''}`}
             className={cn(
-              'group absolute z-10 flex h-7 cursor-pointer items-center overflow-hidden rounded px-1.5 text-[11px] font-medium text-white shadow-sm transition hover:opacity-95',
-              m.done && 'opacity-55',
-              isPastNotDone && 'ring-2 ring-red-500',
-              isDragging && 'opacity-90 shadow-lg ring-2 ring-blue-400',
+              'group absolute z-10 flex items-center gap-1.5 cursor-grab active:cursor-grabbing',
+              isDragging && 'z-20',
             )}
-            style={{
-              left: startOff * DAY_WIDTH,
-              width,
-              top: 24,
-              background: milestoneStage.color,
-            }}
+            style={{ left: off * DAY_WIDTH - DOT_SIZE / 2, top }}
           >
-            <span className="pointer-events-none truncate pr-2">{m.title}</span>
             <span
-              onMouseDown={(e) => onStartResize(e, m)}
-              onClick={(e) => e.stopPropagation()}
               className={cn(
-                'absolute right-0 top-0 h-full w-2 cursor-ew-resize',
-                'bg-white/0 transition-colors hover:bg-white/40 active:bg-white/60',
-                isDragging && 'bg-white/60',
+                'inline-block rounded-full ring-2 ring-white shadow-sm transition dark:ring-neutral-900',
+                todo.done && 'opacity-50',
+                isPastNotDone && 'ring-red-500 ring-offset-1 dark:ring-red-500',
+                isDragging && 'scale-125 ring-blue-400',
               )}
-              title="拖动改结束日期"
+              style={{
+                width: DOT_SIZE,
+                height: DOT_SIZE,
+                background: stage.color,
+              }}
             />
+            <span
+              className={cn(
+                'pointer-events-none whitespace-nowrap rounded bg-white/85 px-1 text-[10px] font-medium text-neutral-800 shadow-sm dark:bg-neutral-800/85 dark:text-neutral-200',
+                todo.done && 'opacity-50 line-through',
+              )}
+            >
+              {todo.title || '未命名'}
+            </span>
           </div>
         )
       })}
@@ -394,19 +391,18 @@ function Legend() {
         过去（已发生）
       </span>
       <span className="inline-flex items-center gap-1">
-        <span className="inline-block h-3 w-5 rounded" style={{ background: 'var(--color-stage-data)' }} />
-        里程碑（按阶段着色）
+        <span
+          className="inline-block h-3 w-3 rounded-full ring-2 ring-white dark:ring-neutral-900"
+          style={{ background: 'var(--color-emerald-400, #34d399)' }}
+        />
+        待办（按所属阶段着色）
       </span>
       <span className="inline-flex items-center gap-1 text-red-600">▲ 投稿截止</span>
       <span className="inline-flex items-center gap-1 text-amber-600">◆ Rebuttal</span>
       <span className="inline-flex items-center gap-1">
         <span className="inline-block h-3 w-0.5 bg-red-500" /> 今天
       </span>
-      <span className="inline-flex items-center gap-1">
-        <span className="inline-block h-3 w-3 rounded ring-2 ring-red-500" />
-        逾期未完成
-      </span>
-      <span className="inline-flex items-center gap-1 text-neutral-400">·  里程碑右沿可拖动调整结束日期</span>
+      <span className="inline-flex items-center gap-1 text-neutral-400">·  待办圆点可拖动调整截止日期</span>
     </div>
   )
 }
