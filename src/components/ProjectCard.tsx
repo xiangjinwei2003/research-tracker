@@ -1,6 +1,6 @@
 import { CalendarClock, Users, Check } from 'lucide-react'
 import type { Project } from '@/lib/types'
-import { STAGE_BY_VALUE } from '@/lib/types'
+import { findStage } from '@/lib/types'
 import { nextDeadline, upcomingMilestones, useStore } from '@/lib/store'
 import { countdownLabel, daysUntil, fmtShort, today } from '@/lib/date'
 import { Card } from './ui/Card'
@@ -43,7 +43,7 @@ export function ProjectCard({ project, onEdit }: Props) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <StageBadge stage={project.stage} />
+        <StageBadge stage={findStage(project.stages, project.stage)} />
         {project.venue ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
             {project.venue.name}
@@ -93,7 +93,7 @@ export function ProjectCard({ project, onEdit }: Props) {
           <ul className="space-y-1">
             {upcoming.map((m) => {
               const overdue = m.endDate < t
-              const stage = STAGE_BY_VALUE[m.stage]
+              const stage = findStage(project.stages, m.stage)
               return (
                 <li
                   key={m.id}

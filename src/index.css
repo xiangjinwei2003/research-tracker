@@ -3,17 +3,6 @@
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-
-  /* Stage palette — distinct hues, calm saturation */
-  --color-stage-lit: oklch(0.78 0.10 250);
-  --color-stage-design: oklch(0.78 0.10 200);
-  --color-stage-irb: oklch(0.80 0.10 100);
-  --color-stage-data: oklch(0.78 0.10 150);
-  --color-stage-analysis: oklch(0.78 0.10 50);
-  --color-stage-writing: oklch(0.78 0.10 320);
-  --color-stage-submit: oklch(0.78 0.10 0);
-  --color-stage-rebuttal: oklch(0.78 0.10 30);
-  --color-stage-done: oklch(0.70 0.05 250);
 }
 
 html, body, #root {

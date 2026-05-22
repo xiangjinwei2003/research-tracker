@@ -1,4 +1,5 @@
 import type { Project } from './types'
+import { defaultStages } from './types'
 import { uid } from './id'
 import { format, addDays } from 'date-fns'
 
@@ -13,6 +14,7 @@ export function seedProjects(): Project[] {
       title: 'AI 写作助手对研究者工作流的影响',
       description: '半结构化访谈 + 日志分析，理解 LLM 工具如何改变学术写作过程。',
       stage: 'analysis',
+      stages: defaultStages(),
       startDate: d(-90),
       venue: { name: 'CHI', deadline: d(45) },
       collaborators: [
@@ -35,6 +37,7 @@ export function seedProjects(): Project[] {
       title: '在线协作工具中的注意力修复',
       description: '探索通知设计如何帮助远程协作者更快回到深度工作。',
       stage: 'design',
+      stages: defaultStages(),
       startDate: d(-30),
       venue: { name: 'CSCW', deadline: d(110) },
       collaborators: [
@@ -56,6 +59,7 @@ export function seedProjects(): Project[] {
       title: 'JMIR 投稿：可穿戴心率干预',
       description: '已投稿，等待 reviewer 意见，预计 rebuttal 6 月。',
       stage: 'submitted',
+      stages: defaultStages(),
       startDate: d(-180),
       venue: { name: 'JMIR', deadline: d(-30), rebuttalAt: d(20) },
       collaborators: [

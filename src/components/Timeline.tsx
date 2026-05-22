@@ -2,7 +2,7 @@ import { useMemo, useRef, useEffect, useState } from 'react'
 import { addDays, addMonths, differenceInCalendarDays, format, startOfMonth } from 'date-fns'
 import { nextDeadline, useStore } from '@/lib/store'
 import { countdownLabel, daysUntil, monthGrid, parse, today } from '@/lib/date'
-import { STAGE_BY_VALUE, type Project, type Milestone } from '@/lib/types'
+import { findStage, type Project, type Milestone } from '@/lib/types'
 import { Card } from './ui/Card'
 import { cn } from '@/lib/cn'
 
@@ -283,7 +283,7 @@ function LeftRow({ project, onClick }: { project: Project; onClick: () => void }
         </span>
       </div>
       <div className="truncate text-[11px] text-neutral-500">
-        {STAGE_BY_VALUE[project.stage].label}
+        {findStage(project.stages, project.stage).name}
         {project.venue ? ` · ${project.venue.name}` : ''}
       </div>
     </button>
@@ -312,7 +312,7 @@ function ProjectRow({ project, dayOffset, draggingId, onEdit, onStartResize }: R
         if (startOff == null || endOff == null) return null
         const width = Math.max(8, (endOff - startOff + 1) * DAY_WIDTH)
         const isPastNotDone = !m.done && m.endDate < todayIso
-        const milestoneStage = STAGE_BY_VALUE[m.stage]
+        const milestoneStage = findStage(project.stages, m.stage)
         const isDragging = draggingId === m.id
         return (
           <div
@@ -329,7 +329,7 @@ function ProjectRow({ project, dayOffset, draggingId, onEdit, onStartResize }: R
               left: startOff * DAY_WIDTH,
               width,
               top: 24,
-              background: `var(${milestoneStage.colorVar})`,
+              background: milestoneStage.color,
             }}
           >
             <span className="pointer-events-none truncate pr-2">{m.title}</span>

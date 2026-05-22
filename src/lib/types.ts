@@ -1,29 +1,40 @@
-export type Stage =
-  | 'literature'
-  | 'design'
-  | 'irb'
-  | 'data'
-  | 'analysis'
-  | 'writing'
-  | 'submitted'
-  | 'rebuttal'
-  | 'done'
+/** A stage ID local to a single project's `stages` array. */
+export type Stage = string
 
-export const STAGES: { value: Stage; label: string; shortLabel: string; colorVar: string }[] = [
-  { value: 'literature', label: '文献调研', shortLabel: '文献', colorVar: '--color-stage-lit' },
-  { value: 'design', label: '研究设计', shortLabel: '设计', colorVar: '--color-stage-design' },
-  { value: 'irb', label: 'IRB 审批', shortLabel: 'IRB', colorVar: '--color-stage-irb' },
-  { value: 'data', label: '数据采集', shortLabel: '数据', colorVar: '--color-stage-data' },
-  { value: 'analysis', label: '数据分析', shortLabel: '分析', colorVar: '--color-stage-analysis' },
-  { value: 'writing', label: '论文写作', shortLabel: '写作', colorVar: '--color-stage-writing' },
-  { value: 'submitted', label: '投稿/审稿', shortLabel: '投稿', colorVar: '--color-stage-submit' },
-  { value: 'rebuttal', label: 'Rebuttal', shortLabel: 'Rebuttal', colorVar: '--color-stage-rebuttal' },
-  { value: 'done', label: '完成/搁置', shortLabel: '完成', colorVar: '--color-stage-done' },
-]
+export interface StageDef {
+  id: string
+  name: string
+  shortLabel: string
+  /** Any valid CSS color string (hex, rgb, oklch, etc). */
+  color: string
+}
 
-export const STAGE_BY_VALUE: Record<Stage, (typeof STAGES)[number]> = Object.fromEntries(
-  STAGES.map((s) => [s.value, s]),
-) as Record<Stage, (typeof STAGES)[number]>
+/** The default 9-stage HCI / CSCW pipeline. New projects start with this. */
+export function defaultStages(): StageDef[] {
+  return [
+    { id: 'literature', name: '文献调研', shortLabel: '文献', color: 'oklch(0.78 0.10 250)' },
+    { id: 'design', name: '研究设计', shortLabel: '设计', color: 'oklch(0.78 0.10 200)' },
+    { id: 'irb', name: 'IRB 审批', shortLabel: 'IRB', color: 'oklch(0.80 0.10 100)' },
+    { id: 'data', name: '数据采集', shortLabel: '数据', color: 'oklch(0.78 0.10 150)' },
+    { id: 'analysis', name: '数据分析', shortLabel: '分析', color: 'oklch(0.78 0.10 50)' },
+    { id: 'writing', name: '论文写作', shortLabel: '写作', color: 'oklch(0.78 0.10 320)' },
+    { id: 'submitted', name: '投稿/审稿', shortLabel: '投稿', color: 'oklch(0.78 0.10 0)' },
+    { id: 'rebuttal', name: 'Rebuttal', shortLabel: 'Rebuttal', color: 'oklch(0.78 0.10 30)' },
+    { id: 'done', name: '完成/搁置', shortLabel: '完成', color: 'oklch(0.70 0.05 250)' },
+  ]
+}
+
+const FALLBACK_STAGE: StageDef = {
+  id: '__unknown',
+  name: '未指定',
+  shortLabel: '未指定',
+  color: 'oklch(0.70 0.02 250)',
+}
+
+/** Lookup a stage definition by id within a project's stages, with a safe fallback. */
+export function findStage(stages: StageDef[], id: string): StageDef {
+  return stages.find((s) => s.id === id) ?? FALLBACK_STAGE
+}
 
 export type CollaboratorRole = 'advisor' | 'coauthor' | 'student' | 'other'
 
@@ -50,7 +61,7 @@ export interface Milestone {
   /** ISO date string YYYY-MM-DD; must be >= startDate */
   endDate: string
   done: boolean
-  /** Which research stage this milestone belongs to. Required. */
+  /** Stage ID referencing one of the project's stages. */
   stage: Stage
   notes?: string
 }
@@ -68,7 +79,10 @@ export interface Project {
   id: string
   title: string
   description: string
+  /** Current main stage; must be an id in `stages`. */
   stage: Stage
+  /** Ordered list of stages available for this project. Each project has its own pipeline. */
+  stages: StageDef[]
   /** ISO date string — when the project was started, used for Gantt left edge */
   startDate: string
   venue?: Venue
@@ -98,4 +112,20 @@ export const PRESET_VENUES = [
   'JAMIA',
   'TOCHI',
   'IJHCS',
+] as const
+
+/** Common color presets for the stage color picker. */
+export const STAGE_COLOR_PRESETS = [
+  'oklch(0.78 0.10 250)',
+  'oklch(0.78 0.10 200)',
+  'oklch(0.80 0.10 100)',
+  'oklch(0.78 0.10 150)',
+  'oklch(0.78 0.10 50)',
+  'oklch(0.78 0.10 320)',
+  'oklch(0.78 0.10 0)',
+  'oklch(0.78 0.10 30)',
+  'oklch(0.70 0.05 250)',
+  'oklch(0.72 0.13 280)',
+  'oklch(0.75 0.13 130)',
+  'oklch(0.70 0.05 30)',
 ] as const

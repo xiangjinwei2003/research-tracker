@@ -1,11 +1,12 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { Project, Milestone, Collaborator, AppState } from './types'
+import type { Project, Milestone, Collaborator, AppState, StageDef } from './types'
+import { defaultStages } from './types'
 import { uid } from './id'
 import { today } from './date'
 import { seedProjects } from './seed'
 
-const SCHEMA_VERSION = 2
+const SCHEMA_VERSION = 3
 
 type UndoEntry =
   | { kind: 'project-removed'; project: Project; index: number; label: string }
@@ -39,6 +40,12 @@ interface Store extends AppState {
     patch: Partial<Collaborator>,
   ) => void
   removeCollaborator: (projectId: string, collaboratorId: string) => void
+
+  addProjectStage: (projectId: string, s?: Partial<StageDef>) => string
+  updateProjectStage: (projectId: string, stageId: string, patch: Partial<StageDef>) => void
+  removeProjectStage: (projectId: string, stageId: string, reassignTo: string) => void
+  reorderProjectStages: (projectId: string, ids: string[]) => void
+  resetProjectStages: (projectId: string) => void
 
   replaceState: (state: AppState) => void
   clearAll: () => void
@@ -271,6 +278,99 @@ export const useStore = create<Store>()(
         }))
       },
 
+      addProjectStage: (projectId, s) => {
+        const id = uid()
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id !== projectId
+              ? p
+              : {
+                  ...p,
+                  stages: [
+                    ...p.stages,
+                    {
+                      id,
+                      name: '新阶段',
+                      shortLabel: '新',
+                      color: 'oklch(0.75 0.10 280)',
+                      ...s,
+                    },
+                  ],
+                  updatedAt: stamp(),
+                },
+          ),
+        }))
+        return id
+      },
+
+      updateProjectStage: (projectId, stageId, patch) => {
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id !== projectId
+              ? p
+              : {
+                  ...p,
+                  stages: p.stages.map((s) =>
+                    s.id === stageId ? { ...s, ...patch } : s,
+                  ),
+                  updatedAt: stamp(),
+                },
+          ),
+        }))
+      },
+
+      removeProjectStage: (projectId, stageId, reassignTo) => {
+        set((state) => ({
+          projects: state.projects.map((p) => {
+            if (p.id !== projectId) return p
+            if (p.stages.length <= 1) return p
+            if (!p.stages.find((s) => s.id === reassignTo)) return p
+            return {
+              ...p,
+              stages: p.stages.filter((s) => s.id !== stageId),
+              stage: p.stage === stageId ? reassignTo : p.stage,
+              milestones: p.milestones.map((m) =>
+                m.stage === stageId ? { ...m, stage: reassignTo } : m,
+              ),
+              updatedAt: stamp(),
+            }
+          }),
+        }))
+      },
+
+      reorderProjectStages: (projectId, ids) => {
+        set((state) => ({
+          projects: state.projects.map((p) => {
+            if (p.id !== projectId) return p
+            const byId = new Map(p.stages.map((s) => [s.id, s]))
+            const next = ids.map((id) => byId.get(id)).filter(Boolean) as StageDef[]
+            for (const s of p.stages) if (!ids.includes(s.id)) next.push(s)
+            return { ...p, stages: next, updatedAt: stamp() }
+          }),
+        }))
+      },
+
+      resetProjectStages: (projectId) => {
+        set((state) => ({
+          projects: state.projects.map((p) => {
+            if (p.id !== projectId) return p
+            const fresh = defaultStages()
+            const valid = new Set(fresh.map((s) => s.id))
+            const fallback = fresh[0].id
+            return {
+              ...p,
+              stages: fresh,
+              stage: valid.has(p.stage) ? p.stage : fallback,
+              milestones: p.milestones.map((m) => ({
+                ...m,
+                stage: valid.has(m.stage) ? m.stage : fallback,
+              })),
+              updatedAt: stamp(),
+            }
+          }),
+        }))
+      },
+
       removeCollaborator: (projectId, collaboratorId) => {
         const state = get()
         const project = state.projects.find((p) => p.id === projectId)
@@ -391,13 +491,22 @@ export const useStore = create<Store>()(
         if (!state || !Array.isArray(state.projects)) {
           return { projects: [], version: SCHEMA_VERSION } as AppState
         }
-        const projects = state.projects.map((p) => ({
-          ...p,
-          milestones: (p.milestones ?? []).map((m) => ({
-            ...m,
-            stage: m.stage ?? p.stage,
-          })),
-        }))
+        const projects = state.projects.map((p) => {
+          const stages: StageDef[] =
+            Array.isArray(p.stages) && p.stages.length > 0 ? p.stages : defaultStages()
+          const validIds = new Set(stages.map((s) => s.id))
+          const fallbackStage = stages[0].id
+          const projectStage = validIds.has(p.stage) ? p.stage : fallbackStage
+          return {
+            ...p,
+            stages,
+            stage: projectStage,
+            milestones: (p.milestones ?? []).map((m) => ({
+              ...m,
+              stage: validIds.has(m.stage ?? '') ? m.stage : projectStage,
+            })),
+          }
+        })
         return { projects, version: SCHEMA_VERSION } as AppState
       },
     },

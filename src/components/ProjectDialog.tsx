@@ -8,16 +8,19 @@ import {
   ArchiveRestore,
   GripVertical,
   Paintbrush,
+  RotateCcw,
 } from 'lucide-react'
 import {
   ROLES,
-  STAGES,
-  STAGE_BY_VALUE,
   PRESET_VENUES,
+  STAGE_COLOR_PRESETS,
+  defaultStages,
+  findStage,
   type Collaborator,
   type Milestone,
   type Project,
   type Stage,
+  type StageDef,
 } from '@/lib/types'
 import { today } from '@/lib/date'
 import { useStore } from '@/lib/store'
@@ -59,7 +62,6 @@ function EditDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  // Subscribe to the live project from the store, so external changes (undo) refresh the UI.
   const project = useStore((s) => s.projects.find((p) => p.id === projectId))
   const updateProject = useStore((s) => s.updateProject)
   const removeProject = useStore((s) => s.removeProject)
@@ -72,6 +74,11 @@ function EditDialog({
   const addCollaborator = useStore((s) => s.addCollaborator)
   const updateCollaborator = useStore((s) => s.updateCollaborator)
   const removeCollaborator = useStore((s) => s.removeCollaborator)
+  const addProjectStage = useStore((s) => s.addProjectStage)
+  const updateProjectStage = useStore((s) => s.updateProjectStage)
+  const removeProjectStage = useStore((s) => s.removeProjectStage)
+  const reorderProjectStages = useStore((s) => s.reorderProjectStages)
+  const resetProjectStages = useStore((s) => s.resetProjectStages)
   const undo = useStore((s) => s.undo)
 
   if (!project) {
@@ -108,6 +115,34 @@ function EditDialog({
     toast({ message: '已将所有里程碑对齐项目当前阶段' })
   }
 
+  const onResetStages = () => {
+    if (
+      confirm(
+        '重置阶段列表会替换为默认 9 阶段。如果你定制过阶段名/颜色或新增过阶段，这些改动会丢失。继续？',
+      )
+    ) {
+      resetProjectStages(project.id)
+      toast({ message: '已重置阶段列表为默认' })
+    }
+  }
+
+  const onRemoveStage = (stageId: string) => {
+    if (project.stages.length <= 1) {
+      alert('至少要保留一个阶段。')
+      return
+    }
+    const usingProject = project.stage === stageId
+    const usingMilestones = project.milestones.filter((m) => m.stage === stageId)
+    const usageNote =
+      usingMilestones.length === 0 && !usingProject
+        ? ''
+        : `（当前${usingProject ? '项目主阶段' : ''}${usingProject && usingMilestones.length > 0 ? ' + ' : ''}${usingMilestones.length > 0 ? `${usingMilestones.length} 个里程碑` : ''}使用此阶段，删除后将自动改为列表首位的阶段）`
+    if (confirm(`删除此阶段？${usageNote}`)) {
+      const reassignTo = project.stages.find((s) => s.id !== stageId)?.id
+      if (reassignTo) removeProjectStage(project.id, stageId, reassignTo)
+    }
+  }
+
   return (
     <Dialog
       open={open}
@@ -142,9 +177,9 @@ function EditDialog({
               value={project.stage}
               onChange={(e) => updateProject(project.id, { stage: e.target.value as Stage })}
             >
-              {STAGES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
+              {project.stages.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
                 </option>
               ))}
             </Select>
@@ -247,6 +282,35 @@ function EditDialog({
           ) : null}
         </fieldset>
 
+        {/* Stage editor */}
+        <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+          <legend className="px-1 text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            研究阶段
+          </legend>
+          <p className="mb-2 text-[11px] text-neutral-500 dark:text-neutral-500">
+            每个项目自带一份阶段列表。改名、改色、增删、拖拽重排都只影响本项目。
+          </p>
+          <StageList
+            stages={project.stages}
+            onChange={(id, patch) => updateProjectStage(project.id, id, patch)}
+            onRemove={onRemoveStage}
+            onReorder={(ids) => reorderProjectStages(project.id, ids)}
+          />
+          <div className="mt-2 flex items-center justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => addProjectStage(project.id)}
+            >
+              <Plus size={14} /> 添加阶段
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onResetStages}>
+              <RotateCcw size={12} /> 重置为默认 9 阶段
+            </Button>
+          </div>
+        </fieldset>
+
         {/* Collaborators */}
         <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
           <legend className="px-1 text-xs font-medium text-neutral-600 dark:text-neutral-400">
@@ -290,6 +354,7 @@ function EditDialog({
           </div>
           <MilestoneList
             milestones={project.milestones}
+            stages={project.stages}
             onChange={(id, patch) => updateMilestone(project.id, id, patch)}
             onRemove={(id) => {
               const m = project.milestones.find((x) => x.id === id)
@@ -351,10 +416,12 @@ function EditDialog({
 type Draft = Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'archived'>
 
 function emptyDraft(): Draft {
+  const stages = defaultStages()
   return {
     title: '',
     description: '',
-    stage: 'literature',
+    stage: stages[0].id,
+    stages,
     startDate: today(),
     venue: undefined,
     collaborators: [],
@@ -426,9 +493,9 @@ function CreateDialog({
               value={draft.stage}
               onChange={(e) => setDraft({ ...draft, stage: e.target.value as Stage })}
             >
-              {STAGES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
+              {draft.stages.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
                 </option>
               ))}
             </Select>
@@ -443,6 +510,9 @@ function CreateDialog({
             />
           </div>
         </div>
+        <p className="text-[11px] text-neutral-500 dark:text-neutral-500">
+          新项目默认会带上 9 个常用研究阶段（文献调研 → 完成/搁置）。创建后可在编辑页里改名、增删或重排。
+        </p>
       </div>
 
       <div className="mt-5 flex items-center justify-end gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
@@ -507,13 +577,183 @@ function CollaboratorRow({
   )
 }
 
+/* ---------- Stage editor ---------- */
+
+function StageList({
+  stages,
+  onChange,
+  onRemove,
+  onReorder,
+}: {
+  stages: StageDef[]
+  onChange: (id: string, patch: Partial<StageDef>) => void
+  onRemove: (id: string) => void
+  onReorder: (ids: string[]) => void
+}) {
+  const dragIdRef = useRef<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    dragIdRef.current = id
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', id)
+  }
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (overId !== id) setOverId(id)
+  }
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    const draggedId = dragIdRef.current
+    setOverId(null)
+    dragIdRef.current = null
+    if (!draggedId || draggedId === targetId) return
+    const ids = stages.map((s) => s.id)
+    const from = ids.indexOf(draggedId)
+    const to = ids.indexOf(targetId)
+    if (from < 0 || to < 0) return
+    const next = [...ids]
+    next.splice(from, 1)
+    next.splice(to, 0, draggedId)
+    onReorder(next)
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {stages.map((s) => (
+        <StageRow
+          key={s.id}
+          value={s}
+          isDropTarget={overId === s.id}
+          onDragStart={(e) => handleDragStart(e, s.id)}
+          onDragOver={(e) => handleDragOver(e, s.id)}
+          onDragLeave={() => setOverId((cur) => (cur === s.id ? null : cur))}
+          onDragEnd={() => {
+            setOverId(null)
+            dragIdRef.current = null
+          }}
+          onDrop={(e) => handleDrop(e, s.id)}
+          onChange={(patch) => onChange(s.id, patch)}
+          onRemove={() => onRemove(s.id)}
+        />
+      ))}
+    </div>
+  )
+}
+
+function StageRow({
+  value,
+  isDropTarget,
+  onChange,
+  onRemove,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDragEnd,
+  onDrop,
+}: {
+  value: StageDef
+  isDropTarget: boolean
+  onChange: (patch: Partial<StageDef>) => void
+  onRemove: () => void
+  onDragStart: (e: React.DragEvent) => void
+  onDragOver: (e: React.DragEvent) => void
+  onDragLeave: () => void
+  onDragEnd: () => void
+  onDrop: (e: React.DragEvent) => void
+}) {
+  const [palOpen, setPalOpen] = useState(false)
+
+  return (
+    <div
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      className={cn(
+        'flex items-center gap-1.5 rounded-md border border-transparent p-1 transition',
+        isDropTarget && 'border-blue-400 bg-blue-50/50 dark:bg-blue-950/30',
+      )}
+    >
+      <button
+        type="button"
+        draggable
+        onDragStart={onDragStart}
+        className="shrink-0 cursor-grab text-neutral-400 hover:text-neutral-600 active:cursor-grabbing dark:hover:text-neutral-300"
+        aria-label="拖拽以重排"
+        title="拖拽以重排"
+      >
+        <GripVertical size={16} />
+      </button>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setPalOpen((v) => !v)}
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ring-neutral-300 transition hover:ring-neutral-500 dark:ring-neutral-700"
+          style={{ background: value.color }}
+          aria-label="改阶段颜色"
+          title="改阶段颜色"
+        />
+        {palOpen ? (
+          <div
+            className="absolute left-0 top-9 z-20 grid w-44 grid-cols-6 gap-1.5 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+            onMouseLeave={() => setPalOpen(false)}
+          >
+            {STAGE_COLOR_PRESETS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => {
+                  onChange({ color: c })
+                  setPalOpen(false)
+                }}
+                className="h-5 w-5 rounded-full ring-1 ring-inset ring-neutral-300 transition hover:scale-110 hover:ring-neutral-500 dark:ring-neutral-600"
+                style={{ background: c }}
+                aria-label={`选择颜色 ${c}`}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <Input
+        className="min-w-0 flex-1"
+        placeholder="阶段名称（如：文献调研）"
+        value={value.name}
+        onChange={(e) => onChange({ name: e.target.value })}
+      />
+      <Input
+        className="w-24 shrink-0"
+        placeholder="缩写"
+        value={value.shortLabel}
+        onChange={(e) => onChange({ shortLabel: e.target.value })}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-label="移除阶段"
+        onClick={onRemove}
+      >
+        <Trash2 size={14} />
+      </Button>
+    </div>
+  )
+}
+
+/* ---------- Milestones ---------- */
+
 function MilestoneList({
   milestones,
+  stages,
   onChange,
   onRemove,
   onReorder,
 }: {
   milestones: Milestone[]
+  stages: StageDef[]
   onChange: (id: string, patch: Partial<Milestone>) => void
   onRemove: (id: string) => void
   onReorder: (ids: string[]) => void
@@ -550,9 +790,7 @@ function MilestoneList({
   }
 
   if (milestones.length === 0) {
-    return (
-      <p className="text-xs text-neutral-400">还没有里程碑。点下方按钮添加。</p>
-    )
+    return <p className="text-xs text-neutral-400">还没有里程碑。点下方按钮添加。</p>
   }
 
   return (
@@ -561,6 +799,7 @@ function MilestoneList({
         <MilestoneRow
           key={m.id}
           value={m}
+          stages={stages}
           isDropTarget={overId === m.id}
           onDragStart={(e) => handleDragStart(e, m.id)}
           onDragOver={(e) => handleDragOver(e, m.id)}
@@ -580,6 +819,7 @@ function MilestoneList({
 
 interface MilestoneRowProps {
   value: Milestone
+  stages: StageDef[]
   isDropTarget: boolean
   onChange: (patch: Partial<Milestone>) => void
   onRemove: () => void
@@ -592,6 +832,7 @@ interface MilestoneRowProps {
 
 function MilestoneRow({
   value,
+  stages,
   isDropTarget,
   onChange,
   onRemove,
@@ -601,7 +842,7 @@ function MilestoneRow({
   onDragEnd,
   onDrop,
 }: MilestoneRowProps) {
-  const stage = STAGE_BY_VALUE[value.stage]
+  const stage = findStage(stages, value.stage)
 
   return (
     <div
@@ -641,16 +882,16 @@ function MilestoneRow({
         className="relative inline-flex shrink-0 cursor-pointer items-center rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
         title="里程碑研究阶段"
       >
-        {stage.shortLabel}
+        {stage.shortLabel || stage.name}
         <select
           className="absolute inset-0 cursor-pointer opacity-0"
           value={value.stage}
           onChange={(e) => onChange({ stage: e.target.value as Stage })}
           aria-label="研究阶段"
         >
-          {STAGES.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
+          {stages.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
             </option>
           ))}
         </select>
