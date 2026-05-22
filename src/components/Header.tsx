@@ -53,10 +53,10 @@ export function Header({ tab, onTabChange }: Props) {
   }
 
   const onReset = () => {
-    if (confirm('恢复演示数据将清除当前所有项目。继续？')) {
+    if (confirm('加载 3 个演示项目会清除当前所有项目。继续？')) {
       resetToSeed()
       toast({
-        message: '已恢复演示数据',
+        message: '已加载演示数据',
         action: { label: '撤销', onClick: () => undo() },
       })
     }
@@ -103,7 +103,7 @@ export function Header({ tab, onTabChange }: Props) {
           >
             <Upload size={14} /> 导入
           </Button>
-          <Button variant="ghost" size="sm" onClick={onReset} title="恢复演示数据">
+          <Button variant="ghost" size="sm" onClick={onReset} title="加载演示数据">
             <RotateCcw size={14} />
           </Button>
           <input

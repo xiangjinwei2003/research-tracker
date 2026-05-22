@@ -64,7 +64,7 @@ function pushUndo(state: Store, entry: UndoEntry): UndoEntry[] {
 export const useStore = create<Store>()(
   persist(
     (set, get) => ({
-      projects: seedProjects(),
+      projects: [],
       version: SCHEMA_VERSION,
       undoStack: [],
 
