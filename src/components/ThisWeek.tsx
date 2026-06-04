@@ -17,6 +17,7 @@ import {
 import { thisWeek, fmtMD, weekdayLabel, daysUntil, today } from '@/lib/date'
 import { cn } from '@/lib/cn'
 import { PriorityButton } from './PriorityButton'
+import { StageChip } from './StageChip'
 
 interface Props {
   onEdit: (p: Project) => void
@@ -27,8 +28,11 @@ export function ThisWeek({ onEdit }: Props) {
   const updateTodo = useStore((s) => s.updateTodo)
   const toggleTodoDone = useStore((s) => s.toggleTodoDone)
 
-  const week = useMemo(() => thisWeek(), [])
   const t = today()
+  // Computed every render (two cheap date-fns calls) so a tab left open across
+  // a week boundary always filters by the current Mon–Sun window. The string
+  // bounds are stable within a day, so the memos below stay cached.
+  const week = thisWeek()
 
   const items = useMemo(() => weekItems(projects, week.end), [projects, week.end])
   const doneItems = useMemo(
@@ -36,16 +40,26 @@ export function ThisWeek({ onEdit }: Props) {
     [projects, week.start, week.end],
   )
 
-  const overdueCount = items.filter((it) => it.todo.endDate < t).length
-  const highCount = items.filter((it) => todoPriority(it.todo) === 'high').length
-
-  const groups = PRIORITY_ORDER.map((pri) => ({
-    pri,
-    rows: items.filter((it) => todoPriority(it.todo) === pri),
-  })).filter((g) => g.rows.length > 0)
+  // One pass over the (already priority-sorted) items: bucket by priority and
+  // tally high / overdue counts together instead of re-scanning three times.
+  const { groups, highCount, overdueCount } = useMemo(() => {
+    const byPri: Record<Priority, WeekItem[]> = { high: [], normal: [], low: [] }
+    let overdue = 0
+    for (const it of items) {
+      byPri[todoPriority(it.todo)].push(it)
+      if (it.todo.endDate < t) overdue++
+    }
+    return {
+      groups: PRIORITY_ORDER.map((pri) => ({ pri, rows: byPri[pri] })).filter(
+        (g) => g.rows.length > 0,
+      ),
+      highCount: byPri.high.length,
+      overdueCount: overdue,
+    }
+  }, [items, t])
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-6">
+    <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-semibold text-neutral-900 dark:text-neutral-100">
@@ -58,7 +72,7 @@ export function ThisWeek({ onEdit }: Props) {
             {highCount > 0 ? (
               <>
                 <span className="mx-1.5 text-neutral-300 dark:text-neutral-700">·</span>
-                <span className="font-medium" style={{ color: PRIORITY_META.high.color }}>
+                <span className={cn('font-medium', PRIORITY_META.high.text)}>
                   {highCount} 项主攻
                 </span>
               </>
@@ -107,7 +121,7 @@ export function ThisWeek({ onEdit }: Props) {
             <section>
               <div className="flex items-center gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                 <CheckCircle2 size={14} className="text-green-500" />
-                本周已完成
+                本周到期 · 已完成
                 <span className="tabular-nums text-neutral-400">{doneItems.length}</span>
               </div>
               <ul className="mt-2 space-y-1">
@@ -121,15 +135,15 @@ export function ThisWeek({ onEdit }: Props) {
                       <button
                         type="button"
                         onClick={() => toggleTodoDone(it.project.id, it.todo.id)}
-                        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-green-500 bg-green-500 text-white"
-                        aria-label="标记为未完成"
+                        className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border border-green-500 bg-green-500 text-white"
+                        aria-label={`将「${it.todo.title || '未命名'}」标记为未完成`}
                       >
                         <Check size={12} />
                       </button>
                       <span className="min-w-0 flex-1 truncate text-neutral-400 line-through dark:text-neutral-500">
                         {it.todo.title || '未命名待办'}
                       </span>
-                      <span className="shrink-0 text-xs text-neutral-400 dark:text-neutral-600">
+                      <span className="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">
                         {it.project.title} · {stage.shortLabel || stage.name}
                       </span>
                     </li>
@@ -148,10 +162,7 @@ function GroupHeader({ pri, count }: { pri: Priority; count: number }) {
   const meta = PRIORITY_META[pri]
   return (
     <div className="flex items-center gap-2">
-      <span
-        className="inline-block h-2.5 w-2.5 rounded-full"
-        style={{ background: meta.color }}
-      />
+      <span className={cn('inline-block h-2.5 w-2.5 rounded-full', meta.dot)} />
       <h3 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
         {meta.label}
       </h3>
@@ -180,21 +191,25 @@ function WeekRow({
   const overdueDays = overdue ? -(daysUntil(todo.endDate) ?? 0) : 0
 
   return (
-    <li className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-2.5 py-2 transition hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700">
+    // The whole row opens the project (like ProjectCard); the priority chip and
+    // checkbox stop propagation so they act without also opening the editor.
+    <li
+      onClick={onOpen}
+      className="flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-200 bg-white px-2.5 py-2 transition hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+    >
       <PriorityButton priority={todoPriority(todo)} onChange={onPriority} />
       <button
         type="button"
-        onClick={onToggle}
-        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-neutral-300 text-transparent transition hover:border-neutral-500 hover:text-neutral-400 dark:border-neutral-600 dark:hover:border-neutral-400"
-        aria-label={`标记「${todo.title || '未命名'}」为已完成`}
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggle()
+        }}
+        className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border border-neutral-300 text-transparent transition hover:border-neutral-500 hover:text-neutral-400 dark:border-neutral-600 dark:hover:border-neutral-400"
+        aria-label={`将「${todo.title || '未命名'}」标记为已完成`}
       >
         <Check size={12} />
       </button>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left"
-      >
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-200">
             {todo.title || <span className="italic text-neutral-400">未命名待办</span>}
@@ -202,9 +217,7 @@ function WeekRow({
           <div className="mt-0.5 flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
             <span className="truncate">{project.title}</span>
             <span className="text-neutral-300 dark:text-neutral-600">·</span>
-            <span className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-              {stage.shortLabel || stage.name}
-            </span>
+            <StageChip stage={stage} />
           </div>
         </div>
         <span
@@ -222,7 +235,7 @@ function WeekRow({
             {fmtMD(todo.endDate)}
           </span>
         </span>
-      </button>
+      </div>
     </li>
   )
 }

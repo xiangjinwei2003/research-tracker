@@ -53,7 +53,7 @@ export interface Collaborator {
   waitingFor: string
 }
 
-/** Weekly importance. Absent on a todo means 'normal'. */
+/** Todo importance / priority. Absent on a todo means 'normal'. */
 export type Priority = 'high' | 'normal' | 'low'
 
 /** Most-important-first; also the cycle order for the priority toggle. */
@@ -66,18 +66,48 @@ export interface PriorityMeta {
   short: string
   /** Lower = more important. Used for sorting. */
   rank: number
-  color: string
+  /** Chip classes (border + bg + text), light + dark — WCAG-AA legible. */
+  chip: string
+  /** Accent text color (light + dark) for counts / labels. */
+  text: string
+  /** Dot indicator background (light + dark). */
+  dot: string
 }
 
 export const PRIORITY_META: Record<Priority, PriorityMeta> = {
-  high: { label: '本周主攻', short: '主攻', rank: 0, color: 'oklch(0.62 0.20 25)' },
-  normal: { label: '一般', short: '一般', rank: 1, color: 'oklch(0.68 0.12 250)' },
-  low: { label: '次要', short: '次要', rank: 2, color: 'oklch(0.64 0.02 250)' },
+  high: {
+    label: '本周主攻',
+    short: '主攻',
+    rank: 0,
+    chip: 'border-red-300 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300',
+    text: 'text-red-600 dark:text-red-400',
+    dot: 'bg-red-500',
+  },
+  normal: {
+    label: '一般',
+    short: '一般',
+    rank: 1,
+    chip: 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300',
+    text: 'text-blue-600 dark:text-blue-400',
+    dot: 'bg-blue-500',
+  },
+  low: {
+    label: '次要',
+    short: '次要',
+    rank: 2,
+    chip: 'border-neutral-300 bg-neutral-100 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
+    text: 'text-neutral-500 dark:text-neutral-400',
+    dot: 'bg-neutral-400 dark:bg-neutral-500',
+  },
 }
 
-/** Priority of a todo, treating legacy todos without the field as 'normal'. */
+/**
+ * Priority of a todo. Legacy todos without the field — and any out-of-union
+ * value from imported / hand-edited JSON — resolve to 'normal', so the
+ * `PRIORITY_META[...]` lookups in sorting and rendering never crash.
+ */
 export function todoPriority(t: { priority?: Priority }): Priority {
-  return t.priority ?? 'normal'
+  return t.priority && t.priority in PRIORITY_META ? t.priority : 'normal'
 }
 
 export interface Todo {
@@ -88,7 +118,7 @@ export interface Todo {
   done: boolean
   /** Stage ID referencing one of the project's stages. */
   stage: Stage
-  /** Weekly importance; absent = 'normal'. */
+  /** Importance / priority (drives the 本周 view ordering); absent = 'normal'. */
   priority?: Priority
   notes?: string
 }

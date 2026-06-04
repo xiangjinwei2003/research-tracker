@@ -5,6 +5,7 @@ import { nextDeadline, stageProgress, upcomingTodos, useStore } from '@/lib/stor
 import { countdownLabel, daysUntil, fmtShort, today } from '@/lib/date'
 import { Card } from './ui/Card'
 import { StageBadge } from './StageBadge'
+import { StageChip } from './StageChip'
 import { cn } from '@/lib/cn'
 
 interface Props {
@@ -119,9 +120,7 @@ export function ProjectCard({ project, onEdit }: Props) {
                   >
                     <Check size={10} />
                   </button>
-                  <span className="inline-flex shrink-0 items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                    {stage.shortLabel || stage.name}
-                  </span>
+                  <StageChip stage={stage} />
                   <span className="min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-300">
                     {todo.title || <span className="italic text-neutral-400">未命名</span>}
                   </span>

@@ -17,8 +17,9 @@ interface Props {
 
 /** A compact chip that cycles 主攻 → 一般 → 次要 on click. */
 export function PriorityButton({ priority, onChange, className }: Props) {
-  const meta = PRIORITY_META[priority]
-  const Icon = ICON[priority]
+  // Fall back defensively so an unexpected value never crashes the chip.
+  const meta = PRIORITY_META[priority] ?? PRIORITY_META.normal
+  const Icon = ICON[priority] ?? Minus
   const next = PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(priority) + 1) % PRIORITY_ORDER.length]
 
   return (
@@ -31,14 +32,11 @@ export function PriorityButton({ priority, onChange, className }: Props) {
       title={`重要程度：${meta.label}（点击切换）`}
       aria-label={`重要程度：${meta.label}，点击切换`}
       className={cn(
-        'inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-1.5 text-xs font-medium transition hover:brightness-105',
+        'inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-1.5 text-xs font-medium transition',
+        'hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-950',
+        meta.chip,
         className,
       )}
-      style={{
-        borderColor: meta.color,
-        backgroundColor: `color-mix(in oklab, ${meta.color} 14%, transparent)`,
-        color: meta.color,
-      }}
     >
       <Icon size={12} />
       {meta.short}

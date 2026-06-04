@@ -554,7 +554,7 @@ export function weekItems(projects: Project[], end: string): WeekItem[] {
   for (const p of projects) {
     if (p.archived) continue
     for (const t of p.todos) {
-      if (t.done) continue
+      if (t.done || !t.endDate) continue
       if (t.endDate <= end) items.push({ project: p, todo: t })
     }
   }
@@ -572,7 +572,7 @@ export function weekDoneItems(projects: Project[], start: string, end: string): 
   for (const p of projects) {
     if (p.archived) continue
     for (const t of p.todos) {
-      if (!t.done) continue
+      if (!t.done || !t.endDate) continue
       if (t.endDate >= start && t.endDate <= end) items.push({ project: p, todo: t })
     }
   }
