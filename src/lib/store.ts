@@ -545,9 +545,9 @@ export interface WeekItem {
 }
 
 /**
- * Incomplete todos that should be handled this week: anything due on or before
- * `end` (so this-week items plus any overdue carry-over), across non-archived
- * projects. Sorted by importance, then earliest due (overdue floats to top).
+ * Incomplete todos due on or before `end` — the rolling board window plus any
+ * overdue carry-over — across non-archived projects. Sorted by importance, then
+ * earliest due (overdue floats to the top).
  */
 export function weekItems(projects: Project[], end: string): WeekItem[] {
   const items: WeekItem[] = []
@@ -564,19 +564,6 @@ export function weekItems(projects: Project[], end: string): WeekItem[] {
     if (ra !== rb) return ra - rb
     return a.todo.endDate.localeCompare(b.todo.endDate)
   })
-}
-
-/** Completed todos whose due date falls in [start, end] — this week's wins. */
-export function weekDoneItems(projects: Project[], start: string, end: string): WeekItem[] {
-  const items: WeekItem[] = []
-  for (const p of projects) {
-    if (p.archived) continue
-    for (const t of p.todos) {
-      if (!t.done || !t.endDate) continue
-      if (t.endDate >= start && t.endDate <= end) items.push({ project: p, todo: t })
-    }
-  }
-  return items.sort((a, b) => a.todo.endDate.localeCompare(b.todo.endDate))
 }
 
 /** Up to N incomplete todos, overdue first then by endDate. */

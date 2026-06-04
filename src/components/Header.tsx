@@ -1,11 +1,11 @@
-import { LayoutGrid, CalendarRange, GanttChartSquare, Download, Upload, Archive, RotateCcw } from 'lucide-react'
+import { LayoutGrid, GanttChartSquare, Download, Upload, Archive, RotateCcw } from 'lucide-react'
 import { useRef } from 'react'
 import { useStore, exportJSON, importJSON } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { Button } from './ui/Button'
 import { cn } from '@/lib/cn'
 
-export type Tab = 'dashboard' | 'week' | 'timeline' | 'archived'
+export type Tab = 'dashboard' | 'timeline' | 'archived'
 
 interface Props {
   tab: Tab
@@ -82,9 +82,6 @@ export function Header({ tab, onTabChange }: Props) {
         <nav className="flex items-center gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900">
           <TabButton active={tab === 'dashboard'} onClick={() => onTabChange('dashboard')}>
             <LayoutGrid size={14} /> 总览
-          </TabButton>
-          <TabButton active={tab === 'week'} onClick={() => onTabChange('week')}>
-            <CalendarRange size={14} /> 本周
           </TabButton>
           <TabButton active={tab === 'timeline'} onClick={() => onTabChange('timeline')}>
             <GanttChartSquare size={14} /> 时间线

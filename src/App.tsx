@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Header, type Tab } from '@/components/Header'
 import { Dashboard } from '@/components/Dashboard'
-import { ThisWeek } from '@/components/ThisWeek'
+import { Board } from '@/components/Board'
 import { Timeline } from '@/components/Timeline'
 import { ProjectDialog } from '@/components/ProjectDialog'
 import { Toaster } from '@/components/Toaster'
@@ -55,9 +55,7 @@ export default function App() {
     <div className="min-h-full bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
       <Header tab={tab} onTabChange={setTab} />
       {tab === 'dashboard' ? (
-        <Dashboard showArchived={false} onNew={openNew} onEdit={openEdit} />
-      ) : tab === 'week' ? (
-        <ThisWeek onEdit={openEdit} />
+        <Board onNew={openNew} onEdit={openEdit} />
       ) : tab === 'timeline' ? (
         <Timeline onEdit={openEdit} />
       ) : (
