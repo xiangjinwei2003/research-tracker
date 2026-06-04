@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Project, Todo, Collaborator, AppState, StageDef } from './types'
-import { defaultStages } from './types'
+import { defaultStages, todoPriority, PRIORITY_META } from './types'
 import { uid } from './id'
 import { today } from './date'
 import { seedProjects } from './seed'
@@ -138,6 +138,7 @@ export const useStore = create<Store>()(
                       endDate: today(),
                       done: false,
                       stage: p.stage,
+                      priority: 'normal',
                       ...t,
                     },
                   ],
@@ -536,6 +537,46 @@ export function nextDeadline(p: Project): { date: string; label: string } | null
   candidates.sort((a, b) => a.date.localeCompare(b.date))
   const future = candidates.find((c) => c.date >= today())
   return future ?? candidates[candidates.length - 1]
+}
+
+export interface WeekItem {
+  project: Project
+  todo: Todo
+}
+
+/**
+ * Incomplete todos that should be handled this week: anything due on or before
+ * `end` (so this-week items plus any overdue carry-over), across non-archived
+ * projects. Sorted by importance, then earliest due (overdue floats to top).
+ */
+export function weekItems(projects: Project[], end: string): WeekItem[] {
+  const items: WeekItem[] = []
+  for (const p of projects) {
+    if (p.archived) continue
+    for (const t of p.todos) {
+      if (t.done) continue
+      if (t.endDate <= end) items.push({ project: p, todo: t })
+    }
+  }
+  return items.sort((a, b) => {
+    const ra = PRIORITY_META[todoPriority(a.todo)].rank
+    const rb = PRIORITY_META[todoPriority(b.todo)].rank
+    if (ra !== rb) return ra - rb
+    return a.todo.endDate.localeCompare(b.todo.endDate)
+  })
+}
+
+/** Completed todos whose due date falls in [start, end] — this week's wins. */
+export function weekDoneItems(projects: Project[], start: string, end: string): WeekItem[] {
+  const items: WeekItem[] = []
+  for (const p of projects) {
+    if (p.archived) continue
+    for (const t of p.todos) {
+      if (!t.done) continue
+      if (t.endDate >= start && t.endDate <= end) items.push({ project: p, todo: t })
+    }
+  }
+  return items.sort((a, b) => a.todo.endDate.localeCompare(b.todo.endDate))
 }
 
 /** Up to N incomplete todos, overdue first then by endDate. */

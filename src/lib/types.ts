@@ -53,6 +53,33 @@ export interface Collaborator {
   waitingFor: string
 }
 
+/** Weekly importance. Absent on a todo means 'normal'. */
+export type Priority = 'high' | 'normal' | 'low'
+
+/** Most-important-first; also the cycle order for the priority toggle. */
+export const PRIORITY_ORDER: Priority[] = ['high', 'normal', 'low']
+
+export interface PriorityMeta {
+  /** Full label, e.g. weekly-view group headers. */
+  label: string
+  /** Compact label for chips. */
+  short: string
+  /** Lower = more important. Used for sorting. */
+  rank: number
+  color: string
+}
+
+export const PRIORITY_META: Record<Priority, PriorityMeta> = {
+  high: { label: '本周主攻', short: '主攻', rank: 0, color: 'oklch(0.62 0.20 25)' },
+  normal: { label: '一般', short: '一般', rank: 1, color: 'oklch(0.68 0.12 250)' },
+  low: { label: '次要', short: '次要', rank: 2, color: 'oklch(0.64 0.02 250)' },
+}
+
+/** Priority of a todo, treating legacy todos without the field as 'normal'. */
+export function todoPriority(t: { priority?: Priority }): Priority {
+  return t.priority ?? 'normal'
+}
+
 export interface Todo {
   id: string
   title: string
@@ -61,6 +88,8 @@ export interface Todo {
   done: boolean
   /** Stage ID referencing one of the project's stages. */
   stage: Stage
+  /** Weekly importance; absent = 'normal'. */
+  priority?: Priority
   notes?: string
 }
 

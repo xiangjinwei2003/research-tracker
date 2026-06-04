@@ -16,8 +16,10 @@ import {
   STAGE_COLOR_PRESETS,
   defaultStages,
   findStage,
+  todoPriority,
   type Collaborator,
   type Todo,
+  type Priority,
   type Project,
   type Stage,
   type StageDef,
@@ -28,6 +30,7 @@ import { toast } from '@/lib/toast'
 import { Dialog } from './ui/Dialog'
 import { Button } from './ui/Button'
 import { Input, Label, Select, Textarea } from './ui/Input'
+import { PriorityButton } from './PriorityButton'
 import { cn } from '@/lib/cn'
 
 interface Props {
@@ -901,6 +904,10 @@ function TodoRow({
         placeholder="待办内容"
         value={value.title}
         onChange={(e) => onChange({ title: e.target.value })}
+      />
+      <PriorityButton
+        priority={todoPriority(value)}
+        onChange={(p: Priority) => onChange({ priority: p })}
       />
       <Input
         className="w-[8.5rem] shrink-0"

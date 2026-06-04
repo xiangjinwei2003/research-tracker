@@ -6,10 +6,34 @@ import {
   startOfMonth,
   addMonths,
   differenceInCalendarMonths,
+  startOfWeek,
+  endOfWeek,
 } from 'date-fns'
 
 export function today(): string {
   return format(new Date(), 'yyyy-MM-dd')
+}
+
+/** ISO start/end (Mon–Sun) of the calendar week containing today. */
+export function thisWeek(): { start: string; end: string } {
+  const now = new Date()
+  return {
+    start: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+    end: format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+  }
+}
+
+/** Compact Chinese month-day, e.g. 6月7日. */
+export function fmtMD(iso: string): string {
+  const d = parse(iso)
+  return d ? `${d.getMonth() + 1}月${d.getDate()}日` : ''
+}
+
+/** Weekday label 周一…周日, or '' if unparseable. */
+export function weekdayLabel(iso: string): string {
+  const d = parse(iso)
+  if (!d) return ''
+  return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()]
 }
 
 export function parse(iso: string): Date | null {
