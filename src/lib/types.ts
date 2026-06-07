@@ -87,9 +87,9 @@ export const PRIORITY_META: Record<Priority, PriorityMeta> = {
     label: '一般',
     short: '一般',
     rank: 1,
-    chip: 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300',
-    text: 'text-blue-600 dark:text-blue-400',
-    dot: 'bg-blue-500',
+    chip: 'border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-900/60 dark:bg-brand-950/50 dark:text-brand-300',
+    text: 'text-brand-600 dark:text-brand-400',
+    dot: 'bg-brand-500',
   },
   low: {
     label: '次要',

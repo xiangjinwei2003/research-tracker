@@ -2,9 +2,9 @@ import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } fro
 import { cn } from '@/lib/cn'
 
 const baseCls =
-  'block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 ' +
-  'dark:border-neutral-700 dark:bg-neutral-900 dark:placeholder:text-neutral-500 dark:focus-visible:ring-neutral-600'
+  'block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 transition-colors ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:border-brand-500 ' +
+  'dark:border-neutral-700 dark:bg-neutral-900 dark:placeholder:text-neutral-500 dark:focus-visible:ring-brand-500/50 dark:focus-visible:border-brand-500'
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...rest }, ref) {

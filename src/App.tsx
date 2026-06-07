@@ -53,7 +53,7 @@ export default function App() {
 
   return (
     <div className="min-h-full bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <Header tab={tab} onTabChange={setTab} />
+      <Header tab={tab} onTabChange={setTab} onNew={openNew} />
       {tab === 'dashboard' ? (
         <Board onNew={openNew} onEdit={openEdit} />
       ) : tab === 'timeline' ? (

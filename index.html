@@ -5,7 +5,24 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <title>Research Tracker</title>
+    <title>Research Tracker · 科研项目追踪</title>
+    <meta
+      name="description"
+      content="Research Tracker — 为研究者打造的科研项目追踪面板：本周重点、项目总览与时间线，数据存于本地浏览器。"
+    />
+    <script>
+      // Apply the saved theme before first paint to avoid a flash of the wrong mode.
+      (function () {
+        try {
+          var saved = localStorage.getItem('rt-theme')
+          var dark =
+            saved === 'dark' ||
+            ((!saved || saved === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.classList.toggle('dark', dark)
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

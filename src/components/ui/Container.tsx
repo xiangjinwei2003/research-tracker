@@ -1,0 +1,7 @@
+import type { HTMLAttributes } from 'react'
+import { cn } from '@/lib/cn'
+
+/** Shared page container so the header and every view share one width + gutter. */
+export function Container({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn('mx-auto w-full max-w-7xl px-4 sm:px-6', className)} {...rest} />
+}

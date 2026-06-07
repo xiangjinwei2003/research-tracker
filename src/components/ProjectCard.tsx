@@ -27,12 +27,21 @@ export function ProjectCard({ project, onEdit }: Props) {
   return (
     <Card
       onClick={onEdit}
-      className="group flex cursor-pointer flex-col p-4 transition hover:border-neutral-300 hover:shadow-md dark:hover:border-neutral-700"
+      className="group flex cursor-pointer flex-col p-4 transition hover:border-brand-300 hover:shadow-md dark:hover:border-brand-800/70"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold text-neutral-900 dark:text-neutral-100">
-            {project.title}
+          <h3 className="min-w-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit()
+              }}
+              className="block w-full truncate rounded text-left text-base font-semibold text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-100"
+            >
+              {project.title || <span className="italic text-neutral-400">未命名项目</span>}
+            </button>
           </h3>
           {project.description ? (
             <p className="mt-0.5 line-clamp-2 text-sm text-neutral-500 dark:text-neutral-400">
@@ -113,8 +122,8 @@ export function ProjectCard({ project, onEdit }: Props) {
                     onClick={() => toggleTodoDone(project.id, todo.id)}
                     className={cn(
                       'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                      'border-neutral-300 text-transparent hover:border-neutral-500 hover:text-neutral-400',
-                      'dark:border-neutral-600 dark:hover:border-neutral-400',
+                      'border-neutral-300 text-transparent hover:border-brand-500 hover:text-brand-500',
+                      'dark:border-neutral-600 dark:hover:border-brand-500 dark:hover:text-brand-400',
                     )}
                     aria-label={`标记「${todo.title}」为已完成`}
                   >
@@ -151,13 +160,13 @@ export function ProjectCard({ project, onEdit }: Props) {
       </div>
 
       {waiting.length > 0 ? (
-        <div className="mt-3 flex items-start gap-1.5 rounded-md bg-yellow-50 px-2.5 py-2 text-xs text-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-300">
+        <div className="mt-3 flex items-start gap-1.5 rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
           <Users size={14} className="mt-0.5 shrink-0" />
           <div className="min-w-0">
             {waiting.map((c, i) => (
               <div key={c.id} className={i > 0 ? 'mt-0.5' : undefined}>
                 <span className="font-medium">{c.name}</span>
-                <span className="text-yellow-700/70 dark:text-yellow-300/70">
+                <span className="text-amber-700/70 dark:text-amber-300/70">
                   {' '}
                   · 等 {c.waitingFor}
                 </span>

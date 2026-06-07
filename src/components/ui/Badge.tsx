@@ -1,4 +1,4 @@
-import type { HTMLAttributes } from 'react'
+import type { CSSProperties, HTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
 
 interface Props extends HTMLAttributes<HTMLSpanElement> {
@@ -11,16 +11,11 @@ export function Badge({ color, className, style, children, ...rest }: Props) {
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
+        color && 'stage-badge',
         className,
       )}
       style={{
-        ...(color
-          ? {
-              borderColor: color,
-              backgroundColor: `color-mix(in oklab, ${color} 18%, transparent)`,
-              color: `color-mix(in oklab, ${color} 85%, black)`,
-            }
-          : undefined),
+        ...(color ? ({ '--stage': color } as CSSProperties) : undefined),
         ...style,
       }}
       {...rest}

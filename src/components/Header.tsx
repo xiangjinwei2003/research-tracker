@@ -1,8 +1,29 @@
-import { LayoutGrid, GanttChartSquare, Download, Upload, Archive, RotateCcw } from 'lucide-react'
+import {
+  LayoutGrid,
+  GanttChartSquare,
+  Download,
+  Upload,
+  Archive,
+  Database,
+  Sparkles,
+  Trash2,
+  Plus,
+} from 'lucide-react'
 import { useRef } from 'react'
 import { useStore, exportJSON, importJSON } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { Button } from './ui/Button'
+import { Container } from './ui/Container'
+import { Logo } from './Logo'
+import { ThemeToggle } from './ThemeToggle'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from './ui/DropdownMenu'
 import { cn } from '@/lib/cn'
 
 export type Tab = 'dashboard' | 'timeline' | 'archived'
@@ -10,9 +31,16 @@ export type Tab = 'dashboard' | 'timeline' | 'archived'
 interface Props {
   tab: Tab
   onTabChange: (t: Tab) => void
+  onNew: () => void
 }
 
-export function Header({ tab, onTabChange }: Props) {
+const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
+  { id: 'dashboard', label: '总览', icon: LayoutGrid },
+  { id: 'timeline', label: '时间线', icon: GanttChartSquare },
+  { id: 'archived', label: '归档', icon: Archive },
+]
+
+export function Header({ tab, onTabChange, onNew }: Props) {
   const replaceState = useStore((s) => s.replaceState)
   const resetToSeed = useStore((s) => s.resetToSeed)
   const undo = useStore((s) => s.undo)
@@ -30,18 +58,14 @@ export function Header({ tab, onTabChange }: Props) {
     a.download = `research-tracker-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
+    toast({ message: '已导出 JSON 备份' })
   }
 
   const onImport = async (file: File) => {
     try {
       const text = await file.text()
       const state = importJSON(text)
-      if (
-        !confirm(
-          `导入 ${state.projects.length} 个项目，这将替换当前所有数据。继续？`,
-        )
-      )
-        return
+      if (!confirm(`导入 ${state.projects.length} 个项目，这将替换当前所有数据。继续？`)) return
       replaceState(state)
       toast({
         message: `已导入 ${state.projects.length} 个项目`,
@@ -52,8 +76,8 @@ export function Header({ tab, onTabChange }: Props) {
     }
   }
 
-  const onReset = () => {
-    if (confirm('加载 3 个演示项目会清除当前所有项目。继续？')) {
+  const onLoadDemo = () => {
+    if (confirm('加载 3 个演示项目会替换当前所有项目。继续？')) {
       resetToSeed()
       toast({
         message: '已加载演示数据',
@@ -62,87 +86,118 @@ export function Header({ tab, onTabChange }: Props) {
     }
   }
 
+  const onClearAll = () => {
+    const count = useStore.getState().projects.length
+    if (count === 0) {
+      toast({ message: '当前没有任何数据' })
+      return
+    }
+    if (confirm(`确认清空全部 ${count} 个项目？可在通知里点击撤销。`)) {
+      replaceState({ projects: [], version: useStore.getState().version })
+      toast({
+        message: '已清空全部数据',
+        action: { label: '撤销', onClick: () => undo() },
+      })
+    }
+  }
+
+  const tabNav = (className?: string) => (
+    <nav
+      className={cn(
+        'flex items-center gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900',
+        className,
+      )}
+      aria-label="视图切换"
+    >
+      {TABS.map(({ id, label, icon: Icon }) => {
+        const active = tab === id
+        return (
+          <button
+            key={id}
+            onClick={() => onTabChange(id)}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:flex-none',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+              active
+                ? 'bg-white text-brand-700 shadow-sm dark:bg-neutral-800 dark:text-brand-300'
+                : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100',
+            )}
+          >
+            <Icon size={14} /> {label}
+          </button>
+        )
+      })}
+    </nav>
+  )
+
   return (
-    <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/80 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/80">
-      <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-6 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-neutral-900 text-white dark:bg-white dark:text-neutral-900">
-            <span className="text-sm font-bold">R</span>
-          </div>
-          <div>
-            <div className="text-sm font-semibold leading-tight text-neutral-900 dark:text-neutral-100">
+    <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/80 backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-950/80">
+      <Container>
+        <div className="flex items-center gap-3 py-2.5">
+          <Logo size={30} />
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold leading-tight text-neutral-900 dark:text-neutral-100">
               Research Tracker
             </div>
-            <div className="text-[11px] leading-tight text-neutral-500">
+            <div className="hidden truncate text-[11px] leading-tight text-neutral-500 dark:text-neutral-400 sm:block">
               本地版 · 数据存于浏览器
             </div>
           </div>
+
+          <div className="ml-auto flex items-center gap-1.5">
+            {tabNav('hidden sm:flex')}
+
+            <ThemeToggle />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+                aria-label="数据管理"
+                title="数据管理"
+              >
+                <Database size={17} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>备份</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={onExport}>
+                  <Download size={15} /> 导出 JSON 备份
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => fileRef.current?.click()}>
+                  <Upload size={15} /> 从文件导入
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>演示 / 重置</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={onLoadDemo}>
+                  <Sparkles size={15} /> 加载示例数据
+                </DropdownMenuItem>
+                <DropdownMenuItem destructive onSelect={onClearAll}>
+                  <Trash2 size={15} /> 清空全部数据
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button variant="primary" size="sm" onClick={onNew} aria-label="新建项目">
+              <Plus size={16} /> <span className="hidden sm:inline">新建</span>
+            </Button>
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) onImport(f)
+                e.target.value = ''
+              }}
+            />
+          </div>
         </div>
 
-        <nav className="flex items-center gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900">
-          <TabButton active={tab === 'dashboard'} onClick={() => onTabChange('dashboard')}>
-            <LayoutGrid size={14} /> 总览
-          </TabButton>
-          <TabButton active={tab === 'timeline'} onClick={() => onTabChange('timeline')}>
-            <GanttChartSquare size={14} /> 时间线
-          </TabButton>
-          <TabButton active={tab === 'archived'} onClick={() => onTabChange('archived')}>
-            <Archive size={14} /> 归档
-          </TabButton>
-        </nav>
-
-        <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" onClick={onExport} title="导出 JSON 备份">
-            <Download size={14} /> 导出
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => fileRef.current?.click()}
-            title="从 JSON 文件导入"
-          >
-            <Upload size={14} /> 导入
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onReset} title="加载演示数据">
-            <RotateCcw size={14} />
-          </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) onImport(f)
-              e.target.value = ''
-            }}
-          />
-        </div>
-      </div>
+        {/* Mobile: tabs drop to a full-width row below the brand bar. */}
+        {tabNav('flex pb-2.5 sm:hidden')}
+      </Container>
     </header>
-  )
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition',
-        active
-          ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-neutral-100'
-          : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100',
-      )}
-    >
-      {children}
-    </button>
   )
 }

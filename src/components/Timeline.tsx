@@ -4,6 +4,7 @@ import { nextDeadline, stageProgress, useStore } from '@/lib/store'
 import { countdownLabel, daysUntil, monthGrid, parse, today } from '@/lib/date'
 import { findStage, type Project, type Todo } from '@/lib/types'
 import { Card } from './ui/Card'
+import { Container } from './ui/Container'
 import { cn } from '@/lib/cn'
 
 const DAY_WIDTH = 6
@@ -93,8 +94,7 @@ export function Timeline({ onEdit }: Props) {
         cancelAnimationFrame(rafRef.current)
         rafRef.current = null
       }
-      document.body.style.userSelect = ''
-      document.body.style.cursor = ''
+      document.body.classList.remove('is-dragging')
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
@@ -114,22 +114,21 @@ export function Timeline({ onEdit }: Props) {
       initialEnd: todo.endDate,
     }
     setDraggingId(todo.id)
-    document.body.style.userSelect = 'none'
-    document.body.style.cursor = 'grabbing'
+    document.body.classList.add('is-dragging')
   }
 
   if (projects.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-6xl px-6 py-6">
-        <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-12 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
+      <Container className="py-6">
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-12 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900/50">
           还没有项目，去「项目总览」新建一个吧。
         </div>
-      </div>
+      </Container>
     )
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-6 py-6">
+    <Container className="py-6">
       <div className="mb-3">
         <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">时间线</h2>
         <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
@@ -227,7 +226,7 @@ export function Timeline({ onEdit }: Props) {
       </Card>
 
       <Legend />
-    </div>
+    </Container>
   )
 }
 
@@ -324,7 +323,7 @@ function ProjectRow({ project, dayOffset, draggingId, onEdit, onStartDrag }: Row
                 'inline-block rounded-full ring-2 ring-white shadow-sm transition dark:ring-neutral-900',
                 todo.done && 'opacity-50',
                 isPastNotDone && 'ring-red-500 ring-offset-1 dark:ring-red-500',
-                isDragging && 'scale-125 ring-blue-400',
+                isDragging && 'scale-125 ring-brand-400',
               )}
               style={{
                 width: DOT_SIZE,
@@ -393,7 +392,10 @@ function Legend() {
       <span className="inline-flex items-center gap-1">
         <span
           className="inline-block h-3 w-3 rounded-full ring-2 ring-white dark:ring-neutral-900"
-          style={{ background: 'var(--color-emerald-400, #34d399)' }}
+          style={{
+            background:
+              'linear-gradient(135deg, oklch(0.78 0.10 250), oklch(0.78 0.10 150), oklch(0.80 0.10 100))',
+          }}
         />
         待办（按所属阶段着色）
       </span>

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { CalendarRange } from 'lucide-react'
 import { useStore, weekItems, type WeekItem } from '@/lib/store'
 import {
   findStage,
@@ -11,6 +12,8 @@ import {
 import { dateFromToday, fmtMD, daysUntil, today } from '@/lib/date'
 import { cn } from '@/lib/cn'
 import { StageChip } from './StageChip'
+import { PriorityButton } from './PriorityButton'
+import { Container } from './ui/Container'
 import { Dashboard } from './Dashboard'
 
 interface Props {
@@ -24,7 +27,8 @@ const WINDOW_DAYS = 7
 /**
  * Merged home view: a drag-to-prioritise board of everything due in the next
  * 7 days (plus overdue carry-over), followed by the full project overview.
- * Drag a card between columns to change that todo's importance.
+ * Priority can be changed by dragging a card between columns, or — for keyboard
+ * and touch users — with the priority button on each card.
  */
 export function Board({ onNew, onEdit }: Props) {
   const projects = useStore((s) => s.projects)
@@ -40,6 +44,8 @@ export function Board({ onNew, onEdit }: Props) {
     return PRIORITY_ORDER.map((pri) => ({ pri, rows: byPri[pri] }))
   }, [items])
 
+  const hasActiveProjects = useMemo(() => projects.some((p) => !p.archived), [projects])
+
   const dragRef = useRef<{ projectId: string; todoId: string; from: Priority } | null>(null)
   const [overCol, setOverCol] = useState<Priority | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -54,23 +60,35 @@ export function Board({ onNew, onEdit }: Props) {
 
   return (
     <>
-      <div className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
-            本周重点
-          </h2>
-          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
-            今天起 {WINDOW_DAYS} 天内到期 · 拖动卡片调整重要程度 · 共 {items.length} 项
-          </p>
-        </div>
+      {hasActiveProjects ? (
+        <Container className="pt-6">
+          <div className="mb-4 flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-300">
+              <CalendarRange size={18} />
+            </span>
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+                本周重点
+              </h2>
+              <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
+                今天起 {WINDOW_DAYS} 天内到期 · 拖动或点按优先级调整 · 共 {items.length} 项
+              </p>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {columns.map(({ pri, rows }) => {
+          {items.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900/50">
+              本周（{WINDOW_DAYS} 天内）暂无到期事项 🎉 待办临近截止时会自动出现在这里。
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {columns.map(({ pri, rows }) => {
             const meta = PRIORITY_META[pri]
             const isOver = overCol === pri
             return (
               <section
                 key={pri}
+                aria-label={`${meta.label}（${rows.length} 项）`}
                 onDragOver={(e) => {
                   e.preventDefault()
                   e.dataTransfer.dropEffect = 'move'
@@ -87,9 +105,9 @@ export function Board({ onNew, onEdit }: Props) {
                   handleDrop(pri)
                 }}
                 className={cn(
-                  'rounded-xl border p-2 transition',
+                  'rounded-xl border p-2 transition-colors',
                   isOver
-                    ? 'border-neutral-400 bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800/60'
+                    ? 'border-brand-400 bg-brand-50/60 ring-1 ring-brand-300 dark:border-brand-700 dark:bg-brand-950/30 dark:ring-brand-800'
                     : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/40',
                 )}
               >
@@ -121,19 +139,22 @@ export function Board({ onNew, onEdit }: Props) {
                         dragRef.current = null
                       }}
                       onOpen={() => onEdit(it.project)}
+                      onChangePriority={(p) => updateTodo(it.project.id, it.todo.id, { priority: p })}
                     />
                   ))}
                   {rows.length === 0 ? (
                     <p className="px-1 py-6 text-center text-xs text-neutral-400 dark:text-neutral-600">
-                      拖到这里
+                      暂无 · 拖动卡片到此
                     </p>
                   ) : null}
                 </div>
               </section>
             )
-          })}
-        </div>
-      </div>
+              })}
+            </div>
+          )}
+        </Container>
+      ) : null}
 
       <Dashboard showArchived={false} onNew={onNew} onEdit={onEdit} />
     </>
@@ -147,6 +168,7 @@ function BoardCard({
   onDragStart,
   onDragEnd,
   onOpen,
+  onChangePriority,
 }: {
   item: WeekItem
   todayIso: string
@@ -154,6 +176,7 @@ function BoardCard({
   onDragStart: () => void
   onDragEnd: () => void
   onOpen: () => void
+  onChangePriority: (p: Priority) => void
 }) {
   const { project, todo } = item
   const stage = findStage(project.stages, todo.stage)
@@ -177,14 +200,27 @@ function BoardCard({
       }}
       onDragEnd={onDragEnd}
       onClick={onOpen}
-      title="点击打开项目 · 拖动调整重要程度"
+      title="拖动调整重要程度"
       className={cn(
-        'cursor-grab rounded-lg border border-neutral-200 bg-white p-2.5 shadow-sm transition hover:border-neutral-300 hover:shadow active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700',
+        'cursor-grab rounded-lg border border-neutral-200 bg-white p-2.5 shadow-sm transition hover:border-brand-300 hover:shadow active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-brand-800/70',
         dragging && 'opacity-40',
       )}
     >
-      <div className="line-clamp-2 text-sm font-medium text-neutral-800 dark:text-neutral-200">
-        {todo.title || <span className="italic text-neutral-400">未命名待办</span>}
+      <div className="flex items-start justify-between gap-1.5">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpen()
+          }}
+          className="line-clamp-2 rounded text-left text-sm font-medium text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-200"
+        >
+          {todo.title || <span className="italic text-neutral-400">未命名待办</span>}
+        </button>
+        <PriorityButton
+          priority={todoPriority(todo)}
+          onChange={onChangePriority}
+        />
       </div>
       <div className="mt-1.5 flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
         <StageChip stage={stage} />

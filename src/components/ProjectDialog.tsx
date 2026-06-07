@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   Plus,
   Trash2,
@@ -442,10 +442,14 @@ function CreateDialog({
 }) {
   const addProject = useStore((s) => s.addProject)
   const [draft, setDraft] = useState<Draft>(emptyDraft())
+  const [prevOpen, setPrevOpen] = useState(open)
 
-  useEffect(() => {
+  // Reset the draft each time the dialog (re)opens. Done during render rather
+  // than in an effect so the fresh form is ready on the first paint.
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) setDraft(emptyDraft())
-  }, [open])
+  }
 
   const save = () => {
     if (!draft.title.trim()) return
@@ -678,7 +682,7 @@ function StageRow({
       onDragEnd={onDragEnd}
       className={cn(
         'flex items-center gap-1.5 rounded-md border border-transparent p-1 transition',
-        isDropTarget && 'border-blue-400 bg-blue-50/50 dark:bg-blue-950/30',
+        isDropTarget && 'border-brand-400 bg-brand-50/50 dark:bg-brand-950/30',
       )}
     >
       <button
@@ -702,7 +706,7 @@ function StageRow({
         />
         {palOpen ? (
           <div
-            className="absolute left-0 top-9 z-20 grid w-44 grid-cols-6 gap-1.5 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+            className="absolute left-0 top-9 z-20 grid w-44 grid-cols-6 gap-1.5 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg animate-menu-in dark:border-neutral-700 dark:bg-neutral-800"
             onMouseLeave={() => setPalOpen(false)}
           >
             {STAGE_COLOR_PRESETS.map((c) => (
@@ -855,7 +859,7 @@ function TodoRow({
       onDragEnd={onDragEnd}
       className={cn(
         'flex items-center gap-1.5 rounded-md border border-transparent p-1 transition',
-        isDropTarget && 'border-blue-400 bg-blue-50/50 dark:bg-blue-950/30',
+        isDropTarget && 'border-brand-400 bg-brand-50/50 dark:bg-brand-950/30',
       )}
     >
       <button
@@ -874,7 +878,7 @@ function TodoRow({
         className={cn(
           'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
           value.done
-            ? 'border-green-500 bg-green-500 text-white'
+            ? 'border-emerald-500 bg-emerald-500 text-white'
             : 'border-neutral-300 text-neutral-400 hover:border-neutral-400 dark:border-neutral-700',
         )}
         aria-label={value.done ? '标记为未完成' : '标记为已完成'}

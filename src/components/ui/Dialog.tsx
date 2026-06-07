@@ -30,11 +30,11 @@ export function Dialog({
   return (
     <Radix.Root open={open} onOpenChange={onOpenChange}>
       <Radix.Portal>
-        <Radix.Overlay className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in" />
+        <Radix.Overlay className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-overlay-in" />
         <Radix.Content
           className={cn(
             'fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2',
-            'rounded-xl border border-neutral-200 bg-white shadow-xl outline-none',
+            'rounded-xl border border-neutral-200 bg-white shadow-xl outline-none animate-content-in',
             'dark:border-neutral-800 dark:bg-neutral-900',
             'max-h-[90vh] overflow-y-auto',
             sizeCls[size],
@@ -52,7 +52,7 @@ export function Dialog({
               ) : null}
             </div>
             <Radix.Close
-              className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+              className="rounded-md p-1 text-neutral-500 transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800"
               aria-label="关闭"
             >
               <X size={18} />
