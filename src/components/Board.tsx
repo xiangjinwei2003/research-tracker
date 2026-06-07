@@ -13,7 +13,6 @@ import { dateFromToday, fmtMD, daysUntil, today } from '@/lib/date'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
 import { StageChip } from './StageChip'
-import { PriorityButton } from './PriorityButton'
 import { Container } from './ui/Container'
 import { Dashboard } from './Dashboard'
 
@@ -203,9 +202,6 @@ export function Board({ onNew, onEdit }: Props) {
                               dragRef.current = null
                             }}
                             onOpen={() => onEdit(it.project)}
-                            onChangePriority={(p) =>
-                              updateTodo(it.project.id, it.todo.id, { priority: p })
-                            }
                             onUnpin={() =>
                               updateTodo(it.project.id, it.todo.id, { inWeek: false })
                             }
@@ -249,7 +245,6 @@ function BoardCard({
   onDragStart,
   onDragEnd,
   onOpen,
-  onChangePriority,
   onUnpin,
 }: {
   item: WeekItem
@@ -259,7 +254,6 @@ function BoardCard({
   onDragStart: () => void
   onDragEnd: () => void
   onOpen: () => void
-  onChangePriority: (p: Priority) => void
   onUnpin: () => void
 }) {
   const { project, todo } = item
@@ -293,19 +287,16 @@ function BoardCard({
         dragging && 'opacity-40',
       )}
     >
-      <div className="flex items-start justify-between gap-1.5">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onOpen()
-          }}
-          className="line-clamp-2 rounded text-left text-sm font-medium text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-200"
-        >
-          {todo.title || <span className="italic text-neutral-400">未命名待办</span>}
-        </button>
-        <PriorityButton priority={todoPriority(todo)} onChange={onChangePriority} />
-      </div>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onOpen()
+        }}
+        className="line-clamp-2 block w-full rounded text-left text-sm font-medium text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-200"
+      >
+        {todo.title || <span className="italic text-neutral-400">未命名待办</span>}
+      </button>
       <div className="mt-1.5 flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
         {pinnedExtra ? (
           <button
