@@ -13,17 +13,9 @@ interface Props {
   onEdit: () => void
   /** When true, upcoming todos can be dragged into 本周重点. */
   draggableTodos?: boolean
-  onTodoDragStart?: () => void
-  onTodoDragEnd?: () => void
 }
 
-export function ProjectCard({
-  project,
-  onEdit,
-  draggableTodos = false,
-  onTodoDragStart,
-  onTodoDragEnd,
-}: Props) {
+export function ProjectCard({ project, onEdit, draggableTodos = false }: Props) {
   const toggleTodoDone = useStore((s) => s.toggleTodoDone)
   const nd = nextDeadline(project)
   const days = nd ? daysUntil(nd.date) : null
@@ -134,11 +126,9 @@ export function ProjectCard({
                             'application/x-rt-todo',
                             JSON.stringify({ projectId: project.id, todoId: todo.id }),
                           )
-                          onTodoDragStart?.()
                         }
                       : undefined
                   }
-                  onDragEnd={draggableTodos ? () => onTodoDragEnd?.() : undefined}
                   title={draggableTodos ? '拖到「本周重点」即可本周处理' : undefined}
                   className={cn(
                     'group/todo flex items-center gap-2 text-xs',

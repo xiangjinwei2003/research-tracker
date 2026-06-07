@@ -1,13 +1,24 @@
-import { useMemo } from 'react'
-import { Plus, Archive, Sparkles } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Plus, Archive, Sparkles, ChevronDown } from 'lucide-react'
 import { useStore, nextDeadline } from '@/lib/store'
 import { daysUntil } from '@/lib/date'
 import { toast } from '@/lib/toast'
+import { cn } from '@/lib/cn'
 import type { Project } from '@/lib/types'
 import { ProjectCard } from './ProjectCard'
 import { Logo } from './Logo'
 import { Button } from './ui/Button'
 import { Container } from './ui/Container'
+
+const COLLAPSE_KEY = 'rt-overview-collapsed'
+
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
 
 interface Props {
   showArchived: boolean
@@ -15,8 +26,8 @@ interface Props {
   onEdit: (p: Project) => void
   /** Forwarded to each card so its todos can be dragged into 本周重点. */
   draggableTodos?: boolean
-  onTodoDragStart?: () => void
-  onTodoDragEnd?: () => void
+  /** Show a fold/unfold toggle for the project grid (home overview only). */
+  collapsible?: boolean
 }
 
 export function Dashboard({
@@ -24,12 +35,22 @@ export function Dashboard({
   onNew,
   onEdit,
   draggableTodos = false,
-  onTodoDragStart,
-  onTodoDragEnd,
+  collapsible = false,
 }: Props) {
   const projects = useStore((s) => s.projects)
   const resetToSeed = useStore((s) => s.resetToSeed)
   const undo = useStore((s) => s.undo)
+
+  const [collapsed, setCollapsed] = useState(() => collapsible && readCollapsed())
+  const toggleCollapsed = () => {
+    const next = !collapsed
+    setCollapsed(next)
+    try {
+      localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
+    } catch {
+      /* ignore persistence failures (e.g. private mode) */
+    }
+  }
 
   const visible = useMemo(() => {
     const filtered = projects.filter((p) => p.archived === showArchived)
@@ -86,14 +107,31 @@ export function Dashboard({
             )}
           </p>
         </div>
-        {!showArchived && visible.length > 0 ? (
-          <Button variant="primary" onClick={onNew}>
-            <Plus size={16} /> 新建项目
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-2">
+          {!showArchived && visible.length > 0 ? (
+            <Button variant="primary" onClick={onNew}>
+              <Plus size={16} /> 新建项目
+            </Button>
+          ) : null}
+          {collapsible && visible.length > 0 ? (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-expanded={!collapsed}
+              aria-controls="overview-grid"
+              title={collapsed ? '展开项目总览' : '折叠项目总览'}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+            >
+              <ChevronDown
+                size={18}
+                className={cn('transition-transform', collapsed && '-rotate-90')}
+              />
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      {visible.length === 0 ? (
+      {collapsed ? null : visible.length === 0 ? (
         showArchived ? (
           <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-12 text-center dark:border-neutral-700 dark:bg-neutral-900/50">
             <Archive size={28} className="mx-auto mb-2 text-neutral-400" />
@@ -125,15 +163,16 @@ export function Dashboard({
           </div>
         )
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          id="overview-grid"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {visible.map((p) => (
             <ProjectCard
               key={p.id}
               project={p}
               onEdit={() => onEdit(p)}
               draggableTodos={draggableTodos}
-              onTodoDragStart={onTodoDragStart}
-              onTodoDragEnd={onTodoDragEnd}
             />
           ))}
         </div>
