@@ -109,8 +109,16 @@ export function Board({ onNew, onEdit }: Props) {
   return (
     <>
       {hasActiveProjects ? (
-        <Container className="pt-6 pb-12">
-          <section aria-label="本周重点">
+        <Container className="pt-6 pb-14">
+          <section
+            aria-label="本周重点"
+            className={cn(
+              'rounded-2xl border bg-white/70 p-4 shadow-sm transition-colors dark:bg-neutral-900/40 sm:p-5',
+              pulling
+                ? 'border-brand-300 ring-2 ring-brand-200 dark:border-brand-800 dark:ring-brand-900/60'
+                : 'border-neutral-200 dark:border-neutral-800',
+            )}
+          >
             <div className="flex items-center gap-2.5">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-300">
                 <CalendarRange size={18} />
