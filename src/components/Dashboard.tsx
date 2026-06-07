@@ -13,9 +13,20 @@ interface Props {
   showArchived: boolean
   onNew: () => void
   onEdit: (p: Project) => void
+  /** Forwarded to each card so its todos can be dragged into 本周重点. */
+  draggableTodos?: boolean
+  onTodoDragStart?: () => void
+  onTodoDragEnd?: () => void
 }
 
-export function Dashboard({ showArchived, onNew, onEdit }: Props) {
+export function Dashboard({
+  showArchived,
+  onNew,
+  onEdit,
+  draggableTodos = false,
+  onTodoDragStart,
+  onTodoDragEnd,
+}: Props) {
   const projects = useStore((s) => s.projects)
   const resetToSeed = useStore((s) => s.resetToSeed)
   const undo = useStore((s) => s.undo)
@@ -116,7 +127,14 @@ export function Dashboard({ showArchived, onNew, onEdit }: Props) {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((p) => (
-            <ProjectCard key={p.id} project={p} onEdit={() => onEdit(p)} />
+            <ProjectCard
+              key={p.id}
+              project={p}
+              onEdit={() => onEdit(p)}
+              draggableTodos={draggableTodos}
+              onTodoDragStart={onTodoDragStart}
+              onTodoDragEnd={onTodoDragEnd}
+            />
           ))}
         </div>
       )}

@@ -120,6 +120,11 @@ export interface Todo {
   stage: Stage
   /** Importance / priority (drives the 本周 view ordering); absent = 'normal'. */
   priority?: Priority
+  /**
+   * Manually pinned into 本周重点 from the project overview, so it shows there
+   * even when its due date is outside the rolling window. Absent = not pinned.
+   */
+  inWeek?: boolean
   notes?: string
 }
 

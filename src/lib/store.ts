@@ -542,27 +542,35 @@ export function nextDeadline(p: Project): { date: string; label: string } | null
 export interface WeekItem {
   project: Project
   todo: Todo
+  /** True when it shows only because it was manually pinned (its due date is out of window). */
+  pinnedExtra: boolean
 }
 
 /**
- * Incomplete todos due on or before `end` — the rolling board window plus any
- * overdue carry-over — across non-archived projects. Sorted by importance, then
- * earliest due (overdue floats to the top).
+ * Incomplete todos shown in 本周重点 across non-archived projects: those due on
+ * or before `end` (the rolling window plus any overdue carry-over) plus any
+ * manually pinned (`inWeek`) regardless of due date. Sorted by importance, then
+ * earliest due (overdue floats up; undated pins sink to the bottom).
  */
 export function weekItems(projects: Project[], end: string): WeekItem[] {
   const items: WeekItem[] = []
   for (const p of projects) {
     if (p.archived) continue
     for (const t of p.todos) {
-      if (t.done || !t.endDate) continue
-      if (t.endDate <= end) items.push({ project: p, todo: t })
+      if (t.done) continue
+      const inWindow = !!t.endDate && t.endDate <= end
+      if (inWindow || t.inWeek) {
+        items.push({ project: p, todo: t, pinnedExtra: !!t.inWeek && !inWindow })
+      }
     }
   }
   return items.sort((a, b) => {
     const ra = PRIORITY_META[todoPriority(a.todo)].rank
     const rb = PRIORITY_META[todoPriority(b.todo)].rank
     if (ra !== rb) return ra - rb
-    return a.todo.endDate.localeCompare(b.todo.endDate)
+    const da = a.todo.endDate || '9999-12-31'
+    const db = b.todo.endDate || '9999-12-31'
+    return da.localeCompare(db)
   })
 }
 

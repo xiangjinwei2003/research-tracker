@@ -1,4 +1,4 @@
-import { CalendarClock, Users, Check } from 'lucide-react'
+import { CalendarClock, Users, Check, GripVertical } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import { findStage } from '@/lib/types'
 import { nextDeadline, stageProgress, upcomingTodos, useStore } from '@/lib/store'
@@ -11,9 +11,19 @@ import { cn } from '@/lib/cn'
 interface Props {
   project: Project
   onEdit: () => void
+  /** When true, upcoming todos can be dragged into 本周重点. */
+  draggableTodos?: boolean
+  onTodoDragStart?: () => void
+  onTodoDragEnd?: () => void
 }
 
-export function ProjectCard({ project, onEdit }: Props) {
+export function ProjectCard({
+  project,
+  onEdit,
+  draggableTodos = false,
+  onTodoDragStart,
+  onTodoDragEnd,
+}: Props) {
   const toggleTodoDone = useStore((s) => s.toggleTodoDone)
   const nd = nextDeadline(project)
   const days = nd ? daysUntil(nd.date) : null
@@ -110,14 +120,39 @@ export function ProjectCard({ project, onEdit }: Props) {
         {upcoming.length > 0 ? (
           <ul className="space-y-1">
             {upcoming.map((todo) => {
-              const overdue = todo.endDate < t
+              const overdue = !!todo.endDate && todo.endDate < t
               const stage = findStage(project.stages, todo.stage)
               return (
                 <li
                   key={todo.id}
-                  className="flex items-center gap-2 text-xs"
+                  draggable={draggableTodos || undefined}
+                  onDragStart={
+                    draggableTodos
+                      ? (e) => {
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.dataTransfer.setData(
+                            'application/x-rt-todo',
+                            JSON.stringify({ projectId: project.id, todoId: todo.id }),
+                          )
+                          onTodoDragStart?.()
+                        }
+                      : undefined
+                  }
+                  onDragEnd={draggableTodos ? () => onTodoDragEnd?.() : undefined}
+                  title={draggableTodos ? '拖到「本周重点」即可本周处理' : undefined}
+                  className={cn(
+                    'group/todo flex items-center gap-2 text-xs',
+                    draggableTodos && 'cursor-grab active:cursor-grabbing',
+                  )}
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {draggableTodos ? (
+                    <GripVertical
+                      size={11}
+                      aria-hidden
+                      className="shrink-0 text-neutral-300 opacity-0 transition group-hover/todo:opacity-100 dark:text-neutral-600"
+                    />
+                  ) : null}
                   <button
                     onClick={() => toggleTodoDone(project.id, todo.id)}
                     className={cn(
