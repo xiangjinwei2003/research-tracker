@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type DragEvent } from 'react'
-import { CalendarRange, Pin } from 'lucide-react'
+import { CalendarRange, Check, Pin } from 'lucide-react'
 import { useStore, weekItems, type WeekItem } from '@/lib/store'
 import {
   findStage,
@@ -34,6 +34,7 @@ const WINDOW_DAYS = 7
 export function Board({ onNew, onEdit }: Props) {
   const projects = useStore((s) => s.projects)
   const updateTodo = useStore((s) => s.updateTodo)
+  const toggleTodoDone = useStore((s) => s.toggleTodoDone)
 
   const t = today()
   const end = dateFromToday(WINDOW_DAYS)
@@ -157,6 +158,16 @@ export function Board({ onNew, onEdit }: Props) {
                             dragRef.current = null
                           }}
                           onOpen={() => onEdit(it.project)}
+                          onToggleDone={() => {
+                            toggleTodoDone(it.project.id, it.todo.id)
+                            toast({
+                              message: `已完成「${it.todo.title || '未命名待办'}」`,
+                              action: {
+                                label: '撤销',
+                                onClick: () => toggleTodoDone(it.project.id, it.todo.id),
+                              },
+                            })
+                          }}
                           onUnpin={() =>
                             updateTodo(it.project.id, it.todo.id, { inWeek: false })
                           }
@@ -195,6 +206,7 @@ function BoardCard({
   onDragStart,
   onDragEnd,
   onOpen,
+  onToggleDone,
   onUnpin,
 }: {
   item: WeekItem
@@ -204,6 +216,7 @@ function BoardCard({
   onDragStart: () => void
   onDragEnd: () => void
   onOpen: () => void
+  onToggleDone: () => void
   onUnpin: () => void
 }) {
   const { project, todo } = item
@@ -237,45 +250,61 @@ function BoardCard({
         dragging && 'opacity-40',
       )}
     >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation()
-          onOpen()
-        }}
-        className="line-clamp-2 block w-full rounded text-left text-sm font-medium text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-200"
-      >
-        {todo.title || <span className="italic text-neutral-400">未命名待办</span>}
-      </button>
-      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-        {pinnedExtra ? (
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleDone()
+          }}
+          title="标记完成"
+          aria-label={`标记「${todo.title || '未命名待办'}」为已完成`}
+          className="mt-0.5 inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border border-neutral-300 text-transparent transition hover:border-brand-500 hover:text-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-neutral-600 dark:hover:border-brand-500 dark:hover:text-brand-400"
+        >
+          <Check size={12} />
+        </button>
+        <div className="min-w-0 flex-1">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              onUnpin()
+              onOpen()
             }}
-            title="已手动加入本周 · 点击移出"
-            aria-label="移出本周重点"
-            className="inline-flex shrink-0 items-center gap-0.5 rounded bg-brand-50 px-1 py-0.5 text-[10px] font-medium text-brand-600 transition hover:bg-brand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:bg-brand-950/50 dark:text-brand-300 dark:hover:bg-brand-900/60"
+            className="line-clamp-2 block w-full rounded text-left text-sm font-medium text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-200"
           >
-            <Pin size={10} /> 本周
+            {todo.title || <span className="italic text-neutral-400">未命名待办</span>}
           </button>
-        ) : null}
-        <StageChip stage={stage} />
-        <span className="min-w-0 truncate">{project.title}</span>
-      </div>
-      <div
-        className={cn(
-          'mt-1.5 text-xs tabular-nums',
-          overdue
-            ? 'font-medium text-red-600 dark:text-red-400'
-            : hasDate && dleft === 0
-              ? 'font-medium text-orange-600 dark:text-orange-400'
-              : 'text-neutral-500 dark:text-neutral-500',
-        )}
-      >
-        {hasDate ? `${rel} · ${fmtMD(todo.endDate)}` : rel}
+          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+            {pinnedExtra ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onUnpin()
+                }}
+                title="已手动加入本周 · 点击移出"
+                aria-label="移出本周重点"
+                className="inline-flex shrink-0 items-center gap-0.5 rounded bg-brand-50 px-1 py-0.5 text-[10px] font-medium text-brand-600 transition hover:bg-brand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:bg-brand-950/50 dark:text-brand-300 dark:hover:bg-brand-900/60"
+              >
+                <Pin size={10} /> 本周
+              </button>
+            ) : null}
+            <StageChip stage={stage} />
+            <span className="min-w-0 truncate">{project.title}</span>
+          </div>
+          <div
+            className={cn(
+              'mt-1.5 text-xs tabular-nums',
+              overdue
+                ? 'font-medium text-red-600 dark:text-red-400'
+                : hasDate && dleft === 0
+                  ? 'font-medium text-orange-600 dark:text-orange-400'
+                  : 'text-neutral-500 dark:text-neutral-500',
+            )}
+          >
+            {hasDate ? `${rel} · ${fmtMD(todo.endDate)}` : rel}
+          </div>
+        </div>
       </div>
     </article>
   )
