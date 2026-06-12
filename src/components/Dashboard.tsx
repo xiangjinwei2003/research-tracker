@@ -52,18 +52,12 @@ export function Dashboard({
     }
   }
 
-  const visible = useMemo(() => {
-    const filtered = projects.filter((p) => p.archived === showArchived)
-    // Sort: items with deadlines by soonest first; no-deadline at the bottom by recency.
-    return [...filtered].sort((a, b) => {
-      const da = nextDeadline(a)?.date
-      const db = nextDeadline(b)?.date
-      if (da && db) return da.localeCompare(db)
-      if (da) return -1
-      if (db) return 1
-      return b.updatedAt.localeCompare(a.updatedAt)
-    })
-  }, [projects, showArchived])
+  const visible = useMemo(
+    // Keep the store's array order (newest created first): cards hold a fixed
+    // position instead of reshuffling as deadlines shift or todos change.
+    () => projects.filter((p) => p.archived === showArchived),
+    [projects, showArchived],
+  )
 
   const urgentCount = visible.filter((p) => {
     const nd = nextDeadline(p)
