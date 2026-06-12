@@ -1,9 +1,11 @@
-import { CalendarClock, Users, Check, GripVertical } from 'lucide-react'
+import { useState } from 'react'
+import { CalendarClock, Users, Check, GripVertical, Plus } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import { findStage } from '@/lib/types'
 import { nextDeadline, stageProgress, upcomingTodos, useStore } from '@/lib/store'
 import { countdownLabel, daysUntil, fmtShort, today } from '@/lib/date'
 import { Card } from './ui/Card'
+import { Input } from './ui/Input'
 import { StageBadge } from './StageBadge'
 import { StageChip } from './StageChip'
 import { cn } from '@/lib/cn'
@@ -17,6 +19,17 @@ interface Props {
 
 export function ProjectCard({ project, onEdit, draggableTodos = false }: Props) {
   const toggleTodoDone = useStore((s) => s.toggleTodoDone)
+  const addTodo = useStore((s) => s.addTodo)
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  /** Create the drafted todo (store defaults: due today, current stage). */
+  const commitDraft = () => {
+    const title = draft.trim()
+    if (title) addTodo(project.id, { title })
+    setDraft('')
+    return !!title
+  }
   const nd = nextDeadline(project)
   const days = nd ? daysUntil(nd.date) : null
   const cd = days == null ? null : countdownLabel(days)
@@ -182,6 +195,40 @@ export function ProjectCard({ project, onEdit, draggableTodos = false }: Props) 
         ) : (
           <p className="text-[11px] text-neutral-400">还没有待办</p>
         )}
+
+        <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+          {adding ? (
+            <Input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  // Commit and stay open so several todos can be added in a row.
+                  commitDraft()
+                } else if (e.key === 'Escape') {
+                  setDraft('')
+                  setAdding(false)
+                }
+              }}
+              onBlur={() => {
+                commitDraft()
+                setAdding(false)
+              }}
+              placeholder="待办标题 · 回车添加，Esc 取消"
+              aria-label={`为「${project.title || '未命名项目'}」添加待办`}
+              className="h-7 px-2 text-xs"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="inline-flex items-center gap-1 rounded text-xs text-neutral-400 transition hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-500 dark:hover:text-brand-400"
+            >
+              <Plus size={12} /> 添加待办
+            </button>
+          )}
+        </div>
       </div>
 
       {waiting.length > 0 ? (
