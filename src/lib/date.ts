@@ -1,5 +1,6 @@
 import {
   differenceInCalendarDays,
+  differenceInCalendarWeeks,
   format,
   parseISO,
   isValid,
@@ -22,6 +23,25 @@ export function dateFromToday(days: number): string {
 export function fmtMD(iso: string): string {
   const d = parse(iso)
   return d ? `${d.getMonth() + 1}月${d.getDate()}日` : ''
+}
+
+const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'] as const
+
+/**
+ * Week-relative weekday label for near-term dates, e.g. 本周四 / 下周四 / 下下周一.
+ * Weeks start on Monday. Falls back to a dated weekday (6月25日周四) past 下下周.
+ * Caller handles today/overdue; this is for forward-looking dates.
+ */
+export function weekdayLabel(iso: string, todayIso: string): string {
+  const d = parse(iso)
+  const base = parse(todayIso) ?? new Date()
+  if (!d) return ''
+  const wd = `周${WEEKDAY_CN[d.getDay()]}`
+  const weeks = differenceInCalendarWeeks(d, base, { weekStartsOn: 1 })
+  if (weeks <= 0) return `本${wd}`
+  if (weeks === 1) return `下${wd}`
+  if (weeks === 2) return `下下${wd}`
+  return `${fmtMD(iso)}${wd}`
 }
 
 export function parse(iso: string): Date | null {

@@ -9,7 +9,7 @@ import {
   type Priority,
   type Project,
 } from '@/lib/types'
-import { dateFromToday, fmtMD, daysUntil, today } from '@/lib/date'
+import { dateFromToday, daysUntil, weekdayLabel, today } from '@/lib/date'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
 import { StageChip } from './StageChip'
@@ -232,7 +232,7 @@ function BoardCard({
         ? '今天'
         : dleft === 1
           ? '明天'
-          : `${dleft} 天后`
+          : weekdayLabel(todo.endDate, todayIso)
 
   return (
     <article
@@ -302,7 +302,7 @@ function BoardCard({
                   : 'text-neutral-500 dark:text-neutral-500',
             )}
           >
-            {hasDate ? `${rel} · ${fmtMD(todo.endDate)}` : rel}
+            {rel}
           </div>
         </div>
       </div>
