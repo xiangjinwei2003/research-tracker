@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, useRef, useState } from 'react'
 import { CalendarClock, Users, Check, GripVertical, Plus } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import { findStage } from '@/lib/types'
@@ -24,6 +24,7 @@ export const ProjectCard = memo(function ProjectCard({
   draggableTodos = false,
 }: Props) {
   const toggleTodoDone = useStore((s) => s.toggleTodoDone)
+  const updateTodo = useStore((s) => s.updateTodo)
   const addTodo = useStore((s) => s.addTodo)
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState('')
@@ -176,16 +177,11 @@ export const ProjectCard = memo(function ProjectCard({
                   <span className="min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-300">
                     {todo.title || <span className="italic text-neutral-400">未命名</span>}
                   </span>
-                  <span
-                    className={cn(
-                      'shrink-0 tabular-nums',
-                      overdue
-                        ? 'font-medium text-red-600 dark:text-red-400'
-                        : 'text-neutral-500 dark:text-neutral-500',
-                    )}
-                  >
-                    {fmtShort(todo.endDate)}
-                  </span>
+                  <TodoDateButton
+                    value={todo.endDate}
+                    overdue={overdue}
+                    onChange={(d) => updateTodo(project.id, todo.id, { endDate: d })}
+                  />
                 </li>
               )
             })}
@@ -255,3 +251,59 @@ export const ProjectCard = memo(function ProjectCard({
     </Card>
   )
 })
+
+/**
+ * The todo's due date, editable inline from the overview card. Shows the
+ * formatted date; clicking it opens the native date picker so the deadline can
+ * be changed without opening the project dialog.
+ */
+function TodoDateButton({
+  value,
+  overdue,
+  onChange,
+}: {
+  value: string
+  overdue: boolean
+  onChange: (date: string) => void
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+
+  const openPicker = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const el = ref.current
+    if (el?.showPicker) el.showPicker()
+    else el?.focus()
+  }
+
+  return (
+    <span className="relative shrink-0">
+      <button
+        type="button"
+        onClick={openPicker}
+        title="点击修改截止日期"
+        aria-label={`修改截止日期，当前 ${fmtShort(value) || '未设置'}`}
+        className={cn(
+          'cursor-pointer rounded tabular-nums underline-offset-2 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+          overdue
+            ? 'font-medium text-red-600 hover:text-red-700 dark:text-red-400'
+            : 'text-neutral-500 hover:text-brand-600 dark:text-neutral-500 dark:hover:text-brand-400',
+        )}
+      >
+        {fmtShort(value) || '设置日期'}
+      </button>
+      <input
+        ref={ref}
+        type="date"
+        value={value}
+        // Native picker reports '' on clear; ignore so a todo always keeps a date.
+        onChange={(e) => {
+          if (e.target.value) onChange(e.target.value)
+        }}
+        onClick={(e) => e.stopPropagation()}
+        tabIndex={-1}
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 right-0 h-0 w-0 opacity-0"
+      />
+    </span>
+  )
+}
