@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist, type PersistStorage, type StorageValue } from 'zustand/middleware'
 import type { Project, Todo, Collaborator, AppState, StageDef } from './types'
 import { defaultStages, todoPriority, PRIORITY_META } from './types'
 import { uid } from './id'
@@ -55,6 +55,65 @@ interface Store extends AppState {
 }
 
 const stamp = (): string => new Date().toISOString()
+
+/** Only the slice we persist (see `partialize` below). */
+type Persisted = Pick<AppState, 'projects' | 'version'>
+
+/**
+ * A persist storage that coalesces rapid writes. The previous setup wrote the
+ * whole project list to localStorage (a synchronous JSON.stringify + disk
+ * write) on *every* keystroke, which is what made editing feel laggy. Here we
+ * keep the in-memory store updating instantly and only flush to localStorage
+ * `delayMs` after the last change — and immediately when the tab is hidden or
+ * closed, so a pending write is never lost.
+ */
+function debouncedLocalStorage(delayMs = 400): PersistStorage<Persisted> {
+  const pending = new Map<string, StorageValue<Persisted>>()
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  const flush = () => {
+    if (timer !== null) {
+      clearTimeout(timer)
+      timer = null
+    }
+    for (const [name, value] of pending) {
+      try {
+        localStorage.setItem(name, JSON.stringify(value))
+      } catch {
+        /* ignore quota / private-mode failures */
+      }
+    }
+    pending.clear()
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flush()
+    })
+  }
+
+  return {
+    getItem: (name) => {
+      const str = localStorage.getItem(name)
+      if (!str) return null
+      try {
+        return JSON.parse(str) as StorageValue<Persisted>
+      } catch {
+        return null
+      }
+    },
+    setItem: (name, value) => {
+      pending.set(name, value)
+      if (timer !== null) clearTimeout(timer)
+      timer = setTimeout(flush, delayMs)
+    },
+    removeItem: (name) => {
+      pending.delete(name)
+      localStorage.removeItem(name)
+    },
+  }
+}
 
 function pushUndo(state: Store, entry: UndoEntry): UndoEntry[] {
   const next = [entry, ...state.undoStack]
@@ -478,7 +537,7 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'research-tracker-v1',
-      storage: createJSONStorage(() => localStorage),
+      storage: debouncedLocalStorage(),
       partialize: (s) => ({ projects: s.projects, version: s.version }),
       version: SCHEMA_VERSION,
       migrate: (persisted: unknown) => {

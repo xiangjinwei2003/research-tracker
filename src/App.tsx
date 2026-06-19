@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Header, type Tab } from '@/components/Header'
 import { Dashboard } from '@/components/Dashboard'
 import { Board } from '@/components/Board'
@@ -42,14 +42,16 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [undo])
 
-  const openNew = () => {
+  // Stable across renders so memoized cards (ProjectCard) don't re-render every
+  // time the dialog's live project updates on a keystroke.
+  const openNew = useCallback(() => {
     setEditingId(null)
     setDialogOpen(true)
-  }
-  const openEdit = (p: Project) => {
+  }, [])
+  const openEdit = useCallback((p: Project) => {
     setEditingId(p.id)
     setDialogOpen(true)
-  }
+  }, [])
 
   return (
     <div className="min-h-full bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">

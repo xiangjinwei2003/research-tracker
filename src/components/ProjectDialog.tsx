@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus,
   Trash2,
@@ -83,6 +83,32 @@ function EditDialog({
   const reorderProjectStages = useStore((s) => s.reorderProjectStages)
   const resetProjectStages = useStore((s) => s.resetProjectStages)
   const undo = useStore((s) => s.undo)
+
+  // Stable handlers (keyed off the immutable `projectId` prop) so memoized
+  // TodoRows only re-render the row that actually changed — not the whole list
+  // on every keystroke.
+  const handleTodoChange = useCallback(
+    (id: string, patch: Partial<Todo>) => updateTodo(projectId, id, patch),
+    [updateTodo, projectId],
+  )
+  const handleTodoRemove = useCallback(
+    (id: string) => {
+      const t = useStore
+        .getState()
+        .projects.find((p) => p.id === projectId)
+        ?.todos.find((x) => x.id === id)
+      removeTodo(projectId, id)
+      toast({
+        message: `已删除待办「${t?.title || '未命名'}」`,
+        action: { label: '撤销', onClick: () => undo() },
+      })
+    },
+    [removeTodo, undo, projectId],
+  )
+  const handleTodoReorder = useCallback(
+    (ids: string[]) => reorderTodos(projectId, ids),
+    [reorderTodos, projectId],
+  )
 
   if (!project) {
     return null
@@ -298,16 +324,9 @@ function EditDialog({
           <TodoList
             todos={project.todos}
             stages={project.stages}
-            onChange={(id, patch) => updateTodo(project.id, id, patch)}
-            onRemove={(id) => {
-              const t = project.todos.find((x) => x.id === id)
-              removeTodo(project.id, id)
-              toast({
-                message: `已删除待办「${t?.title || '未命名'}」`,
-                action: { label: '撤销', onClick: () => undo() },
-              })
-            }}
-            onReorder={(ids) => reorderTodos(project.id, ids)}
+            onChange={handleTodoChange}
+            onRemove={handleTodoRemove}
+            onReorder={handleTodoReorder}
           />
           <Button
             type="button"
@@ -768,33 +787,58 @@ function TodoList({
   const dragIdRef = useRef<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
 
-  const handleDragStart = (e: React.DragEvent, id: string) => {
+  // Completed todos sink to the bottom; relative order within the done and
+  // not-done groups is preserved (Array.prototype.sort is stable).
+  const ordered = useMemo(
+    () => todos.slice().sort((a, b) => Number(a.done) - Number(b.done)),
+    [todos],
+  )
+  // Live ref so the stable drop handler always reorders against the order the
+  // user actually sees, without needing `ordered` in its dependency list.
+  const orderedRef = useRef(ordered)
+  useEffect(() => {
+    orderedRef.current = ordered
+  }, [ordered])
+
+  const handleDragStart = useCallback((e: React.DragEvent, id: string) => {
     dragIdRef.current = id
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', id)
-  }
+  }, [])
 
-  const handleDragOver = (e: React.DragEvent, id: string) => {
+  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
-    if (overId !== id) setOverId(id)
-  }
+    setOverId((cur) => (cur === id ? cur : id))
+  }, [])
 
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault()
-    const draggedId = dragIdRef.current
+  const handleDragLeave = useCallback((id: string) => {
+    setOverId((cur) => (cur === id ? null : cur))
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
     setOverId(null)
     dragIdRef.current = null
-    if (!draggedId || draggedId === targetId) return
-    const ids = todos.map((t) => t.id)
-    const from = ids.indexOf(draggedId)
-    const to = ids.indexOf(targetId)
-    if (from < 0 || to < 0) return
-    const next = [...ids]
-    next.splice(from, 1)
-    next.splice(to, 0, draggedId)
-    onReorder(next)
-  }
+  }, [])
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent, targetId: string) => {
+      e.preventDefault()
+      const draggedId = dragIdRef.current
+      setOverId(null)
+      dragIdRef.current = null
+      if (!draggedId || draggedId === targetId) return
+      const ids = orderedRef.current.map((t) => t.id)
+      const from = ids.indexOf(draggedId)
+      const to = ids.indexOf(targetId)
+      if (from < 0 || to < 0) return
+      const next = [...ids]
+      next.splice(from, 1)
+      next.splice(to, 0, draggedId)
+      onReorder(next)
+    },
+    [onReorder],
+  )
 
   if (todos.length === 0) {
     return <p className="text-xs text-neutral-400">还没有待办。点下方按钮添加。</p>
@@ -802,22 +846,20 @@ function TodoList({
 
   return (
     <div className="space-y-1.5">
-      {todos.map((todo) => (
+      {ordered.map((todo) => (
         <TodoRow
           key={todo.id}
+          id={todo.id}
           value={todo}
           stages={stages}
           isDropTarget={overId === todo.id}
-          onDragStart={(e) => handleDragStart(e, todo.id)}
-          onDragOver={(e) => handleDragOver(e, todo.id)}
-          onDragLeave={() => setOverId((cur) => (cur === todo.id ? null : cur))}
-          onDragEnd={() => {
-            setOverId(null)
-            dragIdRef.current = null
-          }}
-          onDrop={(e) => handleDrop(e, todo.id)}
-          onChange={(patch) => onChange(todo.id, patch)}
-          onRemove={() => onRemove(todo.id)}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDragEnd={handleDragEnd}
+          onDrop={handleDrop}
+          onChange={onChange}
+          onRemove={onRemove}
         />
       ))}
     </div>
@@ -825,19 +867,21 @@ function TodoList({
 }
 
 interface TodoRowProps {
+  id: string
   value: Todo
   stages: StageDef[]
   isDropTarget: boolean
-  onChange: (patch: Partial<Todo>) => void
-  onRemove: () => void
-  onDragStart: (e: React.DragEvent) => void
-  onDragOver: (e: React.DragEvent) => void
-  onDragLeave: () => void
+  onChange: (id: string, patch: Partial<Todo>) => void
+  onRemove: (id: string) => void
+  onDragStart: (e: React.DragEvent, id: string) => void
+  onDragOver: (e: React.DragEvent, id: string) => void
+  onDragLeave: (id: string) => void
   onDragEnd: () => void
-  onDrop: (e: React.DragEvent) => void
+  onDrop: (e: React.DragEvent, id: string) => void
 }
 
-function TodoRow({
+const TodoRow = memo(function TodoRow({
+  id,
   value,
   stages,
   isDropTarget,
@@ -853,19 +897,20 @@ function TodoRow({
 
   return (
     <div
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
+      onDragOver={(e) => onDragOver(e, id)}
+      onDragLeave={() => onDragLeave(id)}
+      onDrop={(e) => onDrop(e, id)}
       onDragEnd={onDragEnd}
       className={cn(
         'flex items-center gap-1.5 rounded-md border border-transparent p-1 transition',
         isDropTarget && 'border-brand-400 bg-brand-50/50 dark:bg-brand-950/30',
+        value.done && 'opacity-55',
       )}
     >
       <button
         type="button"
         draggable
-        onDragStart={onDragStart}
+        onDragStart={(e) => onDragStart(e, id)}
         className="shrink-0 cursor-grab text-neutral-400 hover:text-neutral-600 active:cursor-grabbing dark:hover:text-neutral-300"
         aria-label="拖拽以重排"
         title="拖拽以重排"
@@ -874,7 +919,7 @@ function TodoRow({
       </button>
       <button
         type="button"
-        onClick={() => onChange({ done: !value.done })}
+        onClick={() => onChange(id, { done: !value.done })}
         className={cn(
           'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
           value.done
@@ -893,7 +938,7 @@ function TodoRow({
         <select
           className="absolute inset-0 cursor-pointer opacity-0"
           value={value.stage}
-          onChange={(e) => onChange({ stage: e.target.value as Stage })}
+          onChange={(e) => onChange(id, { stage: e.target.value as Stage })}
           aria-label="研究阶段"
         >
           {stages.map((s) => (
@@ -904,20 +949,20 @@ function TodoRow({
         </select>
       </label>
       <Input
-        className="min-w-0 flex-1"
+        className={cn('min-w-0 flex-1', value.done && 'line-through')}
         placeholder="待办内容"
         value={value.title}
-        onChange={(e) => onChange({ title: e.target.value })}
+        onChange={(e) => onChange(id, { title: e.target.value })}
       />
       <PriorityButton
         priority={todoPriority(value)}
-        onChange={(p: Priority) => onChange({ priority: p })}
+        onChange={(p: Priority) => onChange(id, { priority: p })}
       />
       <Input
         className="w-[8.5rem] shrink-0"
         type="date"
         value={value.endDate}
-        onChange={(e) => onChange({ endDate: e.target.value })}
+        onChange={(e) => onChange(id, { endDate: e.target.value })}
         aria-label="结束日期"
         title="结束日期"
       />
@@ -926,10 +971,10 @@ function TodoRow({
         variant="ghost"
         size="sm"
         aria-label="移除待办"
-        onClick={onRemove}
+        onClick={() => onRemove(id)}
       >
         <Trash2 size={14} />
       </Button>
     </div>
   )
-}
+})

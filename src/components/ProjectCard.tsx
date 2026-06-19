@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { CalendarClock, Users, Check, GripVertical, Plus } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import { findStage } from '@/lib/types'
@@ -12,12 +12,17 @@ import { cn } from '@/lib/cn'
 
 interface Props {
   project: Project
-  onEdit: () => void
+  /** Receives the project so Dashboard can pass one stable callback to all cards. */
+  onEdit: (p: Project) => void
   /** When true, upcoming todos can be dragged into 本周重点. */
   draggableTodos?: boolean
 }
 
-export function ProjectCard({ project, onEdit, draggableTodos = false }: Props) {
+export const ProjectCard = memo(function ProjectCard({
+  project,
+  onEdit,
+  draggableTodos = false,
+}: Props) {
   const toggleTodoDone = useStore((s) => s.toggleTodoDone)
   const addTodo = useStore((s) => s.addTodo)
   const [adding, setAdding] = useState(false)
@@ -41,7 +46,7 @@ export function ProjectCard({ project, onEdit, draggableTodos = false }: Props) 
 
   return (
     <Card
-      onClick={onEdit}
+      onClick={() => onEdit(project)}
       className="group flex cursor-pointer flex-col p-4 transition hover:border-brand-300 hover:shadow-md dark:hover:border-brand-800/70"
     >
       <div className="flex items-start justify-between gap-2">
@@ -51,7 +56,7 @@ export function ProjectCard({ project, onEdit, draggableTodos = false }: Props) 
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                onEdit()
+                onEdit(project)
               }}
               className="block w-full truncate rounded text-left text-base font-semibold text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-100"
             >
@@ -249,4 +254,4 @@ export function ProjectCard({ project, onEdit, draggableTodos = false }: Props) 
       ) : null}
     </Card>
   )
-}
+})

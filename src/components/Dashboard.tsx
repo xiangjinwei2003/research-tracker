@@ -59,12 +59,16 @@ export function Dashboard({
     [projects, showArchived],
   )
 
-  const urgentCount = visible.filter((p) => {
-    const nd = nextDeadline(p)
-    if (!nd) return false
-    const d = daysUntil(nd.date)
-    return d != null && d <= 14
-  }).length
+  const urgentCount = useMemo(
+    () =>
+      visible.filter((p) => {
+        const nd = nextDeadline(p)
+        if (!nd) return false
+        const d = daysUntil(nd.date)
+        return d != null && d <= 14
+      }).length,
+    [visible],
+  )
 
   const onLoadDemo = () => {
     resetToSeed()
@@ -165,7 +169,7 @@ export function Dashboard({
             <ProjectCard
               key={p.id}
               project={p}
-              onEdit={() => onEdit(p)}
+              onEdit={onEdit}
               draggableTodos={draggableTodos}
             />
           ))}
