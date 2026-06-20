@@ -28,13 +28,39 @@ export const ProjectCard = memo(function ProjectCard({
   const addTodo = useStore((s) => s.addTodo)
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState('')
+  // Hidden date input used to pop the native picker right after a quick-add,
+  // and the id of the todo that picker should write its chosen date back to.
+  const newDateRef = useRef<HTMLInputElement>(null)
+  const pendingDateIdRef = useRef<string | null>(null)
 
-  /** Create the drafted todo (store defaults: due today, current stage). */
-  const commitDraft = () => {
+  /**
+   * Create the drafted todo (store default: due today, current stage). Returns
+   * the new todo's id, or null when the draft was blank.
+   */
+  const commitDraft = (): string | null => {
     const title = draft.trim()
-    if (title) addTodo(project.id, { title })
     setDraft('')
-    return !!title
+    return title ? addTodo(project.id, { title }) : null
+  }
+
+  /**
+   * Commit the draft, then immediately pop the date picker so the user sets a
+   * real deadline instead of silently keeping the default (today).
+   */
+  const commitAndPickDate = () => {
+    const id = commitDraft()
+    if (!id) return
+    pendingDateIdRef.current = id
+    setAdding(false)
+    const el = newDateRef.current
+    if (!el) return
+    el.value = today()
+    try {
+      if (el.showPicker) el.showPicker()
+      else el.focus()
+    } catch {
+      el.focus()
+    }
   }
   const nd = nextDeadline(project)
   const days = nd ? daysUntil(nd.date) : null
@@ -197,7 +223,7 @@ export const ProjectCard = memo(function ProjectCard({
           <p className="text-[11px] text-neutral-400">还没有待办</p>
         )}
 
-        <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+        <div className="relative mt-1.5" onClick={(e) => e.stopPropagation()}>
           {adding ? (
             <Input
               autoFocus
@@ -205,8 +231,8 @@ export const ProjectCard = memo(function ProjectCard({
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  // Commit and stay open so several todos can be added in a row.
-                  commitDraft()
+                  // Add the todo, then pop the date picker to set its deadline.
+                  commitAndPickDate()
                 } else if (e.key === 'Escape') {
                   setDraft('')
                   setAdding(false)
@@ -216,7 +242,7 @@ export const ProjectCard = memo(function ProjectCard({
                 commitDraft()
                 setAdding(false)
               }}
-              placeholder="待办标题 · 回车添加，Esc 取消"
+              placeholder="待办标题 · 回车添加并选日期，Esc 取消"
               aria-label={`为「${project.title || '未命名项目'}」添加待办`}
               className="h-7 px-2 text-xs"
             />
@@ -229,6 +255,21 @@ export const ProjectCard = memo(function ProjectCard({
               <Plus size={12} /> 添加待办
             </button>
           )}
+          {/* Anchors the picker popped by commitAndPickDate; never shown itself. */}
+          <input
+            ref={newDateRef}
+            type="date"
+            onChange={(e) => {
+              const id = pendingDateIdRef.current
+              pendingDateIdRef.current = null
+              if (id && e.target.value) {
+                updateTodo(project.id, id, { endDate: e.target.value })
+              }
+            }}
+            tabIndex={-1}
+            aria-hidden
+            className="pointer-events-none absolute bottom-0 left-2 h-0 w-0 opacity-0"
+          />
         </div>
       </div>
 
