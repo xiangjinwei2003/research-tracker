@@ -38,7 +38,8 @@ export function weekdayLabel(iso: string, todayIso: string): string {
   if (!d) return ''
   const wd = `周${WEEKDAY_CN[d.getDay()]}`
   const weeks = differenceInCalendarWeeks(d, base, { weekStartsOn: 1 })
-  if (weeks <= 0) return `本${wd}`
+  if (weeks < 0) return `${fmtMD(iso)}${wd}` // past: show the date, not 本周
+  if (weeks === 0) return `本${wd}`
   if (weeks === 1) return `下${wd}`
   if (weeks === 2) return `下下${wd}`
   return `${fmtMD(iso)}${wd}`

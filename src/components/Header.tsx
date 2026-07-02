@@ -66,10 +66,10 @@ export function Header({ tab, onTabChange, onNew }: Props) {
       const text = await file.text()
       const state = importJSON(text)
       if (!confirm(`导入 ${state.projects.length} 个项目，这将替换当前所有数据。继续？`)) return
-      replaceState(state)
+      const token = replaceState(state)
       toast({
         message: `已导入 ${state.projects.length} 个项目`,
-        action: { label: '撤销', onClick: () => undo() },
+        action: { label: '撤销', onClick: () => undo(token) },
       })
     } catch (e) {
       alert(`导入失败：${(e as Error).message}`)
@@ -78,10 +78,10 @@ export function Header({ tab, onTabChange, onNew }: Props) {
 
   const onLoadDemo = () => {
     if (confirm('加载 3 个演示项目会替换当前所有项目。继续？')) {
-      resetToSeed()
+      const token = resetToSeed()
       toast({
         message: '已加载演示数据',
-        action: { label: '撤销', onClick: () => undo() },
+        action: { label: '撤销', onClick: () => undo(token) },
       })
     }
   }
@@ -93,10 +93,10 @@ export function Header({ tab, onTabChange, onNew }: Props) {
       return
     }
     if (confirm(`确认清空全部 ${count} 个项目？可在通知里点击撤销。`)) {
-      replaceState({ projects: [], version: useStore.getState().version })
+      const token = replaceState({ projects: [], version: useStore.getState().version })
       toast({
         message: '已清空全部数据',
-        action: { label: '撤销', onClick: () => undo() },
+        action: { label: '撤销', onClick: () => undo(token) },
       })
     }
   }

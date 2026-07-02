@@ -97,10 +97,10 @@ function EditDialog({
         .getState()
         .projects.find((p) => p.id === projectId)
         ?.todos.find((x) => x.id === id)
-      removeTodo(projectId, id)
+      const token = removeTodo(projectId, id)
       toast({
         message: `已删除待办「${t?.title || '未命名'}」`,
-        action: { label: '撤销', onClick: () => undo() },
+        action: { label: '撤销', onClick: () => undo(token) },
       })
     },
     [removeTodo, undo, projectId],
@@ -120,22 +120,22 @@ function EditDialog({
   const onDelete = () => {
     if (confirm(`确认删除「${project.title}」？可在 6 秒内点击撤销。`)) {
       const title = project.title
-      removeProject(project.id)
+      const token = removeProject(project.id)
       onOpenChange(false)
       toast({
         message: `已删除项目「${title}」`,
-        action: { label: '撤销', onClick: () => undo() },
+        action: { label: '撤销', onClick: () => undo(token) },
       })
     }
   }
 
   const onToggleArchive = () => {
     const wasArchived = project.archived
-    archiveProject(project.id, !wasArchived)
+    const token = archiveProject(project.id, !wasArchived)
     onOpenChange(false)
     toast({
       message: wasArchived ? `已取消归档「${project.title}」` : `已归档「${project.title}」`,
-      action: { label: '撤销', onClick: () => undo() },
+      action: { label: '撤销', onClick: () => undo(token) },
     })
   }
 
@@ -380,10 +380,10 @@ function EditDialog({
                 value={c}
                 onChange={(patch) => updateCollaborator(project.id, c.id, patch)}
                 onRemove={() => {
-                  removeCollaborator(project.id, c.id)
+                  const token = removeCollaborator(project.id, c.id)
                   toast({
                     message: `已移除合作者「${c.name || '未命名'}」`,
-                    action: { label: '撤销', onClick: () => undo() },
+                    action: { label: '撤销', onClick: () => undo(token) },
                   })
                 }}
               />

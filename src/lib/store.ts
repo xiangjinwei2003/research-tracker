@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, type PersistStorage, type StorageValue } from 'zustand/middleware'
-import type { Project, Todo, Collaborator, AppState, StageDef } from './types'
+import type { Project, Todo, Collaborator, AppState, StageDef, Venue } from './types'
 import { defaultStages, todoPriority, PRIORITY_META } from './types'
 import { uid } from './id'
 import { today } from './date'
@@ -8,12 +8,20 @@ import { seedProjects } from './seed'
 
 const SCHEMA_VERSION = 4
 
-type UndoEntry =
-  | { kind: 'project-removed'; project: Project; index: number; label: string }
-  | { kind: 'project-archived'; id: string; prevArchived: boolean; label: string }
-  | { kind: 'todo-removed'; projectId: string; todo: Todo; index: number; label: string }
-  | { kind: 'collaborator-removed'; projectId: string; collaborator: Collaborator; index: number; label: string }
-  | { kind: 'replace-state'; prev: AppState; label: string }
+type UndoKind =
+  | { kind: 'project-removed'; project: Project; index: number }
+  | { kind: 'project-archived'; id: string; prevArchived: boolean }
+  | { kind: 'todo-removed'; projectId: string; todo: Todo; index: number }
+  | { kind: 'collaborator-removed'; projectId: string; collaborator: Collaborator; index: number }
+  | { kind: 'replace-state'; prev: AppState }
+
+/**
+ * A stack entry carries a stable `token` so a specific toast can undo *its own*
+ * action, not merely whatever happens to be newest on the stack. (Two deletes
+ * within the toast window used to make an older toast's 撤销 revert the newer
+ * action.)
+ */
+type UndoEntry = UndoKind & { token: string; label: string }
 
 interface Store extends AppState {
   /** Last 20 reversible actions, newest first. Not persisted. */
@@ -23,12 +31,15 @@ interface Store extends AppState {
     p: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'archived'>,
   ) => string
   updateProject: (id: string, patch: Partial<Omit<Project, 'id' | 'createdAt'>>) => void
-  removeProject: (id: string) => void
-  archiveProject: (id: string, archived: boolean) => void
+  /** Returns the undo token, or '' if nothing was removed. */
+  removeProject: (id: string) => string
+  /** Returns the undo token, or '' if the archived flag was unchanged. */
+  archiveProject: (id: string, archived: boolean) => string
 
   addTodo: (projectId: string, t?: Partial<Todo>) => string
   updateTodo: (projectId: string, todoId: string, patch: Partial<Todo>) => void
-  removeTodo: (projectId: string, todoId: string) => void
+  /** Returns the undo token, or '' if nothing was removed. */
+  removeTodo: (projectId: string, todoId: string) => string
   reorderTodos: (projectId: string, ids: string[]) => void
   toggleTodoDone: (projectId: string, todoId: string) => void
   applyProjectStageToTodos: (projectId: string) => void
@@ -39,7 +50,8 @@ interface Store extends AppState {
     collaboratorId: string,
     patch: Partial<Collaborator>,
   ) => void
-  removeCollaborator: (projectId: string, collaboratorId: string) => void
+  /** Returns the undo token, or '' if nothing was removed. */
+  removeCollaborator: (projectId: string, collaboratorId: string) => string
 
   addProjectStage: (projectId: string, s?: Partial<StageDef>) => string
   updateProjectStage: (projectId: string, stageId: string, patch: Partial<StageDef>) => void
@@ -47,11 +59,14 @@ interface Store extends AppState {
   reorderProjectStages: (projectId: string, ids: string[]) => void
   resetProjectStages: (projectId: string) => void
 
-  replaceState: (state: AppState) => void
+  /** Returns the undo token. */
+  replaceState: (state: AppState) => string
   clearAll: () => void
-  resetToSeed: () => void
+  /** Returns the undo token. */
+  resetToSeed: () => string
 
-  undo: () => UndoEntry | null
+  /** Undo a specific entry by token, or the newest action when no token is given. */
+  undo: (token?: string) => UndoEntry | null
 }
 
 const stamp = (): string => new Date().toISOString()
@@ -79,8 +94,10 @@ function debouncedLocalStorage(delayMs = 400): PersistStorage<Persisted> {
     for (const [name, value] of pending) {
       try {
         localStorage.setItem(name, JSON.stringify(value))
-      } catch {
-        /* ignore quota / private-mode failures */
+      } catch (err) {
+        // Fail loud (quota / private-mode): a silently-dropped write means the
+        // user loses data with zero signal. Don't mask it.
+        console.warn('[research-tracker] localStorage write failed; recent changes may not persist.', err)
       }
     }
     pending.clear()
@@ -115,9 +132,37 @@ function debouncedLocalStorage(delayMs = 400): PersistStorage<Persisted> {
   }
 }
 
+function makeUndo(kind: UndoKind, label: string): UndoEntry {
+  return { ...kind, token: uid(), label }
+}
+
+/** Exhaustiveness guard: a future variant without a switch case fails to compile. */
+function assertNever(x: never): never {
+  throw new Error(`Unhandled variant: ${JSON.stringify(x)}`)
+}
+
 function pushUndo(state: Store, entry: UndoEntry): UndoEntry[] {
-  const next = [entry, ...state.undoStack]
-  return next.slice(0, 20)
+  return [entry, ...state.undoStack].slice(0, 20)
+}
+
+/**
+ * Reorder `list` to follow `ids`: items are placed in `ids` order (duplicates
+ * and unknown ids ignored), then any item whose id is missing from `ids` is
+ * appended in its original relative order. Pure; shared by todo + stage reorder.
+ */
+function reorderBy<T extends { id: string }>(list: T[], ids: string[]): T[] {
+  const byId = new Map(list.map((x) => [x.id, x]))
+  const seen = new Set<string>()
+  const next: T[] = []
+  for (const id of ids) {
+    const item = byId.get(id)
+    if (item && !seen.has(id)) {
+      next.push(item)
+      seen.add(id)
+    }
+  }
+  for (const x of list) if (!seen.has(x.id)) next.push(x)
+  return next
 }
 
 export const useStore = create<Store>()(
@@ -147,38 +192,36 @@ export const useStore = create<Store>()(
       removeProject: (id) => {
         const state = get()
         const idx = state.projects.findIndex((p) => p.id === id)
-        if (idx === -1) return
+        if (idx === -1) return ''
         const project = state.projects[idx]
+        const entry = makeUndo(
+          { kind: 'project-removed', project, index: idx },
+          `已删除项目「${project.title}」`,
+        )
         set((s) => ({
           projects: s.projects.filter((p) => p.id !== id),
-          undoStack: pushUndo(s, {
-            kind: 'project-removed',
-            project,
-            index: idx,
-            label: `已删除项目「${project.title}」`,
-          }),
+          undoStack: pushUndo(s, entry),
         }))
+        return entry.token
       },
 
       archiveProject: (id, archived) => {
         const state = get()
         const cur = state.projects.find((p) => p.id === id)
-        if (!cur) return
+        if (!cur) return ''
         const prev = cur.archived
-        if (prev === archived) return
+        if (prev === archived) return ''
+        const entry = makeUndo(
+          { kind: 'project-archived', id, prevArchived: prev },
+          archived ? `已归档「${cur.title}」` : `已取消归档「${cur.title}」`,
+        )
         set((s) => ({
           projects: s.projects.map((p) =>
             p.id === id ? { ...p, archived, updatedAt: stamp() } : p,
           ),
-          undoStack: pushUndo(s, {
-            kind: 'project-archived',
-            id,
-            prevArchived: prev,
-            label: archived
-              ? `已归档「${cur.title}」`
-              : `已取消归档「${cur.title}」`,
-          }),
+          undoStack: pushUndo(s, entry),
         }))
+        return entry.token
       },
 
       addTodo: (projectId, t) => {
@@ -225,10 +268,14 @@ export const useStore = create<Store>()(
       removeTodo: (projectId, todoId) => {
         const state = get()
         const project = state.projects.find((p) => p.id === projectId)
-        if (!project) return
+        if (!project) return ''
         const idx = project.todos.findIndex((t) => t.id === todoId)
-        if (idx === -1) return
+        if (idx === -1) return ''
         const todo = project.todos[idx]
+        const entry = makeUndo(
+          { kind: 'todo-removed', projectId, todo, index: idx },
+          `已删除待办「${todo.title || '未命名'}」`,
+        )
         set((s) => ({
           projects: s.projects.map((p) =>
             p.id !== projectId
@@ -239,25 +286,16 @@ export const useStore = create<Store>()(
                   updatedAt: stamp(),
                 },
           ),
-          undoStack: pushUndo(s, {
-            kind: 'todo-removed',
-            projectId,
-            todo,
-            index: idx,
-            label: `已删除待办「${todo.title || '未命名'}」`,
-          }),
+          undoStack: pushUndo(s, entry),
         }))
+        return entry.token
       },
 
       reorderTodos: (projectId, ids) => {
         set((s) => ({
-          projects: s.projects.map((p) => {
-            if (p.id !== projectId) return p
-            const byId = new Map(p.todos.map((t) => [t.id, t]))
-            const next = ids.map((id) => byId.get(id)).filter(Boolean) as Todo[]
-            for (const t of p.todos) if (!ids.includes(t.id)) next.push(t)
-            return { ...p, todos: next, updatedAt: stamp() }
-          }),
+          projects: s.projects.map((p) =>
+            p.id !== projectId ? p : { ...p, todos: reorderBy(p.todos, ids), updatedAt: stamp() },
+          ),
         }))
       },
 
@@ -394,13 +432,9 @@ export const useStore = create<Store>()(
 
       reorderProjectStages: (projectId, ids) => {
         set((state) => ({
-          projects: state.projects.map((p) => {
-            if (p.id !== projectId) return p
-            const byId = new Map(p.stages.map((s) => [s.id, s]))
-            const next = ids.map((id) => byId.get(id)).filter(Boolean) as StageDef[]
-            for (const s of p.stages) if (!ids.includes(s.id)) next.push(s)
-            return { ...p, stages: next, updatedAt: stamp() }
-          }),
+          projects: state.projects.map((p) =>
+            p.id !== projectId ? p : { ...p, stages: reorderBy(p.stages, ids), updatedAt: stamp() },
+          ),
         }))
       },
 
@@ -428,10 +462,14 @@ export const useStore = create<Store>()(
       removeCollaborator: (projectId, collaboratorId) => {
         const state = get()
         const project = state.projects.find((p) => p.id === projectId)
-        if (!project) return
+        if (!project) return ''
         const idx = project.collaborators.findIndex((c) => c.id === collaboratorId)
-        if (idx === -1) return
+        if (idx === -1) return ''
         const collaborator = project.collaborators[idx]
+        const entry = makeUndo(
+          { kind: 'collaborator-removed', projectId, collaborator, index: idx },
+          `已移除合作者「${collaborator.name || '未命名'}」`,
+        )
         set((s) => ({
           projects: s.projects.map((p) =>
             p.id !== projectId
@@ -442,27 +480,20 @@ export const useStore = create<Store>()(
                   updatedAt: stamp(),
                 },
           ),
-          undoStack: pushUndo(s, {
-            kind: 'collaborator-removed',
-            projectId,
-            collaborator,
-            index: idx,
-            label: `已移除合作者「${collaborator.name || '未命名'}」`,
-          }),
+          undoStack: pushUndo(s, entry),
         }))
+        return entry.token
       },
 
-      replaceState: (state) => {
+      replaceState: (next) => {
         const prev = { projects: get().projects, version: get().version }
+        const entry = makeUndo({ kind: 'replace-state', prev }, '已替换全部数据')
         set((s) => ({
-          projects: state.projects,
-          version: state.version,
-          undoStack: pushUndo(s, {
-            kind: 'replace-state',
-            prev,
-            label: '已替换全部数据',
-          }),
+          projects: next.projects,
+          version: next.version,
+          undoStack: pushUndo(s, entry),
         }))
+        return entry.token
       },
 
       clearAll: () => {
@@ -471,26 +502,28 @@ export const useStore = create<Store>()(
 
       resetToSeed: () => {
         const prev = { projects: get().projects, version: get().version }
+        const entry = makeUndo({ kind: 'replace-state', prev }, '已恢复演示数据')
         set((s) => ({
           projects: seedProjects(),
           version: SCHEMA_VERSION,
-          undoStack: pushUndo(s, {
-            kind: 'replace-state',
-            prev,
-            label: '已恢复演示数据',
-          }),
+          undoStack: pushUndo(s, entry),
         }))
+        return entry.token
       },
 
-      undo: () => {
-        const entry = get().undoStack[0]
+      undo: (token) => {
+        const stack = get().undoStack
+        // Distinguish "no token" (Cmd+Z → newest) from an empty-string token
+        // (a no-op returned when nothing was removed) so undo('') never reverts
+        // the newest action by accident.
+        const entry = token !== undefined ? stack.find((e) => e.token === token) : stack[0]
         if (!entry) return null
         set((s) => {
-          const rest = s.undoStack.slice(1)
+          const rest = s.undoStack.filter((e) => e.token !== entry.token)
           switch (entry.kind) {
             case 'project-removed': {
               const next = [...s.projects]
-              next.splice(entry.index, 0, entry.project)
+              next.splice(Math.min(entry.index, next.length), 0, entry.project)
               return { projects: next, undoStack: rest }
             }
             case 'project-archived': {
@@ -506,7 +539,7 @@ export const useStore = create<Store>()(
                 projects: s.projects.map((p) => {
                   if (p.id !== entry.projectId) return p
                   const next = [...p.todos]
-                  next.splice(entry.index, 0, entry.todo)
+                  next.splice(Math.min(entry.index, next.length), 0, entry.todo)
                   return { ...p, todos: next }
                 }),
                 undoStack: rest,
@@ -517,7 +550,7 @@ export const useStore = create<Store>()(
                 projects: s.projects.map((p) => {
                   if (p.id !== entry.projectId) return p
                   const next = [...p.collaborators]
-                  next.splice(entry.index, 0, entry.collaborator)
+                  next.splice(Math.min(entry.index, next.length), 0, entry.collaborator)
                   return { ...p, collaborators: next }
                 }),
                 undoStack: rest,
@@ -530,6 +563,8 @@ export const useStore = create<Store>()(
                 undoStack: rest,
               }
             }
+            default:
+              return assertNever(entry)
           }
         })
         return entry
@@ -540,44 +575,126 @@ export const useStore = create<Store>()(
       storage: debouncedLocalStorage(),
       partialize: (s) => ({ projects: s.projects, version: s.version }),
       version: SCHEMA_VERSION,
-      migrate: (persisted: unknown) => {
-        const state = persisted as Partial<AppState> | undefined
-        if (!state || !Array.isArray(state.projects)) {
-          return { projects: [], version: SCHEMA_VERSION } as AppState
-        }
-        const projects = state.projects.map((p) => {
-          const stages: StageDef[] =
-            Array.isArray(p.stages) && p.stages.length > 0 ? p.stages : defaultStages()
-          const validIds = new Set(stages.map((s) => s.id))
-          const fallbackStage = stages[0].id
-          const projectStage = validIds.has(p.stage) ? p.stage : fallbackStage
-          // Rename milestones -> todos and drop startDate.
-          type LegacyMilestone = Todo & { startDate?: string }
-          const legacy: LegacyMilestone[] = Array.isArray((p as { milestones?: unknown }).milestones)
-            ? ((p as { milestones?: LegacyMilestone[] }).milestones ?? [])
-            : []
-          const rawTodos: LegacyMilestone[] =
-            Array.isArray(p.todos) && p.todos.length > 0 ? p.todos : legacy
-          const todos: Todo[] = rawTodos.map((t) => {
-            const { startDate: _start, ...rest } = t
-            return {
-              ...rest,
-              stage: validIds.has(rest.stage ?? '') ? rest.stage : projectStage,
-            } as Todo
-          })
-          const { milestones: _m, ...prest } = p as { milestones?: unknown }
-          return {
-            ...prest,
-            stages,
-            stage: projectStage,
-            todos,
-          } as Project
-        })
-        return { projects, version: SCHEMA_VERSION } as AppState
-      },
+      // Heal persisted data on load, and bump the domain version to current
+      // (importJSON keeps the imported file's version instead).
+      migrate: (persisted: unknown) => ({
+        projects: normalizeState(persisted).projects,
+        version: SCHEMA_VERSION,
+      }),
     },
   ),
 )
+
+/* ---------- Normalization (shared by persist migrate + JSON import) ---------- */
+
+const asStr = (v: unknown, fallback: string): string => (typeof v === 'string' ? v : fallback)
+
+function normalizeStage(raw: unknown): StageDef {
+  const s = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const name = asStr(s.name, '未命名阶段')
+  return {
+    id: asStr(s.id, '') || uid(),
+    name,
+    shortLabel: asStr(s.shortLabel, name),
+    color: asStr(s.color, 'oklch(0.70 0.02 250)'),
+  }
+}
+
+function normalizeTodo(raw: unknown, validIds: Set<string>, projectStage: string): Todo {
+  const t = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const todo: Todo = {
+    id: asStr(t.id, '') || uid(),
+    title: asStr(t.title, ''),
+    endDate: asStr(t.endDate, ''),
+    done: !!t.done,
+    stage: typeof t.stage === 'string' && validIds.has(t.stage) ? t.stage : projectStage,
+  }
+  if (t.priority === 'high' || t.priority === 'normal' || t.priority === 'low') todo.priority = t.priority
+  if (t.inWeek) todo.inWeek = true
+  if (typeof t.notes === 'string') todo.notes = t.notes
+  return todo
+}
+
+function normalizeCollaborator(raw: unknown): Collaborator {
+  const c = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const role = c.role
+  return {
+    id: asStr(c.id, '') || uid(),
+    name: asStr(c.name, ''),
+    role:
+      role === 'advisor' || role === 'coauthor' || role === 'student' || role === 'other'
+        ? role
+        : 'coauthor',
+    waitingFor: asStr(c.waitingFor, ''),
+  }
+}
+
+function normalizeVenue(raw: unknown): Venue | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const v = raw as Record<string, unknown>
+  const venue: Venue = { name: asStr(v.name, ''), deadline: asStr(v.deadline, '') }
+  if (typeof v.rebuttalAt === 'string') venue.rebuttalAt = v.rebuttalAt
+  return venue
+}
+
+/**
+ * Coerce one raw project (from persisted storage, a legacy schema, or an
+ * imported/hand-edited JSON file) into a fully-formed `Project`. Guarantees the
+ * arrays and fields every view dereferences (`stages`, `todos`, `collaborators`,
+ * …) exist AND that each element is well-formed (so `todos:[null]` or
+ * `collaborators:[{}]` can't crash a render), renames legacy `milestones` →
+ * `todos`, drops the old per-todo `startDate`, and repairs stage references.
+ */
+export function normalizeProject(raw: unknown): Project {
+  const p = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+
+  const stages: StageDef[] =
+    Array.isArray(p.stages) && p.stages.length > 0 ? p.stages.map(normalizeStage) : defaultStages()
+  const validIds = new Set(stages.map((s) => s.id))
+  const fallbackStage = stages[0].id
+  const projectStage =
+    typeof p.stage === 'string' && validIds.has(p.stage) ? p.stage : fallbackStage
+
+  // Legacy `milestones` were renamed to `todos`; fall back to them when present.
+  // (normalizeTodo drops the removed per-todo `startDate` by only copying known
+  // fields.)
+  const rawTodos: unknown[] =
+    Array.isArray(p.todos) && p.todos.length > 0
+      ? p.todos
+      : Array.isArray(p.milestones)
+        ? p.milestones
+        : []
+  const todos = rawTodos.map((t) => normalizeTodo(t, validIds, projectStage))
+
+  const now = stamp()
+  return {
+    id: asStr(p.id, '') || uid(),
+    title: asStr(p.title, ''),
+    description: asStr(p.description, ''),
+    stage: projectStage,
+    stages,
+    startDate: asStr(p.startDate, today()),
+    venue: normalizeVenue(p.venue),
+    collaborators: Array.isArray(p.collaborators) ? p.collaborators.map(normalizeCollaborator) : [],
+    todos,
+    notes: asStr(p.notes, ''),
+    archived: !!p.archived,
+    createdAt: asStr(p.createdAt, now),
+    updatedAt: asStr(p.updatedAt, now),
+  }
+}
+
+/** Coerce a raw persisted/imported blob into a valid `AppState`. */
+export function normalizeState(raw: unknown): AppState {
+  const s = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : undefined
+  if (!s || !Array.isArray(s.projects)) {
+    return { projects: [], version: SCHEMA_VERSION }
+  }
+  return {
+    projects: s.projects.map(normalizeProject),
+    version: typeof s.version === 'number' ? s.version : SCHEMA_VERSION,
+  }
+}
 
 /** Pure helpers used outside the store */
 
@@ -590,7 +707,8 @@ export function nextDeadline(p: Project): { date: string; label: string } | null
     candidates.push({ date: p.venue.rebuttalAt, label: `${p.venue.name} rebuttal` })
   }
   for (const t of p.todos) {
-    if (!t.done) candidates.push({ date: t.endDate, label: t.title })
+    // Skip undated todos: an empty endDate isn't a real deadline candidate.
+    if (!t.done && t.endDate) candidates.push({ date: t.endDate, label: t.title })
   }
   if (candidates.length === 0) return null
   candidates.sort((a, b) => a.date.localeCompare(b.date))
@@ -633,17 +751,18 @@ export function weekItems(projects: Project[], end: string): WeekItem[] {
   })
 }
 
-/** Up to N incomplete todos, overdue first then by endDate. */
+/** Up to N incomplete todos, overdue first then by endDate (undated sink last). */
 export function upcomingTodos(p: Project, n = 3): Todo[] {
   const t = today()
   const incomplete = p.todos.filter((x) => !x.done)
   return [...incomplete]
     .sort((a, b) => {
-      const aOver = a.endDate < t
-      const bOver = b.endDate < t
-      if (aOver && !bOver) return -1
-      if (!aOver && bOver) return 1
-      return a.endDate.localeCompare(b.endDate)
+      const aOver = !!a.endDate && a.endDate < t
+      const bOver = !!b.endDate && b.endDate < t
+      if (aOver !== bOver) return aOver ? -1 : 1
+      const da = a.endDate || '9999-12-31'
+      const db = b.endDate || '9999-12-31'
+      return da.localeCompare(db)
     })
     .slice(0, n)
 }
@@ -666,8 +785,11 @@ export function importJSON(text: string): AppState {
   if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.projects)) {
     throw new Error('Invalid file: missing `projects` array')
   }
+  // Normalize every project the same way persisted state is healed on load, so
+  // an older/hand-edited backup can't smuggle in a malformed project that
+  // crashes the app on render.
   return {
-    projects: parsed.projects as Project[],
+    projects: parsed.projects.map(normalizeProject),
     version: typeof parsed.version === 'number' ? parsed.version : SCHEMA_VERSION,
   }
 }

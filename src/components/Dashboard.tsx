@@ -71,10 +71,10 @@ export function Dashboard({
   )
 
   const onLoadDemo = () => {
-    resetToSeed()
+    const token = resetToSeed()
     toast({
       message: '已加载演示数据',
-      action: { label: '撤销', onClick: () => undo() },
+      action: { label: '撤销', onClick: () => undo(token) },
     })
   }
 

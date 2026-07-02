@@ -30,6 +30,9 @@ export function Timeline({ onEdit }: Props) {
   const dragRef = useRef<DragState | null>(null)
   const rafRef = useRef<number | null>(null)
   const pendingEndRef = useRef<string | null>(null)
+  // True once a drag actually moved the pointer, so the trailing synthetic
+  // click (which would otherwise open the editor) can be swallowed.
+  const movedRef = useRef(false)
   const [draggingId, setDraggingId] = useState<string | null>(null)
 
   const grid = useMemo(() => {
@@ -71,6 +74,7 @@ export function Timeline({ onEdit }: Props) {
     const onMove = (e: MouseEvent) => {
       const drag = dragRef.current
       if (!drag) return
+      if (Math.abs(e.clientX - drag.startX) > 3) movedRef.current = true
       const deltaDays = Math.round((e.clientX - drag.startX) / DAY_WIDTH)
       const baseEnd = parse(drag.initialEnd)
       if (!baseEnd) return
@@ -101,12 +105,20 @@ export function Timeline({ onEdit }: Props) {
     return () => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
+      // Unmount mid-drag: drop the queued frame and clear the global drag flag
+      // so the cursor/interaction styles don't get stuck app-wide.
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
+      document.body.classList.remove('is-dragging')
     }
   }, [updateTodo])
 
   const startDrag = (e: React.MouseEvent, project: Project, todo: Todo) => {
     e.stopPropagation()
     e.preventDefault()
+    movedRef.current = false
     dragRef.current = {
       projectId: project.id,
       todoId: todo.id,
@@ -216,6 +228,14 @@ export function Timeline({ onEdit }: Props) {
                     dayOffset={dayOffset}
                     draggingId={draggingId}
                     onEdit={() => onEdit(p)}
+                    onDotClick={() => {
+                      // Swallow the click synthesized at the end of a drag.
+                      if (movedRef.current) {
+                        movedRef.current = false
+                        return
+                      }
+                      onEdit(p)
+                    }}
                     onStartDrag={(e, t) => startDrag(e, p, t)}
                   />
                 ))}
@@ -286,12 +306,14 @@ interface RowProps {
   dayOffset: (iso: string) => number | null
   draggingId: string | null
   onEdit: () => void
+  /** Click handler for a todo dot; suppresses the post-drag synthetic click. */
+  onDotClick: () => void
   onStartDrag: (e: React.MouseEvent, t: Todo) => void
 }
 
 const DOT_SIZE = 12
 
-function ProjectRow({ project, dayOffset, draggingId, onEdit, onStartDrag }: RowProps) {
+function ProjectRow({ project, dayOffset, draggingId, onEdit, onDotClick, onStartDrag }: RowProps) {
   const todayIso = today()
 
   return (
@@ -309,7 +331,7 @@ function ProjectRow({ project, dayOffset, draggingId, onEdit, onStartDrag }: Row
         return (
           <div
             key={todo.id}
-            onClick={onEdit}
+            onClick={onDotClick}
             onMouseDown={(e) => onStartDrag(e, todo)}
             title={`${todo.title || '未命名'} · ${todo.endDate}${todo.done ? ' (已完成)' : ''}`}
             className={cn(

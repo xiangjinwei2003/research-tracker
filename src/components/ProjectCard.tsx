@@ -32,15 +32,30 @@ export const ProjectCard = memo(function ProjectCard({
   // and the id of the todo that picker should write its chosen date back to.
   const newDateRef = useRef<HTMLInputElement>(null)
   const pendingDateIdRef = useRef<string | null>(null)
+  // Guards against a double insert: pressing Enter commits and then unmounts the
+  // <Input>, whose blur would otherwise fire commitDraft again from the stale
+  // `draft` closure. Reset each time the quick-add input is (re)opened.
+  const committedRef = useRef(false)
+
+  const openAdd = () => {
+    committedRef.current = false
+    setAdding(true)
+  }
 
   /**
    * Create the drafted todo (store default: due today, current stage). Returns
-   * the new todo's id, or null when the draft was blank.
+   * the new todo's id, or null when the draft was blank or already committed.
+   * Idempotent within one open→commit cycle.
    */
   const commitDraft = (): string | null => {
+    if (committedRef.current) return null
     const title = draft.trim()
     setDraft('')
-    return title ? addTodo(project.id, { title }) : null
+    // Latch only when a real todo is actually inserted: a blank Enter must not
+    // stick the guard, or the next real title would be silently dropped.
+    if (!title) return null
+    committedRef.current = true
+    return addTodo(project.id, { title })
   }
 
   /**
@@ -70,6 +85,9 @@ export const ProjectCard = memo(function ProjectCard({
   const currentStage = findStage(project.stages, project.stage)
   const upcoming = upcomingTodos(project, 3)
   const t = today()
+  const doneCount = project.todos.filter((x) => x.done).length
+  const totalCount = project.todos.length
+  const remainingCount = totalCount - doneCount
 
   return (
     <Card
@@ -151,7 +169,7 @@ export const ProjectCard = memo(function ProjectCard({
         <div className="mb-1 flex items-center justify-between text-xs text-neutral-500">
           <span>待办</span>
           <span className="tabular-nums">
-            {project.todos.filter((x) => x.done).length}/{project.todos.length}
+            {doneCount}/{totalCount}
           </span>
         </div>
         {upcoming.length > 0 ? (
@@ -211,9 +229,9 @@ export const ProjectCard = memo(function ProjectCard({
                 </li>
               )
             })}
-            {project.todos.filter((x) => !x.done).length > upcoming.length ? (
+            {remainingCount > upcoming.length ? (
               <li className="text-[11px] text-neutral-400">
-                还有 {project.todos.filter((x) => !x.done).length - upcoming.length} 个未完成…
+                还有 {remainingCount - upcoming.length} 个未完成…
               </li>
             ) : null}
           </ul>
@@ -234,6 +252,7 @@ export const ProjectCard = memo(function ProjectCard({
                   // Add the todo, then pop the date picker to set its deadline.
                   commitAndPickDate()
                 } else if (e.key === 'Escape') {
+                  committedRef.current = true // discard: block a racing blur-commit
                   setDraft('')
                   setAdding(false)
                 }
@@ -249,7 +268,7 @@ export const ProjectCard = memo(function ProjectCard({
           ) : (
             <button
               type="button"
-              onClick={() => setAdding(true)}
+              onClick={openAdd}
               className="inline-flex items-center gap-1 rounded text-xs text-neutral-400 transition hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-500 dark:hover:text-brand-400"
             >
               <Plus size={12} /> 添加待办
