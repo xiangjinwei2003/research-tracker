@@ -124,9 +124,11 @@ export function Board({ onNew, onEdit }: Props) {
                         {project.title || '未命名项目'}
                       </span>
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800/70">
+                        {/* One consistent accent for the chart (project colors
+                            stay on the cards); saturated so it doesn't read faint. */}
                         <div
-                          className="h-full rounded-full"
-                          style={{ width: `${pct}%`, background: project.color }}
+                          className="h-full rounded-full bg-brand-500 dark:bg-brand-400"
+                          style={{ width: `${pct}%` }}
                         />
                       </div>
                       <span
