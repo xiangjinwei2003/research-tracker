@@ -1,4 +1,4 @@
-import { memo, useRef, useState, type CSSProperties } from 'react'
+import { memo, useRef, useState } from 'react'
 import { CalendarClock, Users, Check, GripVertical, Plus, ChevronDown } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import { findStage } from '@/lib/types'
@@ -98,27 +98,25 @@ export const ProjectCard = memo(function ProjectCard({
   return (
     <Card
       onClick={() => onEdit(project)}
-      style={{ '--proj': project.color } as CSSProperties}
-      className="group relative flex cursor-pointer flex-col p-4 pl-5 transition hover:border-brand-300 hover:shadow-md dark:hover:border-brand-800/70"
+      className="group flex cursor-pointer flex-col p-4 transition hover:border-brand-300 hover:shadow-md dark:hover:border-brand-800/70"
     >
-      {/* Same per-project colour spine as 本周重点, so the accent's meaning is
-          self-evident: this colour = this project. Inset to clear the corners. */}
-      {project.color ? (
-        <span
-          aria-hidden
-          className="proj-spine pointer-events-none absolute bottom-3 left-1.5 top-3 w-[3px] rounded-full"
-        />
-      ) : null}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="min-w-0">
+          <h3 className="flex min-w-0 items-center gap-2">
+            {/* Per-project colour block — this colour = this project, matching
+                the swatch in the editor and the block in 本周重点. */}
+            <span
+              aria-hidden
+              className="h-3 w-3 shrink-0 rounded-[4px] ring-1 ring-inset ring-black/10 dark:ring-white/15"
+              style={{ background: project.color }}
+            />
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 onEdit(project)
               }}
-              className="block w-full truncate rounded text-left text-base font-semibold text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-100"
+              className="min-w-0 flex-1 truncate rounded text-left text-base font-semibold text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-100"
             >
               {project.title || <span className="italic text-neutral-400">未命名项目</span>}
             </button>
