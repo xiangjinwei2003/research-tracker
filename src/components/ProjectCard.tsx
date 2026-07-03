@@ -1,4 +1,4 @@
-import { memo, useRef, useState } from 'react'
+import { memo, useRef, useState, type CSSProperties } from 'react'
 import { CalendarClock, Users, Check, GripVertical, Plus, ChevronDown } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import { findStage } from '@/lib/types'
@@ -98,25 +98,19 @@ export const ProjectCard = memo(function ProjectCard({
   return (
     <Card
       onClick={() => onEdit(project)}
-      className="group flex cursor-pointer flex-col p-4 transition hover:border-brand-300 hover:shadow-md dark:hover:border-brand-800/70"
+      style={{ '--proj': project.color } as CSSProperties}
+      className="proj-card group flex cursor-pointer flex-col p-4 transition hover:border-brand-300 hover:shadow-md dark:hover:border-brand-800/70"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="flex min-w-0 items-center gap-2">
-            {/* Per-project colour block — this colour = this project, matching
-                the swatch in the editor and the block in 本周重点. */}
-            <span
-              aria-hidden
-              className="h-3 w-3 shrink-0 rounded-[4px] ring-1 ring-inset ring-black/10 dark:ring-white/15"
-              style={{ background: project.color }}
-            />
+          <h3 className="min-w-0">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 onEdit(project)
               }}
-              className="min-w-0 flex-1 truncate rounded text-left text-base font-semibold text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-100"
+              className="block w-full truncate rounded text-left text-base font-semibold text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-100"
             >
               {project.title || <span className="italic text-neutral-400">未命名项目</span>}
             </button>

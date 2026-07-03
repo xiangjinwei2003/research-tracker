@@ -109,6 +109,21 @@ html.dark .stage-badge {
   color: color-mix(in oklab, var(--stage) 74%, white);
 }
 
+/* Whole-card project tint: the card background + border take on a wash of the
+   project's colour (`--proj`, set inline per project) so each project's cards
+   are colour-coded at a glance. Kept light enough that text stays legible; dark
+   mode is the tuned mode. Unlayered so it overrides Tailwind's bg/border
+   utilities on the same element (same pattern as .stage-badge). */
+.proj-card {
+  background-color: color-mix(in oklab, var(--proj) 11%, white);
+  border-color: color-mix(in oklab, var(--proj) 38%, var(--color-neutral-200));
+}
+
+html.dark .proj-card {
+  background-color: color-mix(in oklab, var(--proj) 30%, var(--color-neutral-900));
+  border-color: color-mix(in oklab, var(--proj) 44%, var(--color-neutral-800));
+}
+
 /* Respect users who prefer reduced motion: neutralise transitions + animations. */
 @media (prefers-reduced-motion: reduce) {
   *,

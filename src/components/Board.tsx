@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type DragEvent } from 'react'
+import { useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react'
 import { CalendarRange, Check, Pin } from 'lucide-react'
 import { useStore, weekItems, type WeekItem } from '@/lib/store'
 import {
@@ -245,8 +245,9 @@ function BoardCard({
       onDragEnd={onDragEnd}
       onClick={onOpen}
       title="拖动调整重要程度"
+      style={{ '--proj': project.color } as CSSProperties}
       className={cn(
-        'cursor-grab rounded-lg border border-neutral-200 bg-white p-2.5 shadow-sm transition hover:border-brand-300 hover:shadow active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-brand-800/70',
+        'proj-card cursor-grab rounded-lg border border-neutral-200 bg-white p-2.5 shadow-sm transition hover:border-brand-300 hover:shadow active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-brand-800/70',
         dragging && 'opacity-40',
       )}
     >
@@ -290,11 +291,6 @@ function BoardCard({
               </button>
             ) : null}
             <StageChip stage={stage} />
-            <span
-              aria-hidden
-              className="h-2.5 w-2.5 shrink-0 rounded-[3px] ring-1 ring-inset ring-black/10 dark:ring-white/15"
-              style={{ background: project.color }}
-            />
             <span className="min-w-0 truncate">{project.title}</span>
           </div>
           <div
