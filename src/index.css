@@ -109,6 +109,18 @@ html.dark .stage-badge {
   color: color-mix(in oklab, var(--stage) 74%, white);
 }
 
+/* Project accent spine: a thin inset stroke whose colour comes from `--proj`
+   (set inline per project). Groups same-project cards in 本周重点 / 项目总览 as a
+   quiet identity cue — only the mix % differs by theme (dark is the tuned,
+   deliberately understated mode; light needs a touch more to hold on white). */
+.proj-spine {
+  background-color: color-mix(in oklab, var(--proj) 62%, transparent);
+}
+
+html.dark .proj-spine {
+  background-color: color-mix(in oklab, var(--proj) 58%, transparent);
+}
+
 /* Respect users who prefer reduced motion: neutralise transitions + animations. */
 @media (prefers-reduced-motion: reduce) {
   *,

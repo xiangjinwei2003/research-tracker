@@ -14,6 +14,7 @@ import {
   ROLES,
   PRESET_VENUES,
   STAGE_COLOR_PRESETS,
+  PROJECT_COLOR_PRESETS,
   defaultStages,
   findStage,
   todoPriority,
@@ -182,11 +183,18 @@ function EditDialog({
       <div className="space-y-4">
         <div>
           <Label htmlFor="title">项目名称</Label>
-          <Input
-            id="title"
-            value={project.title}
-            onChange={(e) => updateProject(project.id, { title: e.target.value })}
-          />
+          <div className="flex items-center gap-2">
+            <ProjectColorPicker
+              value={project.color}
+              onChange={(color) => updateProject(project.id, { color })}
+            />
+            <Input
+              id="title"
+              className="flex-1"
+              value={project.title}
+              onChange={(e) => updateProject(project.id, { title: e.target.value })}
+            />
+          </div>
         </div>
 
         <div>
@@ -437,11 +445,12 @@ function EditDialog({
 
 type Draft = Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'archived'>
 
-function emptyDraft(): Draft {
+function emptyDraft(color: string): Draft {
   const stages = defaultStages()
   return {
     title: '',
     description: '',
+    color,
     stage: stages[0].id,
     stages,
     startDate: today(),
@@ -460,14 +469,18 @@ function CreateDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const addProject = useStore((s) => s.addProject)
-  const [draft, setDraft] = useState<Draft>(emptyDraft())
+  const projectCount = useStore((s) => s.projects.length)
+  // Pre-select the next palette hue so a new project starts with a distinct
+  // accent (still changeable via the swatch before saving).
+  const nextColor = () => PROJECT_COLOR_PRESETS[projectCount % PROJECT_COLOR_PRESETS.length]
+  const [draft, setDraft] = useState<Draft>(() => emptyDraft(nextColor()))
   const [prevOpen, setPrevOpen] = useState(open)
 
   // Reset the draft each time the dialog (re)opens. Done during render rather
   // than in an effect so the fresh form is ready on the first paint.
   if (open !== prevOpen) {
     setPrevOpen(open)
-    if (open) setDraft(emptyDraft())
+    if (open) setDraft(emptyDraft(nextColor()))
   }
 
   const save = () => {
@@ -491,16 +504,23 @@ function CreateDialog({
       <div className="space-y-4">
         <div>
           <Label htmlFor="new-title">项目名称 *</Label>
-          <Input
-            id="new-title"
-            autoFocus
-            placeholder="例如：AI 写作助手对研究者工作流的影响"
-            value={draft.title}
-            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && draft.title.trim()) save()
-            }}
-          />
+          <div className="flex items-center gap-2">
+            <ProjectColorPicker
+              value={draft.color}
+              onChange={(color) => setDraft({ ...draft, color })}
+            />
+            <Input
+              id="new-title"
+              className="flex-1"
+              autoFocus
+              placeholder="例如：AI 写作助手对研究者工作流的影响"
+              value={draft.title}
+              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && draft.title.trim()) save()
+              }}
+            />
+          </div>
         </div>
         <div>
           <Label htmlFor="new-desc">一句话描述</Label>
@@ -554,6 +574,57 @@ function CreateDialog({
 }
 
 /* ---------- Subcomponents ---------- */
+
+/**
+ * Compact swatch + preset palette for the project's accent color. The chosen
+ * color surfaces as a quiet spine in 本周重点 / 项目总览 so same-project cards group.
+ */
+function ProjectColorPicker({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (color: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ring-neutral-300 transition hover:ring-neutral-500 dark:ring-neutral-700"
+        style={{ background: value || 'transparent' }}
+        aria-label="项目颜色"
+        title="项目颜色"
+      />
+      {open ? (
+        <div
+          className="absolute left-0 top-11 z-20 grid w-44 grid-cols-6 gap-1.5 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg animate-menu-in dark:border-neutral-700 dark:bg-neutral-800"
+          onMouseLeave={() => setOpen(false)}
+        >
+          {PROJECT_COLOR_PRESETS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => {
+                onChange(c)
+                setOpen(false)
+              }}
+              className={cn(
+                'h-5 w-5 rounded-full ring-inset transition hover:scale-110',
+                value === c
+                  ? 'ring-2 ring-neutral-900 dark:ring-white'
+                  : 'ring-1 ring-neutral-300 hover:ring-neutral-500 dark:ring-neutral-600',
+              )}
+              style={{ background: c }}
+              aria-label={`选择颜色 ${c}`}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
 
 function CollaboratorRow({
   value,

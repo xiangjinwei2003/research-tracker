@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type DragEvent } from 'react'
+import { useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react'
 import { CalendarRange, Check, Pin } from 'lucide-react'
 import { useStore, weekItems, type WeekItem } from '@/lib/store'
 import {
@@ -245,11 +245,20 @@ function BoardCard({
       onDragEnd={onDragEnd}
       onClick={onOpen}
       title="拖动调整重要程度"
+      style={{ '--proj': project.color } as CSSProperties}
       className={cn(
-        'cursor-grab rounded-lg border border-neutral-200 bg-white p-2.5 shadow-sm transition hover:border-brand-300 hover:shadow active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-brand-800/70',
+        'relative cursor-grab rounded-lg border border-neutral-200 bg-white p-2.5 pl-3 shadow-sm transition hover:border-brand-300 hover:shadow active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-brand-800/70',
         dragging && 'opacity-40',
       )}
     >
+      {/* Per-project colour spine — a quiet identity cue so same-project cards
+          group at a glance. Inset from the corners so the rounded edge stays clean. */}
+      {project.color ? (
+        <span
+          aria-hidden
+          className="proj-spine pointer-events-none absolute bottom-1.5 left-1 top-1.5 w-[3px] rounded-full"
+        />
+      ) : null}
       <div className="flex items-start gap-2">
         <button
           type="button"

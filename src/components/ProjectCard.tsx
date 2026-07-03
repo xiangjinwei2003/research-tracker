@@ -1,4 +1,4 @@
-import { memo, useRef, useState } from 'react'
+import { memo, useRef, useState, type CSSProperties } from 'react'
 import { CalendarClock, Users, Check, GripVertical, Plus, ChevronDown } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import { findStage } from '@/lib/types'
@@ -98,8 +98,17 @@ export const ProjectCard = memo(function ProjectCard({
   return (
     <Card
       onClick={() => onEdit(project)}
-      className="group flex cursor-pointer flex-col p-4 transition hover:border-brand-300 hover:shadow-md dark:hover:border-brand-800/70"
+      style={{ '--proj': project.color } as CSSProperties}
+      className="group relative flex cursor-pointer flex-col p-4 pl-5 transition hover:border-brand-300 hover:shadow-md dark:hover:border-brand-800/70"
     >
+      {/* Same per-project colour spine as 本周重点, so the accent's meaning is
+          self-evident: this colour = this project. Inset to clear the corners. */}
+      {project.color ? (
+        <span
+          aria-hidden
+          className="proj-spine pointer-events-none absolute bottom-3 left-1.5 top-3 w-[3px] rounded-full"
+        />
+      ) : null}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h3 className="min-w-0">

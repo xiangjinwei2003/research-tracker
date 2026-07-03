@@ -1,5 +1,5 @@
 import type { Project } from './types'
-import { defaultStages } from './types'
+import { defaultStages, PROJECT_COLOR_PRESETS } from './types'
 import { uid } from './id'
 import { format, addDays } from 'date-fns'
 
@@ -13,6 +13,7 @@ export function seedProjects(): Project[] {
       id: uid(),
       title: 'AI 写作助手对研究者工作流的影响',
       description: '半结构化访谈 + 日志分析，理解 LLM 工具如何改变学术写作过程。',
+      color: PROJECT_COLOR_PRESETS[0],
       stage: 'analysis',
       stages: defaultStages(),
       startDate: d(-90),
@@ -38,6 +39,7 @@ export function seedProjects(): Project[] {
       id: uid(),
       title: '在线协作工具中的注意力修复',
       description: '探索通知设计如何帮助远程协作者更快回到深度工作。',
+      color: PROJECT_COLOR_PRESETS[3],
       stage: 'design',
       stages: defaultStages(),
       startDate: d(-30),
@@ -61,6 +63,7 @@ export function seedProjects(): Project[] {
       id: uid(),
       title: 'JMIR 投稿：可穿戴心率干预',
       description: '已投稿，等待 reviewer 意见，预计 rebuttal 6 月。',
+      color: PROJECT_COLOR_PRESETS[7],
       stage: 'submitted',
       stages: defaultStages(),
       startDate: d(-180),

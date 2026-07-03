@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import { persist, type PersistStorage, type StorageValue } from 'zustand/middleware'
 import type { Project, Todo, Collaborator, AppState, StageDef, Venue } from './types'
-import { defaultStages, todoPriority, PRIORITY_META } from './types'
+import { defaultStages, todoPriority, PRIORITY_META, PROJECT_COLOR_PRESETS } from './types'
 import { uid } from './id'
 import { today } from './date'
 import { seedProjects } from './seed'
 
-const SCHEMA_VERSION = 4
+// v5: every project gained a `color` accent (auto-assigned on load if missing).
+const SCHEMA_VERSION = 5
 
 type UndoKind =
   | { kind: 'project-removed'; project: Project; index: number }
@@ -175,9 +176,18 @@ export const useStore = create<Store>()(
       addProject: (p) => {
         const id = uid()
         const now = stamp()
-        set((s) => ({
-          projects: [{ ...p, id, archived: false, createdAt: now, updatedAt: now }, ...s.projects],
-        }))
+        set((s) => {
+          // Fall back to the next palette hue so a project without an explicit
+          // pick still gets a distinct accent instead of an empty color.
+          const color =
+            p.color || PROJECT_COLOR_PRESETS[s.projects.length % PROJECT_COLOR_PRESETS.length]
+          return {
+            projects: [
+              { ...p, id, color, archived: false, createdAt: now, updatedAt: now },
+              ...s.projects,
+            ],
+          }
+        })
         return id
       },
 
@@ -671,6 +681,9 @@ export function normalizeProject(raw: unknown): Project {
     id: asStr(p.id, '') || uid(),
     title: asStr(p.title, ''),
     description: asStr(p.description, ''),
+    // Left '' when absent; `withDefaultColors` assigns a distinct palette hue
+    // by position so pre-color projects still end up individually colored.
+    color: asStr(p.color, ''),
     stage: projectStage,
     stages,
     startDate: asStr(p.startDate, today()),
@@ -684,6 +697,17 @@ export function normalizeProject(raw: unknown): Project {
   }
 }
 
+/**
+ * Guarantee every project has a non-empty accent color: keep any explicit one,
+ * else assign a palette hue by position so adjacently-created projects get
+ * different colors. Applied on both the persisted-load and JSON-import paths.
+ */
+function withDefaultColors(projects: Project[]): Project[] {
+  return projects.map((p, i) =>
+    p.color ? p : { ...p, color: PROJECT_COLOR_PRESETS[i % PROJECT_COLOR_PRESETS.length] },
+  )
+}
+
 /** Coerce a raw persisted/imported blob into a valid `AppState`. */
 export function normalizeState(raw: unknown): AppState {
   const s = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : undefined
@@ -691,7 +715,7 @@ export function normalizeState(raw: unknown): AppState {
     return { projects: [], version: SCHEMA_VERSION }
   }
   return {
-    projects: s.projects.map(normalizeProject),
+    projects: withDefaultColors(s.projects.map(normalizeProject)),
     version: typeof s.version === 'number' ? s.version : SCHEMA_VERSION,
   }
 }
@@ -789,7 +813,7 @@ export function importJSON(text: string): AppState {
   // an older/hand-edited backup can't smuggle in a malformed project that
   // crashes the app on render.
   return {
-    projects: parsed.projects.map(normalizeProject),
+    projects: withDefaultColors(parsed.projects.map(normalizeProject)),
     version: typeof parsed.version === 'number' ? parsed.version : SCHEMA_VERSION,
   }
 }

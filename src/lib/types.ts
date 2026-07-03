@@ -141,6 +141,12 @@ export interface Project {
   id: string
   title: string
   description: string
+  /**
+   * Per-project accent color (a raw CSS color string, e.g. oklch). Used as a
+   * quiet identity cue so cards from the same project group visually in 本周重点.
+   * Always non-empty after normalization (auto-assigned from PROJECT_COLOR_PRESETS).
+   */
+  color: string
   /** Current main stage; must be an id in `stages`. */
   stage: Stage
   /** Ordered list of stages available for this project. Each project has its own pipeline. */
@@ -174,6 +180,26 @@ export const PRESET_VENUES = [
   'JAMIA',
   'TOCHI',
   'IJHCS',
+] as const
+
+/**
+ * Per-project accent palette. Distinct hues at a lightness/chroma that stays
+ * legible-but-quiet on both the light (white) and dark (neutral-900) card
+ * surfaces once run through the `color-mix` tinting used for the accent.
+ */
+export const PROJECT_COLOR_PRESETS = [
+  'oklch(0.72 0.15 264)', // indigo
+  'oklch(0.72 0.13 230)', // blue
+  'oklch(0.74 0.12 196)', // teal
+  'oklch(0.74 0.14 162)', // green
+  'oklch(0.78 0.14 132)', // lime
+  'oklch(0.80 0.13 96)', // yellow
+  'oklch(0.77 0.15 66)', // amber
+  'oklch(0.71 0.16 40)', // orange
+  'oklch(0.68 0.17 18)', // red
+  'oklch(0.70 0.16 350)', // pink
+  'oklch(0.69 0.16 328)', // magenta
+  'oklch(0.68 0.15 300)', // purple
 ] as const
 
 /** Common color presets for the stage color picker. */
