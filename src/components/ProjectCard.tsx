@@ -96,10 +96,11 @@ export const ProjectCard = memo(function ProjectCard({
   const upcoming = upcomingTodos(project, expanded ? remainingCount : VISIBLE_TODOS)
 
   return (
+    // Border/bg + hover border come from .proj-card (project-hue tint).
     <Card
       onClick={() => onEdit(project)}
       style={{ '--proj': project.color } as CSSProperties}
-      className="proj-card group flex cursor-pointer flex-col p-4 transition hover:border-brand-300 hover:shadow-md dark:hover:border-brand-800/70"
+      className="proj-card group flex cursor-pointer flex-col p-4 transition hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -166,7 +167,8 @@ export const ProjectCard = memo(function ProjectCard({
             </span>
           </span>
         </div>
-        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+        {/* Translucent track so it reads correctly on the project-tinted card. */}
+        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10">
           <div
             className="h-full rounded-full transition-all"
             style={{ width: `${sp.percent}%`, background: currentStage.color }}

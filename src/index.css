@@ -109,19 +109,52 @@ html.dark .stage-badge {
   color: color-mix(in oklab, var(--stage) 74%, white);
 }
 
-/* Whole-card project tint: the card background + border take on a wash of the
-   project's colour (`--proj`, set inline per project) so each project's cards
-   are colour-coded at a glance. Kept light enough that text stays legible; dark
-   mode is the tuned mode. Unlayered so it overrides Tailwind's bg/border
-   utilities on the same element (same pattern as .stage-badge). */
+/* Whole-card project tint — hue-pinned recipe. We take ONLY the hue from
+   `--proj` (set inline per project) and pin lightness/chroma to fixed tokens,
+   so all presets land on the identical perceived surface; only the hue differs.
+   (The old color-mix wash collapsed every hue into the same mid-lightness /
+   low-chroma "muddy" zone, at inconsistent strengths per preset.) The border
+   is the same hue, brighter — and hover brightens it further along the
+   project's own hue instead of the brand indigo, which clashed on tinted cards.
+   Unlayered so it overrides Tailwind's bg/border utilities (same pattern as
+   .stage-badge). The color-mix rules are a fallback for engines without CSS
+   relative color; the @supports block below is the real recipe. */
 .proj-card {
-  background-color: color-mix(in oklab, var(--proj) 11%, white);
-  border-color: color-mix(in oklab, var(--proj) 38%, var(--color-neutral-200));
+  background-color: color-mix(in oklab, var(--proj) 12%, white);
+  border-color: color-mix(in oklab, var(--proj) 40%, var(--color-neutral-200));
+}
+
+.proj-card:hover {
+  border-color: color-mix(in oklab, var(--proj) 62%, var(--color-neutral-200));
 }
 
 html.dark .proj-card {
-  background-color: color-mix(in oklab, var(--proj) 30%, var(--color-neutral-900));
-  border-color: color-mix(in oklab, var(--proj) 44%, var(--color-neutral-800));
+  background-color: color-mix(in oklab, var(--proj) 22%, var(--color-neutral-900));
+  border-color: color-mix(in oklab, var(--proj) 45%, var(--color-neutral-800));
+}
+
+html.dark .proj-card:hover {
+  border-color: color-mix(in oklab, var(--proj) 65%, var(--color-neutral-800));
+}
+
+@supports (color: oklch(from red 0.5 0.1 h)) {
+  .proj-card {
+    background-color: oklch(from var(--proj) 0.965 0.016 h);
+    border-color: oklch(from var(--proj) 0.84 0.055 h);
+  }
+
+  .proj-card:hover {
+    border-color: oklch(from var(--proj) 0.74 0.1 h);
+  }
+
+  html.dark .proj-card {
+    background-color: oklch(from var(--proj) 0.28 0.055 h);
+    border-color: oklch(from var(--proj) 0.45 0.08 h);
+  }
+
+  html.dark .proj-card:hover {
+    border-color: oklch(from var(--proj) 0.56 0.11 h);
+  }
 }
 
 /* Respect users who prefer reduced motion: neutralise transitions + animations. */

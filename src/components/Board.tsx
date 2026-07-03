@@ -247,7 +247,8 @@ function BoardCard({
       title="拖动调整重要程度"
       style={{ '--proj': project.color } as CSSProperties}
       className={cn(
-        'proj-card cursor-grab rounded-lg border border-neutral-200 bg-white p-2.5 shadow-sm transition hover:border-brand-300 hover:shadow active:cursor-grabbing dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-brand-800/70',
+        // Border/bg + hover border come from .proj-card (project-hue tint).
+        'proj-card cursor-grab rounded-lg border p-2.5 shadow-sm transition hover:shadow active:cursor-grabbing',
         dragging && 'opacity-40',
       )}
     >

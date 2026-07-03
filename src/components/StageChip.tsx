@@ -6,7 +6,8 @@ export function StageChip({ stage, className }: { stage: StageDef; className?: s
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400',
+        // Translucent bg so the chip sits naturally on project-tinted cards too.
+        'inline-flex shrink-0 items-center rounded bg-black/[0.05] px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-neutral-600 dark:bg-white/10 dark:text-neutral-400',
         className,
       )}
     >
