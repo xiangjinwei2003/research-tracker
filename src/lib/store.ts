@@ -597,7 +597,17 @@ export const useStore = create<Store>()(
 
 /* ---------- Normalization (shared by persist migrate + JSON import) ---------- */
 
-const asStr = (v: unknown, fallback: string): string => (typeof v === 'string' ? v : fallback)
+// MUST be a hoisted `function` declaration, not a `const` arrow. The persisted
+// store above (`create(persist(...))`, line ~169) hydrates SYNCHRONOUSLY at
+// module load; when a SCHEMA_VERSION bump makes `migrate` run, it calls into the
+// normalize* helpers → asStr *before this line executes*. As a `const`, asStr
+// would be in the temporal dead zone at that moment and throw
+// `Cannot access 'asStr' before initialization`, which zustand swallows as a
+// failed hydration — silently loading an empty store over the user's real data.
+// A function declaration is hoisted, so it is available when migrate runs.
+function asStr(v: unknown, fallback: string): string {
+  return typeof v === 'string' ? v : fallback
+}
 
 function normalizeStage(raw: unknown): StageDef {
   const s = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
