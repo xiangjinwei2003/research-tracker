@@ -183,24 +183,46 @@ export const PRESET_VENUES = [
 ] as const
 
 /**
- * Per-project accent palette. Distinct hues at a lightness/chroma that stays
- * legible-but-quiet on both the light (white) and dark (neutral-900) card
- * surfaces once run through the `color-mix` tinting used for the accent.
+ * Per-project accent palette. Ordered so that CONSECUTIVE entries are far apart
+ * on the hue wheel — projects are auto-assigned colours by position, so this
+ * ordering makes the first several projects maximally distinguishable (the first
+ * five are ≥120° apart) instead of a blue→green run that's hard to tell apart.
  */
 export const PROJECT_COLOR_PRESETS = [
   'oklch(0.72 0.15 264)', // indigo
-  'oklch(0.72 0.13 230)', // blue
-  'oklch(0.74 0.12 196)', // teal
-  'oklch(0.74 0.14 162)', // green
-  'oklch(0.78 0.14 132)', // lime
-  'oklch(0.80 0.13 96)', // yellow
-  'oklch(0.77 0.15 66)', // amber
   'oklch(0.71 0.16 40)', // orange
-  'oklch(0.68 0.17 18)', // red
-  'oklch(0.70 0.16 350)', // pink
+  'oklch(0.74 0.14 162)', // green
   'oklch(0.69 0.16 328)', // magenta
+  'oklch(0.80 0.13 96)', // yellow
+  'oklch(0.72 0.13 230)', // blue
+  'oklch(0.68 0.17 18)', // red
+  'oklch(0.74 0.12 196)', // teal
   'oklch(0.68 0.15 300)', // purple
+  'oklch(0.77 0.15 66)', // amber
+  'oklch(0.78 0.14 132)', // lime
+  'oklch(0.70 0.16 350)', // pink
 ] as const
+
+/**
+ * The previous (sequential) preset ordering. Used only to detect a project whose
+ * colour was AUTO-assigned under the old order, so a one-time migration can
+ * re-spread those to the new distinct order while leaving hand-picked colours
+ * (which won't match any of these) untouched.
+ */
+export const LEGACY_PROJECT_COLOR_PRESETS: readonly string[] = [
+  'oklch(0.72 0.15 264)',
+  'oklch(0.72 0.13 230)',
+  'oklch(0.74 0.12 196)',
+  'oklch(0.74 0.14 162)',
+  'oklch(0.78 0.14 132)',
+  'oklch(0.80 0.13 96)',
+  'oklch(0.77 0.15 66)',
+  'oklch(0.71 0.16 40)',
+  'oklch(0.68 0.17 18)',
+  'oklch(0.70 0.16 350)',
+  'oklch(0.69 0.16 328)',
+  'oklch(0.68 0.15 300)',
+]
 
 /** Common color presets for the stage color picker. */
 export const STAGE_COLOR_PRESETS = [

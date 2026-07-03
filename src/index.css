@@ -109,51 +109,60 @@ html.dark .stage-badge {
   color: color-mix(in oklab, var(--stage) 74%, white);
 }
 
-/* Whole-card project tint — hue-pinned recipe. We take ONLY the hue from
-   `--proj` (set inline per project) and pin lightness/chroma to fixed tokens,
-   so all presets land on the identical perceived surface; only the hue differs.
-   (The old color-mix wash collapsed every hue into the same mid-lightness /
-   low-chroma "muddy" zone, at inconsistent strengths per preset.) The border
-   is the same hue, brighter — and hover brightens it further along the
-   project's own hue instead of the brand indigo, which clashed on tinted cards.
-   Unlayered so it overrides Tailwind's bg/border utilities (same pattern as
-   .stage-badge). The color-mix rules are a fallback for engines without CSS
-   relative color; the @supports block below is the real recipe. */
+/* Whole-card project colour — a soft corner GLOW (top-right) in the project's
+   hue over a dark/near-white base, like the reference dashboard cards. The glow
+   is saturated near the corner and fades into the card body, so the card is
+   clearly colour-coded while text sits on a calm surface. Hue-pinned via CSS
+   relative colour (oklch(from --proj …)) so every project renders an identical
+   glow shape/strength — only the hue differs. Unlayered so it overrides
+   Tailwind bg/border utilities (same pattern as .stage-badge).
+   The color-mix rules are a fallback for engines without relative colour; the
+   @supports block below is the real recipe. */
 .proj-card {
-  background-color: color-mix(in oklab, var(--proj) 12%, white);
-  border-color: color-mix(in oklab, var(--proj) 40%, var(--color-neutral-200));
-}
-
-.proj-card:hover {
-  border-color: color-mix(in oklab, var(--proj) 62%, var(--color-neutral-200));
+  background-color: #fff;
+  background-image: radial-gradient(
+    135% 115% at 100% 0%,
+    color-mix(in oklab, var(--proj) 34%, transparent),
+    transparent 60%
+  );
+  border-color: var(--color-neutral-200);
 }
 
 html.dark .proj-card {
-  background-color: color-mix(in oklab, var(--proj) 22%, var(--color-neutral-900));
-  border-color: color-mix(in oklab, var(--proj) 45%, var(--color-neutral-800));
-}
-
-html.dark .proj-card:hover {
-  border-color: color-mix(in oklab, var(--proj) 65%, var(--color-neutral-800));
+  background-color: var(--color-neutral-900);
+  background-image: radial-gradient(
+    135% 115% at 100% 0%,
+    color-mix(in oklab, var(--proj) 42%, transparent),
+    transparent 60%
+  );
+  border-color: var(--color-neutral-800);
 }
 
 @supports (color: oklch(from red 0.5 0.1 h)) {
   .proj-card {
-    background-color: oklch(from var(--proj) 0.965 0.016 h);
-    border-color: oklch(from var(--proj) 0.84 0.055 h);
+    background-image: radial-gradient(
+      135% 115% at 100% 0%,
+      oklch(from var(--proj) 0.85 0.11 h / 0.85) 0%,
+      oklch(from var(--proj) 0.9 0.05 h / 0) 58%
+    );
+    border-color: oklch(from var(--proj) 0.86 0.05 h);
   }
 
   .proj-card:hover {
-    border-color: oklch(from var(--proj) 0.74 0.1 h);
+    border-color: oklch(from var(--proj) 0.76 0.09 h);
   }
 
   html.dark .proj-card {
-    background-color: oklch(from var(--proj) 0.28 0.055 h);
-    border-color: oklch(from var(--proj) 0.45 0.08 h);
+    background-image: radial-gradient(
+      135% 115% at 100% 0%,
+      oklch(from var(--proj) 0.62 0.15 h / 0.5) 0%,
+      oklch(from var(--proj) 0.55 0.12 h / 0) 60%
+    );
+    border-color: oklch(from var(--proj) 0.44 0.06 h);
   }
 
   html.dark .proj-card:hover {
-    border-color: oklch(from var(--proj) 0.56 0.11 h);
+    border-color: oklch(from var(--proj) 0.56 0.1 h);
   }
 }
 

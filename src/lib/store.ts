@@ -1,13 +1,20 @@
 import { create } from 'zustand'
 import { persist, type PersistStorage, type StorageValue } from 'zustand/middleware'
 import type { Project, Todo, Collaborator, AppState, StageDef, Venue } from './types'
-import { defaultStages, todoPriority, PRIORITY_META, PROJECT_COLOR_PRESETS } from './types'
+import {
+  defaultStages,
+  todoPriority,
+  PRIORITY_META,
+  PROJECT_COLOR_PRESETS,
+  LEGACY_PROJECT_COLOR_PRESETS,
+} from './types'
 import { uid } from './id'
 import { today } from './date'
 import { seedProjects } from './seed'
 
 // v5: every project gained a `color` accent (auto-assigned on load if missing).
-const SCHEMA_VERSION = 5
+// v6: re-spread auto-assigned colours to the new max-distinct palette order.
+const SCHEMA_VERSION = 6
 
 type UndoKind =
   | { kind: 'project-removed'; project: Project; index: number }
@@ -588,7 +595,7 @@ export const useStore = create<Store>()(
       // Heal persisted data on load, and bump the domain version to current
       // (importJSON keeps the imported file's version instead).
       migrate: (persisted: unknown) => ({
-        projects: normalizeState(persisted).projects,
+        projects: respreadAutoColors(normalizeState(persisted).projects),
         version: SCHEMA_VERSION,
       }),
     },
@@ -715,6 +722,22 @@ export function normalizeProject(raw: unknown): Project {
 function withDefaultColors(projects: Project[]): Project[] {
   return projects.map((p, i) =>
     p.color ? p : { ...p, color: PROJECT_COLOR_PRESETS[i % PROJECT_COLOR_PRESETS.length] },
+  )
+}
+
+/**
+ * One-time v6 fix: earlier auto-assignment used the old sequential palette order,
+ * so the first projects got adjacent blue→green hues that were hard to tell
+ * apart. Re-assign, by position, any project still carrying an old auto colour to
+ * the new max-distinct order. A colour the user hand-picked won't match the old
+ * palette, so it's left alone. Must be a hoisted `function` (migrate runs during
+ * synchronous hydration at module load — a `const` here would hit the TDZ).
+ */
+function respreadAutoColors(projects: Project[]): Project[] {
+  return projects.map((p, i) =>
+    LEGACY_PROJECT_COLOR_PRESETS.includes(p.color)
+      ? { ...p, color: PROJECT_COLOR_PRESETS[i % PROJECT_COLOR_PRESETS.length] }
+      : p,
   )
 }
 
