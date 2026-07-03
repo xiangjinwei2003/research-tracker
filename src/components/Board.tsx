@@ -46,6 +46,17 @@ export function Board({ onNew, onEdit }: Props) {
     return PRIORITY_ORDER.map((pri) => ({ pri, rows: byPri[pri] }))
   }, [items])
 
+  // How this week's items split across projects — drives the proportion bar.
+  const byProject = useMemo(() => {
+    const map = new Map<string, { project: Project; count: number }>()
+    for (const it of items) {
+      const e = map.get(it.project.id)
+      if (e) e.count += 1
+      else map.set(it.project.id, { project: it.project, count: 1 })
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count)
+  }, [items])
+
   const hasActiveProjects = useMemo(() => projects.some((p) => !p.archived), [projects])
 
   const dragRef = useRef<{ projectId: string; todoId: string; from: Priority } | null>(null)
@@ -98,6 +109,44 @@ export function Board({ onNew, onEdit }: Props) {
                 </p>
               </div>
             </div>
+
+            {items.length > 0 ? (
+              <div className="mt-4">
+                {/* Stacked bar: each project's share of this week's items. */}
+                <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800/70">
+                  {byProject.map(({ project, count }) => (
+                    <div
+                      key={project.id}
+                      className="h-full"
+                      style={{
+                        width: `${(count / items.length) * 100}%`,
+                        background: project.color,
+                      }}
+                      title={`${project.title || '未命名项目'} · ${count} 项 · ${Math.round(
+                        (count / items.length) * 100,
+                      )}%`}
+                    />
+                  ))}
+                </div>
+                <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5">
+                  {byProject.map(({ project, count }) => (
+                    <li key={project.id} className="flex items-center gap-1.5 text-xs">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ background: project.color }}
+                        aria-hidden
+                      />
+                      <span className="max-w-[160px] truncate text-neutral-600 dark:text-neutral-300">
+                        {project.title || '未命名项目'}
+                      </span>
+                      <span className="tabular-nums text-neutral-400 dark:text-neutral-500">
+                        {count}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               {columns.map(({ pri, rows }) => {
