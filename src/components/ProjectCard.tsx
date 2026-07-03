@@ -1,5 +1,5 @@
 import { memo, useRef, useState } from 'react'
-import { CalendarClock, Users, Check, GripVertical, Plus } from 'lucide-react'
+import { CalendarClock, Users, Check, GripVertical, Plus, ChevronDown } from 'lucide-react'
 import type { Project } from '@/lib/types'
 import { findStage } from '@/lib/types'
 import { nextDeadline, stageProgress, upcomingTodos, useStore } from '@/lib/store'
@@ -9,6 +9,9 @@ import { Input } from './ui/Input'
 import { StageBadge } from './StageBadge'
 import { StageChip } from './StageChip'
 import { cn } from '@/lib/cn'
+
+/** How many upcoming todos a collapsed card shows before the expand toggle. */
+const VISIBLE_TODOS = 3
 
 interface Props {
   project: Project
@@ -28,6 +31,9 @@ export const ProjectCard = memo(function ProjectCard({
   const addTodo = useStore((s) => s.addTodo)
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState('')
+  // Reveal every incomplete todo (not just the nearest 3) so further-out ones
+  // can also be dragged into 本周重点.
+  const [expanded, setExpanded] = useState(false)
   // Hidden date input used to pop the native picker right after a quick-add,
   // and the id of the todo that picker should write its chosen date back to.
   const newDateRef = useRef<HTMLInputElement>(null)
@@ -83,11 +89,11 @@ export const ProjectCard = memo(function ProjectCard({
   const waiting = project.collaborators.filter((c) => c.waitingFor.trim())
   const sp = stageProgress(project)
   const currentStage = findStage(project.stages, project.stage)
-  const upcoming = upcomingTodos(project, 3)
   const t = today()
   const doneCount = project.todos.filter((x) => x.done).length
   const totalCount = project.todos.length
   const remainingCount = totalCount - doneCount
+  const upcoming = upcomingTodos(project, expanded ? remainingCount : VISIBLE_TODOS)
 
   return (
     <Card
@@ -229,9 +235,23 @@ export const ProjectCard = memo(function ProjectCard({
                 </li>
               )
             })}
-            {remainingCount > upcoming.length ? (
-              <li className="text-[11px] text-neutral-400">
-                还有 {remainingCount - upcoming.length} 个未完成…
+            {remainingCount > VISIBLE_TODOS ? (
+              <li>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setExpanded((v) => !v)
+                  }}
+                  aria-expanded={expanded}
+                  className="inline-flex items-center gap-0.5 rounded text-[11px] text-neutral-400 transition hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:text-brand-400"
+                >
+                  {expanded ? '收起' : `还有 ${remainingCount - upcoming.length} 个未完成…`}
+                  <ChevronDown
+                    size={11}
+                    className={cn('transition-transform', expanded && 'rotate-180')}
+                  />
+                </button>
               </li>
             ) : null}
           </ul>
