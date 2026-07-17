@@ -1,4 +1,12 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import {
   Plus,
   Trash2,
@@ -6,7 +14,9 @@ import {
   Square,
   Archive,
   ArchiveRestore,
+  ChevronRight,
   GripVertical,
+  MoreHorizontal,
   Paintbrush,
   RotateCcw,
 } from 'lucide-react'
@@ -25,12 +35,19 @@ import {
   type Stage,
   type StageDef,
 } from '@/lib/types'
-import { today } from '@/lib/date'
+import { today, daysUntil } from '@/lib/date'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { Dialog } from './ui/Dialog'
 import { Button } from './ui/Button'
 import { Input, Label, Select, Textarea } from './ui/Input'
+import { Collapsible } from './ui/Collapsible'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from './ui/DropdownMenu'
 import { PriorityButton } from './PriorityButton'
 import { cn } from '@/lib/cn'
 
@@ -117,6 +134,54 @@ function EditDialog({
 
   const hasVenue = !!project.venue
   const hasRebuttal = !!project.venue?.rebuttalAt
+
+  // Collapsed-section summaries: the key fact stays visible without expanding.
+  const venueSummary: ReactNode = project.venue ? (
+    <>
+      {project.venue.name || '未命名'} · {project.venue.deadline || '未定截止'}
+      {(() => {
+        const d = project.venue.deadline ? daysUntil(project.venue.deadline) : null
+        if (d == null) return null
+        return (
+          <span
+            className={cn(
+              'ml-1.5',
+              d < 0
+                ? 'font-medium text-red-600 dark:text-red-400'
+                : d <= 14
+                  ? 'font-medium text-orange-600 dark:text-orange-400'
+                  : '',
+            )}
+          >
+            {d < 0 ? `逾期 ${-d} 天` : d === 0 ? '今天截止' : `还剩 ${d} 天`}
+          </span>
+        )
+      })()}
+    </>
+  ) : (
+    '未设置'
+  )
+
+  const currentStageName =
+    project.stages.find((s) => s.id === project.stage)?.name ?? '未指定'
+  const stageSummary = `${project.stages.length} 个阶段 · 当前：${currentStageName}`
+
+  const waitingOn = project.collaborators.find((c) => c.waitingFor.trim())
+  const collabSummary =
+    project.collaborators.length === 0
+      ? '无'
+      : `${project.collaborators.length} 人${
+          waitingOn ? ` · 等待：${waitingOn.waitingFor.trim().slice(0, 12)}` : ''
+        }`
+
+  const notesFirstLine = project.notes.trim().split('\n')[0] ?? ''
+  const notesSummary = notesFirstLine
+    ? notesFirstLine.length > 24
+      ? `${notesFirstLine.slice(0, 24)}…`
+      : notesFirstLine
+    : '无'
+
+  const activeTodoCount = project.todos.filter((t) => !t.done).length
 
   const onDelete = () => {
     if (confirm(`确认删除「${project.title}」？可在 6 秒内点击撤销。`)) {
@@ -232,103 +297,31 @@ function EditDialog({
           </div>
         </div>
 
-        {/* Venue */}
-        <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
-          <legend className="px-1 text-xs font-medium text-neutral-600 dark:text-neutral-400">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={hasVenue}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    updateProject(project.id, { venue: { name: 'CHI', deadline: today() } })
-                  } else {
-                    updateProject(project.id, { venue: undefined })
-                  }
-                }}
-              />
-              投稿目标
-            </label>
-          </legend>
-
-          {hasVenue && project.venue ? (
-            <div className="mt-2 space-y-3">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <Label>会议 / 期刊</Label>
-                  <Input
-                    list="venue-presets"
-                    value={project.venue.name}
-                    onChange={(e) =>
-                      updateProject(project.id, {
-                        venue: { ...project.venue!, name: e.target.value },
-                      })
-                    }
-                  />
-                  <datalist id="venue-presets">
-                    {PRESET_VENUES.map((v) => (
-                      <option key={v} value={v} />
-                    ))}
-                  </datalist>
-                </div>
-                <div>
-                  <Label>投稿截止</Label>
-                  <Input
-                    type="date"
-                    value={project.venue.deadline}
-                    onChange={(e) =>
-                      updateProject(project.id, {
-                        venue: { ...project.venue!, deadline: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
-                  <input
-                    type="checkbox"
-                    checked={hasRebuttal}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        updateProject(project.id, {
-                          venue: { ...project.venue!, rebuttalAt: today() },
-                        })
-                      } else {
-                        const { rebuttalAt: _rebuttal, ...rest } = project.venue!
-                        updateProject(project.id, { venue: rest })
-                      }
-                    }}
-                  />
-                  有 rebuttal 阶段
-                </label>
-                {hasRebuttal ? (
-                  <Input
-                    className="mt-1.5"
-                    type="date"
-                    value={project.venue.rebuttalAt ?? ''}
-                    onChange={(e) =>
-                      updateProject(project.id, {
-                        venue: { ...project.venue!, rebuttalAt: e.target.value },
-                      })
-                    }
-                  />
-                ) : null}
-              </div>
+        {/* 待办 — the dialog's primary body (config folds away below). */}
+        <div className="pt-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200">待办</h3>
+            <span className="text-xs tabular-nums text-neutral-400 dark:text-neutral-500">
+              {activeTodoCount} 项未完成
+            </span>
+            <div className="ml-auto">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                  aria-label="待办批量操作"
+                  title="待办批量操作"
+                >
+                  <MoreHorizontal size={15} />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={onApplyStage}>
+                    <Paintbrush size={14} /> 全部对齐项目阶段
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          ) : null}
-        </fieldset>
-
-        {/* Todos (was 里程碑) — moved above stages + collaborators */}
-        <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
-          <legend className="px-1 text-xs font-medium text-neutral-600 dark:text-neutral-400">
-            待办
-          </legend>
-          <div className="mb-2 flex justify-end">
-            <Button type="button" variant="ghost" size="sm" onClick={onApplyStage}>
-              <Paintbrush size={12} /> 全部对齐项目阶段
-            </Button>
           </div>
+          <QuickAddTodo onAdd={(title) => addTodo(project.id, { title })} />
           <TodoList
             todos={project.todos}
             stages={project.stages}
@@ -336,85 +329,159 @@ function EditDialog({
             onRemove={handleTodoRemove}
             onReorder={handleTodoReorder}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="mt-2"
-            onClick={() => addTodo(project.id)}
-          >
-            <Plus size={14} /> 添加待办
-          </Button>
-        </fieldset>
+        </div>
 
-        {/* Stage editor */}
-        <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
-          <legend className="px-1 text-xs font-medium text-neutral-600 dark:text-neutral-400">
-            研究阶段
-          </legend>
-          <p className="mb-2 text-[11px] text-neutral-500 dark:text-neutral-500">
-            每个项目自带一份阶段列表。改名、改色、增删、拖拽重排都只影响本项目。
-          </p>
-          <StageList
-            stages={project.stages}
-            onChange={(id, patch) => updateProjectStage(project.id, id, patch)}
-            onRemove={onRemoveStage}
-            onReorder={(ids) => reorderProjectStages(project.id, ids)}
-          />
-          <div className="mt-2 flex items-center justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => addProjectStage(project.id)}
-            >
-              <Plus size={14} /> 添加阶段
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onResetStages}>
-              <RotateCcw size={12} /> 重置为默认 9 阶段
-            </Button>
-          </div>
-        </fieldset>
-
-        {/* Collaborators */}
-        <fieldset className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
-          <legend className="px-1 text-xs font-medium text-neutral-600 dark:text-neutral-400">
-            合作者
-          </legend>
-          <div className="mt-2 space-y-2">
-            {project.collaborators.map((c) => (
-              <CollaboratorRow
-                key={c.id}
-                value={c}
-                onChange={(patch) => updateCollaborator(project.id, c.id, patch)}
-                onRemove={() => {
-                  const token = removeCollaborator(project.id, c.id)
-                  toast({
-                    message: `已移除合作者「${c.name || '未命名'}」`,
-                    action: { label: '撤销', onClick: () => undo(token) },
-                  })
-                }}
-              />
-            ))}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => addCollaborator(project.id)}
-            >
-              <Plus size={14} /> 添加合作者
-            </Button>
-          </div>
-        </fieldset>
-
+        {/* Rarely-edited config folds away; summaries keep the key facts visible. */}
         <div>
-          <Label htmlFor="notes">备注</Label>
-          <Textarea
-            id="notes"
-            placeholder="给未来的自己留个 note"
-            value={project.notes}
-            onChange={(e) => updateProject(project.id, { notes: e.target.value })}
-          />
+          <Collapsible title="投稿目标" summary={venueSummary}>
+            {hasVenue && project.venue ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label>会议 / 期刊</Label>
+                    <Input
+                      list="venue-presets"
+                      value={project.venue.name}
+                      onChange={(e) =>
+                        updateProject(project.id, {
+                          venue: { ...project.venue!, name: e.target.value },
+                        })
+                      }
+                    />
+                    <datalist id="venue-presets">
+                      {PRESET_VENUES.map((v) => (
+                        <option key={v} value={v} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div>
+                    <Label>投稿截止</Label>
+                    <Input
+                      type="date"
+                      value={project.venue.deadline}
+                      onChange={(e) =>
+                        updateProject(project.id, {
+                          venue: { ...project.venue!, deadline: e.target.value },
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                    <input
+                      type="checkbox"
+                      checked={hasRebuttal}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          updateProject(project.id, {
+                            venue: { ...project.venue!, rebuttalAt: today() },
+                          })
+                        } else {
+                          const { rebuttalAt: _rebuttal, ...rest } = project.venue!
+                          updateProject(project.id, { venue: rest })
+                        }
+                      }}
+                    />
+                    有 rebuttal 阶段
+                  </label>
+                  {hasRebuttal ? (
+                    <Input
+                      className="mt-1.5"
+                      type="date"
+                      value={project.venue.rebuttalAt ?? ''}
+                      onChange={(e) =>
+                        updateProject(project.id, {
+                          venue: { ...project.venue!, rebuttalAt: e.target.value },
+                        })
+                      }
+                    />
+                  ) : null}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50"
+                  onClick={() => updateProject(project.id, { venue: undefined })}
+                >
+                  <Trash2 size={13} /> 移除投稿目标
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  updateProject(project.id, { venue: { name: 'CHI', deadline: today() } })
+                }
+              >
+                <Plus size={14} /> 设置投稿目标
+              </Button>
+            )}
+          </Collapsible>
+
+          <Collapsible title="研究阶段" summary={stageSummary}>
+            <p className="mb-2 text-[11px] text-neutral-500 dark:text-neutral-500">
+              每个项目自带一份阶段列表。改名、改色、增删、拖拽重排都只影响本项目。
+            </p>
+            <StageList
+              stages={project.stages}
+              onChange={(id, patch) => updateProjectStage(project.id, id, patch)}
+              onRemove={onRemoveStage}
+              onReorder={(ids) => reorderProjectStages(project.id, ids)}
+            />
+            <div className="mt-2 flex items-center justify-between">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => addProjectStage(project.id)}
+              >
+                <Plus size={14} /> 添加阶段
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={onResetStages}>
+                <RotateCcw size={12} /> 重置为默认 9 阶段
+              </Button>
+            </div>
+          </Collapsible>
+
+          <Collapsible title="合作者" summary={collabSummary}>
+            <div className="space-y-2">
+              {project.collaborators.map((c) => (
+                <CollaboratorRow
+                  key={c.id}
+                  value={c}
+                  onChange={(patch) => updateCollaborator(project.id, c.id, patch)}
+                  onRemove={() => {
+                    const token = removeCollaborator(project.id, c.id)
+                    toast({
+                      message: `已移除合作者「${c.name || '未命名'}」`,
+                      action: { label: '撤销', onClick: () => undo(token) },
+                    })
+                  }}
+                />
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => addCollaborator(project.id)}
+              >
+                <Plus size={14} /> 添加合作者
+              </Button>
+            </div>
+          </Collapsible>
+
+          <Collapsible title="备注" summary={notesSummary}>
+            <Textarea
+              placeholder="给未来的自己留个 note"
+              aria-label="备注"
+              value={project.notes}
+              onChange={(e) => updateProject(project.id, { notes: e.target.value })}
+            />
+          </Collapsible>
         </div>
       </div>
 
@@ -842,6 +909,47 @@ function StageRow({
 
 /* ---------- Todos ---------- */
 
+/**
+ * Todoist-style quick add: type → Enter → next one. Keeps focus for chained
+ * entry; Enter during IME composition must NOT submit (Chinese input).
+ */
+function QuickAddTodo({ onAdd }: { onAdd: (title: string) => void }) {
+  const [value, setValue] = useState('')
+  const submit = () => {
+    const title = value.trim()
+    if (!title) return
+    onAdd(title)
+    setValue('')
+  }
+  return (
+    <div className="mt-2 flex items-center gap-1.5">
+      <Input
+        value={value}
+        placeholder="输入待办，回车添加"
+        aria-label="快速添加待办"
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+            e.preventDefault()
+            submit()
+          }
+        }}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={submit}
+        disabled={!value.trim()}
+        aria-label="添加待办"
+        title="添加待办"
+      >
+        <Plus size={15} />
+      </Button>
+    </div>
+  )
+}
+
 function TodoList({
   todos,
   stages,
@@ -911,28 +1019,57 @@ function TodoList({
     [onReorder],
   )
 
+  // 已完成 todos fold away so past work stops crowding the daily list.
+  const [doneOpen, setDoneOpen] = useState(false)
+  const active = ordered.filter((t) => !t.done)
+  const done = ordered.filter((t) => t.done)
+
   if (todos.length === 0) {
-    return <p className="text-xs text-neutral-400">还没有待办。点下方按钮添加。</p>
+    return (
+      <p className="mt-2 text-xs text-neutral-400">还没有待办，输入内容回车即可添加。</p>
+    )
   }
 
+  const renderRow = (todo: Todo) => (
+    <TodoRow
+      key={todo.id}
+      id={todo.id}
+      value={todo}
+      stages={stages}
+      isDropTarget={overId === todo.id}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDragEnd={handleDragEnd}
+      onDrop={handleDrop}
+      onChange={onChange}
+      onRemove={onRemove}
+    />
+  )
+
   return (
-    <div className="space-y-1.5">
-      {ordered.map((todo) => (
-        <TodoRow
-          key={todo.id}
-          id={todo.id}
-          value={todo}
-          stages={stages}
-          isDropTarget={overId === todo.id}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDragEnd={handleDragEnd}
-          onDrop={handleDrop}
-          onChange={onChange}
-          onRemove={onRemove}
-        />
-      ))}
+    <div className="mt-2 space-y-1.5">
+      {active.map(renderRow)}
+      {active.length === 0 ? (
+        <p className="px-1 py-1.5 text-xs text-neutral-400">没有未完成的待办。</p>
+      ) : null}
+      {done.length > 0 ? (
+        <div className="pt-0.5">
+          <button
+            type="button"
+            onClick={() => setDoneOpen((v) => !v)}
+            aria-expanded={doneOpen}
+            className="group flex items-center gap-1 rounded-md px-1 py-1 text-xs text-neutral-500 transition-colors hover:text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:text-neutral-200"
+          >
+            <ChevronRight
+              size={13}
+              className={cn('transition-transform', doneOpen && 'rotate-90')}
+            />
+            已完成 <span className="tabular-nums">{done.length}</span>
+          </button>
+          {doneOpen ? <div className="mt-1 space-y-1.5">{done.map(renderRow)}</div> : null}
+        </div>
+      ) : null}
     </div>
   )
 }
