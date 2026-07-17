@@ -1,6 +1,15 @@
 import { create } from 'zustand'
 import { persist, type PersistStorage, type StorageValue } from 'zustand/middleware'
-import type { Project, Todo, Collaborator, AppState, StageDef, Venue } from './types'
+import type {
+  Project,
+  Todo,
+  Collaborator,
+  AppState,
+  StageDef,
+  Venue,
+  FocusSession,
+  ActiveTimer,
+} from './types'
 import {
   defaultStages,
   todoPriority,
@@ -14,13 +23,15 @@ import { seedProjects } from './seed'
 
 // v5: every project gained a `color` accent (auto-assigned on load if missing).
 // v6: re-spread auto-assigned colours to the new max-distinct palette order.
-const SCHEMA_VERSION = 6
+// v7: focus sessions (倒计时记录) + the running countdown joined persisted state.
+const SCHEMA_VERSION = 7
 
 type UndoKind =
   | { kind: 'project-removed'; project: Project; index: number }
   | { kind: 'project-archived'; id: string; prevArchived: boolean }
   | { kind: 'todo-removed'; projectId: string; todo: Todo; index: number }
   | { kind: 'collaborator-removed'; projectId: string; collaborator: Collaborator; index: number }
+  | { kind: 'session-removed'; session: FocusSession; index: number }
   | { kind: 'replace-state'; prev: AppState }
 
 /**
@@ -34,6 +45,24 @@ type UndoEntry = UndoKind & { token: string; label: string }
 interface Store extends AppState {
   /** Last 20 reversible actions, newest first. Not persisted. */
   undoStack: UndoEntry[]
+
+  /** The running countdown, or null. Persisted so a reload keeps it ticking. */
+  activeTimer: ActiveTimer | null
+
+  /**
+   * Start a countdown. A timer already running is first recorded exactly like
+   * `completeTimer({ early: true })` — elapsed focus is never silently dropped.
+   */
+  startTimer: (opts: { plannedMin: number; projectId?: string; todoId?: string }) => void
+  /**
+   * Record the running countdown as a session and clear it. `early` marks a
+   * manual stop before 0; elapsed under 1 minute is discarded (returns null).
+   */
+  completeTimer: (opts?: { early?: boolean }) => FocusSession | null
+  /** Discard the running countdown without recording anything. */
+  cancelTimer: () => void
+  /** Returns the undo token, or '' if the session id wasn't found. */
+  removeSession: (id: string) => string
 
   addProject: (
     p: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'archived'>,
@@ -80,7 +109,9 @@ interface Store extends AppState {
 const stamp = (): string => new Date().toISOString()
 
 /** Only the slice we persist (see `partialize` below). */
-type Persisted = Pick<AppState, 'projects' | 'version'>
+type Persisted = Pick<AppState, 'projects' | 'sessions' | 'version'> & {
+  activeTimer: ActiveTimer | null
+}
 
 /**
  * A persist storage that coalesces rapid writes. The previous setup wrote the
@@ -177,8 +208,74 @@ export const useStore = create<Store>()(
   persist(
     (set, get) => ({
       projects: [],
+      sessions: [],
+      activeTimer: null,
       version: SCHEMA_VERSION,
       undoStack: [],
+
+      startTimer: ({ plannedMin, projectId, todoId }) => {
+        // Record (or discard, if <1min) whatever countdown is already running.
+        get().completeTimer({ early: true })
+        const project = projectId
+          ? get().projects.find((p) => p.id === projectId)
+          : undefined
+        const todo = todoId ? project?.todos.find((t) => t.id === todoId) : undefined
+        set({
+          activeTimer: {
+            startedAt: Date.now(),
+            plannedMin,
+            projectId,
+            todoId,
+            // Snapshots keep 回顾 meaningful even after the project/todo is gone.
+            projectTitle: project?.title,
+            todoTitle: todo?.title,
+            color: project?.color,
+          },
+        })
+      },
+
+      completeTimer: (opts) => {
+        const at = get().activeTimer
+        if (!at) return null
+        const plannedEnd = at.startedAt + at.plannedMin * 60_000
+        // An `early` stop at/after the planned end still counts as completed.
+        const early = !!opts?.early && Date.now() < plannedEnd
+        const endedAt = early ? Date.now() : plannedEnd
+        if (endedAt - at.startedAt < 60_000) {
+          set({ activeTimer: null })
+          return null
+        }
+        const session: FocusSession = {
+          id: uid(),
+          plannedMin: at.plannedMin,
+          startedAt: at.startedAt,
+          endedAt,
+          completed: !early,
+          projectId: at.projectId,
+          todoId: at.todoId,
+          projectTitle: at.projectTitle,
+          todoTitle: at.todoTitle,
+          color: at.color,
+        }
+        set((s) => ({ sessions: [session, ...s.sessions], activeTimer: null }))
+        return session
+      },
+
+      cancelTimer: () => {
+        set({ activeTimer: null })
+      },
+
+      removeSession: (id) => {
+        const idx = get().sessions.findIndex((x) => x.id === id)
+        if (idx === -1) return ''
+        const session = get().sessions[idx]
+        const entry = makeUndo({ kind: 'session-removed', session, index: idx }, '已删除专注记录')
+        set((s) => ({
+          sessions: s.sessions.filter((x) => x.id !== id),
+          undoStack: pushUndo(s, entry),
+        }))
+        return entry.token
+      },
 
       addProject: (p) => {
         const id = uid()
@@ -503,10 +600,16 @@ export const useStore = create<Store>()(
       },
 
       replaceState: (next) => {
-        const prev = { projects: get().projects, version: get().version }
+        const prev = {
+          projects: get().projects,
+          sessions: get().sessions,
+          version: get().version,
+        }
         const entry = makeUndo({ kind: 'replace-state', prev }, '已替换全部数据')
+        // A running countdown survives an import — it isn't part of AppState.
         set((s) => ({
           projects: next.projects,
+          sessions: next.sessions,
           version: next.version,
           undoStack: pushUndo(s, entry),
         }))
@@ -514,12 +617,18 @@ export const useStore = create<Store>()(
       },
 
       clearAll: () => {
-        set({ projects: [], version: SCHEMA_VERSION })
+        set({ projects: [], sessions: [], activeTimer: null, version: SCHEMA_VERSION })
       },
 
       resetToSeed: () => {
-        const prev = { projects: get().projects, version: get().version }
+        const prev = {
+          projects: get().projects,
+          sessions: get().sessions,
+          version: get().version,
+        }
         const entry = makeUndo({ kind: 'replace-state', prev }, '已恢复演示数据')
+        // Demo projects replace the project list only; the user's focus history
+        // stays (sessions render via their own snapshots, so nothing dangles).
         set((s) => ({
           projects: seedProjects(),
           version: SCHEMA_VERSION,
@@ -573,9 +682,15 @@ export const useStore = create<Store>()(
                 undoStack: rest,
               }
             }
+            case 'session-removed': {
+              const next = [...s.sessions]
+              next.splice(Math.min(entry.index, next.length), 0, entry.session)
+              return { sessions: next, undoStack: rest }
+            }
             case 'replace-state': {
               return {
                 projects: entry.prev.projects,
+                sessions: entry.prev.sessions,
                 version: entry.prev.version,
                 undoStack: rest,
               }
@@ -590,14 +705,26 @@ export const useStore = create<Store>()(
     {
       name: 'research-tracker-v1',
       storage: debouncedLocalStorage(),
-      partialize: (s) => ({ projects: s.projects, version: s.version }),
+      partialize: (s) => ({
+        projects: s.projects,
+        sessions: s.sessions,
+        activeTimer: s.activeTimer,
+        version: s.version,
+      }),
       version: SCHEMA_VERSION,
       // Heal persisted data on load, and bump the domain version to current
       // (importJSON keeps the imported file's version instead).
-      migrate: (persisted: unknown) => ({
-        projects: respreadAutoColors(normalizeState(persisted).projects),
-        version: SCHEMA_VERSION,
-      }),
+      migrate: (persisted: unknown) => {
+        const state = normalizeState(persisted)
+        return {
+          projects: respreadAutoColors(state.projects),
+          sessions: state.sessions,
+          activeTimer: normalizeActiveTimer(
+            (persisted as Record<string, unknown> | null)?.activeTimer,
+          ),
+          version: SCHEMA_VERSION,
+        }
+      },
     },
   ),
 )
@@ -741,14 +868,65 @@ function respreadAutoColors(projects: Project[]): Project[] {
   )
 }
 
+/**
+ * Coerce one raw focus session; null drops rows too malformed to render
+ * (non-finite timestamps, zero/negative span). Hoisted `function` — see `asStr`.
+ */
+function normalizeSession(raw: unknown): FocusSession | null {
+  if (!raw || typeof raw !== 'object') return null
+  const s = raw as Record<string, unknown>
+  const startedAt = typeof s.startedAt === 'number' && Number.isFinite(s.startedAt) ? s.startedAt : NaN
+  const endedAt = typeof s.endedAt === 'number' && Number.isFinite(s.endedAt) ? s.endedAt : NaN
+  const plannedMin =
+    typeof s.plannedMin === 'number' && Number.isFinite(s.plannedMin) ? s.plannedMin : NaN
+  if (!(startedAt > 0) || !(endedAt > startedAt) || !(plannedMin > 0)) return null
+  const session: FocusSession = {
+    id: asStr(s.id, '') || uid(),
+    plannedMin,
+    startedAt,
+    endedAt,
+    completed: !!s.completed,
+  }
+  if (typeof s.projectId === 'string') session.projectId = s.projectId
+  if (typeof s.todoId === 'string') session.todoId = s.todoId
+  if (typeof s.projectTitle === 'string') session.projectTitle = s.projectTitle
+  if (typeof s.todoTitle === 'string') session.todoTitle = s.todoTitle
+  if (typeof s.color === 'string') session.color = s.color
+  return session
+}
+
+/** Same for the persisted running countdown; invalid → null (no timer). */
+function normalizeActiveTimer(raw: unknown): ActiveTimer | null {
+  if (!raw || typeof raw !== 'object') return null
+  const t = raw as Record<string, unknown>
+  const startedAt = typeof t.startedAt === 'number' && Number.isFinite(t.startedAt) ? t.startedAt : NaN
+  const plannedMin =
+    typeof t.plannedMin === 'number' && Number.isFinite(t.plannedMin) ? t.plannedMin : NaN
+  if (!(startedAt > 0) || !(plannedMin > 0)) return null
+  const timer: ActiveTimer = { startedAt, plannedMin }
+  if (typeof t.projectId === 'string') timer.projectId = t.projectId
+  if (typeof t.todoId === 'string') timer.todoId = t.todoId
+  if (typeof t.projectTitle === 'string') timer.projectTitle = t.projectTitle
+  if (typeof t.todoTitle === 'string') timer.todoTitle = t.todoTitle
+  if (typeof t.color === 'string') timer.color = t.color
+  return timer
+}
+
+/** Sessions from a raw blob (pre-v7 blobs have none). Hoisted — see `asStr`. */
+function normalizeSessions(raw: unknown): FocusSession[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map(normalizeSession).filter((s): s is FocusSession => s !== null)
+}
+
 /** Coerce a raw persisted/imported blob into a valid `AppState`. */
 export function normalizeState(raw: unknown): AppState {
   const s = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : undefined
   if (!s || !Array.isArray(s.projects)) {
-    return { projects: [], version: SCHEMA_VERSION }
+    return { projects: [], sessions: [], version: SCHEMA_VERSION }
   }
   return {
     projects: withDefaultColors(s.projects.map(normalizeProject)),
+    sessions: normalizeSessions(s.sessions),
     version: typeof s.version === 'number' ? s.version : SCHEMA_VERSION,
   }
 }
@@ -844,9 +1022,10 @@ export function importJSON(text: string): AppState {
   }
   // Normalize every project the same way persisted state is healed on load, so
   // an older/hand-edited backup can't smuggle in a malformed project that
-  // crashes the app on render.
+  // crashes the app on render. Pre-v7 backups simply have no sessions.
   return {
     projects: withDefaultColors(parsed.projects.map(normalizeProject)),
+    sessions: normalizeSessions(parsed.sessions),
     version: typeof parsed.version === 'number' ? parsed.version : SCHEMA_VERSION,
   }
 }

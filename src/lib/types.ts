@@ -164,8 +164,41 @@ export interface Project {
   updatedAt: string
 }
 
+/** One recorded focus session — a countdown that ran, fully or partially. */
+export interface FocusSession {
+  id: string
+  /** Chosen countdown length in minutes (30 | 60). */
+  plannedMin: number
+  /** Epoch ms. */
+  startedAt: number
+  endedAt: number
+  /** True when the countdown ran to 0 (vs ended early). */
+  completed: boolean
+  /** Binding to a todo/project; absent = 自由专注. */
+  projectId?: string
+  todoId?: string
+  /** Denormalized snapshots so 回顾 survives project/todo deletion. */
+  projectTitle?: string
+  todoTitle?: string
+  /** Project accent color snapshot (raw CSS color). */
+  color?: string
+}
+
+/** The running countdown. Persisted so a reload keeps it ticking. */
+export interface ActiveTimer {
+  startedAt: number
+  plannedMin: number
+  projectId?: string
+  todoId?: string
+  projectTitle?: string
+  todoTitle?: string
+  color?: string
+}
+
 export interface AppState {
   projects: Project[]
+  /** Recorded focus sessions, newest first. */
+  sessions: FocusSession[]
   /** Schema version, for future migrations */
   version: number
 }

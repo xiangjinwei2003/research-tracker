@@ -1,5 +1,12 @@
-import { useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react'
-import { CalendarRange, Check, Pin } from 'lucide-react'
+import {
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react'
+import { CalendarRange, Check, Pin, Timer } from 'lucide-react'
 import { useStore, weekItems, type WeekItem } from '@/lib/store'
 import {
   findStage,
@@ -15,6 +22,14 @@ import { cn } from '@/lib/cn'
 import { StageChip } from './StageChip'
 import { Container } from './ui/Container'
 import { Dashboard } from './Dashboard'
+import { FocusTimer } from './FocusTimer'
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+} from './ui/ContextMenu'
 
 interface Props {
   onNew: () => void
@@ -35,6 +50,7 @@ export function Board({ onNew, onEdit }: Props) {
   const projects = useStore((s) => s.projects)
   const updateTodo = useStore((s) => s.updateTodo)
   const toggleTodoDone = useStore((s) => s.toggleTodoDone)
+  const startTimer = useStore((s) => s.startTimer)
 
   const t = today()
   const end = dateFromToday(WINDOW_DAYS)
@@ -62,6 +78,38 @@ export function Board({ onNew, onEdit }: Props) {
   const dragRef = useRef<{ projectId: string; todoId: string; from: Priority } | null>(null)
   const [overCol, setOverCol] = useState<Priority | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+
+  // What the last right-click landed on: a task card → the countdown binds to
+  // that todo; anywhere else in the section → 自由专注.
+  const [ctxTarget, setCtxTarget] = useState<{
+    projectId: string
+    todoId: string
+    title: string
+  } | null>(null)
+
+  const onSectionContextMenu = (e: ReactMouseEvent) => {
+    const hit = (e.target as HTMLElement).closest?.('[data-todo-id]') as HTMLElement | null
+    setCtxTarget(
+      hit && hit.dataset.projectId && hit.dataset.todoId
+        ? {
+            projectId: hit.dataset.projectId,
+            todoId: hit.dataset.todoId,
+            title: hit.dataset.todoTitle ?? '',
+          }
+        : null,
+    )
+  }
+
+  const startFocus = (plannedMin: number) =>
+    startTimer({
+      plannedMin,
+      projectId: ctxTarget?.projectId,
+      todoId: ctxTarget?.todoId,
+    })
+
+  const ctxLabel = ctxTarget
+    ? `专注 · ${(ctxTarget.title || '未命名待办').length > 14 ? `${(ctxTarget.title || '未命名待办').slice(0, 14)}…` : ctxTarget.title || '未命名待办'}`
+    : '自由专注'
 
   const handleDrop = (pri: Priority, e: DragEvent) => {
     const d = dragRef.current
@@ -93,8 +141,10 @@ export function Board({ onNew, onEdit }: Props) {
     <>
       {hasActiveProjects ? (
         <Container className="pt-6 pb-14">
-          <section aria-label="本周重点">
-            <div className="flex items-center gap-2.5">
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
+          <section aria-label="本周重点" onContextMenu={onSectionContextMenu}>
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-300">
                 <CalendarRange size={18} />
               </span>
@@ -104,10 +154,12 @@ export function Board({ onNew, onEdit }: Props) {
                 </h2>
                 <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
                   {items.length > 0
-                    ? `${WINDOW_DAYS} 天内到期 · 可从项目总览拖入更长期的任务 · 共 ${items.length} 项`
+                    ? `${WINDOW_DAYS} 天内到期 · 右键任务可开始专注 · 共 ${items.length} 项`
                     : `${WINDOW_DAYS} 天内到期会自动出现，也可从下方项目总览拖入`}
                 </p>
               </div>
+              {/* The focus countdown lives top-right of the section header. */}
+              <FocusTimer />
             </div>
 
             {items.length > 0 ? (
@@ -229,6 +281,17 @@ export function Board({ onNew, onEdit }: Props) {
               })}
             </div>
           </section>
+            </ContextMenuTrigger>
+            <ContextMenuContent>
+              <ContextMenuLabel>{ctxLabel}</ContextMenuLabel>
+              <ContextMenuItem onSelect={() => startFocus(30)}>
+                <Timer size={15} /> 倒计时 30 分钟
+              </ContextMenuItem>
+              <ContextMenuItem onSelect={() => startFocus(60)}>
+                <Timer size={15} /> 倒计时 1 小时
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
         </Container>
       ) : null}
 
@@ -282,6 +345,9 @@ function BoardCard({
   return (
     <article
       draggable
+      data-todo-id={todo.id}
+      data-project-id={project.id}
+      data-todo-title={todo.title}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move'
         e.dataTransfer.setData('text/plain', todo.id)
@@ -289,7 +355,7 @@ function BoardCard({
       }}
       onDragEnd={onDragEnd}
       onClick={onOpen}
-      title="拖动调整重要程度"
+      title="拖动调整重要程度 · 右键开始专注"
       style={{ '--proj': project.color } as CSSProperties}
       className={cn(
         // Border/bg + hover border come from .proj-card (project-hue tint).

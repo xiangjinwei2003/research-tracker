@@ -1,6 +1,7 @@
 import {
   LayoutGrid,
   GanttChartSquare,
+  CalendarClock,
   Download,
   Upload,
   Archive,
@@ -26,7 +27,7 @@ import {
 } from './ui/DropdownMenu'
 import { cn } from '@/lib/cn'
 
-export type Tab = 'dashboard' | 'timeline' | 'archived'
+export type Tab = 'dashboard' | 'timeline' | 'review' | 'archived'
 
 interface Props {
   tab: Tab
@@ -37,6 +38,7 @@ interface Props {
 const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'dashboard', label: '总览', icon: LayoutGrid },
   { id: 'timeline', label: '时间线', icon: GanttChartSquare },
+  { id: 'review', label: '回顾', icon: CalendarClock },
   { id: 'archived', label: '归档', icon: Archive },
 ]
 
@@ -49,6 +51,7 @@ export function Header({ tab, onTabChange, onNew }: Props) {
   const onExport = () => {
     const state = {
       projects: useStore.getState().projects,
+      sessions: useStore.getState().sessions,
       version: useStore.getState().version,
     }
     const blob = new Blob([exportJSON(state)], { type: 'application/json' })
@@ -93,7 +96,11 @@ export function Header({ tab, onTabChange, onNew }: Props) {
       return
     }
     if (confirm(`确认清空全部 ${count} 个项目？可在通知里点击撤销。`)) {
-      const token = replaceState({ projects: [], version: useStore.getState().version })
+      const token = replaceState({
+        projects: [],
+        sessions: [],
+        version: useStore.getState().version,
+      })
       toast({
         message: '已清空全部数据',
         action: { label: '撤销', onClick: () => undo(token) },

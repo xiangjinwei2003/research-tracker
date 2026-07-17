@@ -5,6 +5,7 @@ import {
   parseISO,
   isValid,
   startOfMonth,
+  startOfWeek,
   addMonths,
   addDays,
   differenceInCalendarMonths,
@@ -101,4 +102,22 @@ export function daysBetween(aIso: string, bIso: string): number {
   const b = parse(bIso)
   if (!a || !b) return 0
   return differenceInCalendarDays(b, a)
+}
+
+/** Monday 00:00 of the week containing `d` (weeks start Monday app-wide). */
+export function weekStart(d: Date): Date {
+  return startOfWeek(d, { weekStartsOn: 1 })
+}
+
+/** Wall-clock HH:mm of an epoch-ms timestamp, e.g. 13:05. */
+export function fmtHM(epochMs: number): string {
+  return format(new Date(epochMs), 'HH:mm')
+}
+
+/** Compact minutes label: 45m → 45 分钟, 90m → 1.5 小时, 120m → 2 小时. */
+export function fmtMinutes(min: number): string {
+  if (min < 60) return `${min} 分钟`
+  const h = min / 60
+  const rounded = Math.round(h * 10) / 10
+  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded} 小时`
 }

@@ -3,6 +3,7 @@ import { Header, type Tab } from '@/components/Header'
 import { Dashboard } from '@/components/Dashboard'
 import { Board } from '@/components/Board'
 import { Timeline } from '@/components/Timeline'
+import { Review } from '@/components/Review'
 import { ProjectDialog } from '@/components/ProjectDialog'
 import { Toaster } from '@/components/Toaster'
 import { useStore } from '@/lib/store'
@@ -60,6 +61,8 @@ export default function App() {
         <Board onNew={openNew} onEdit={openEdit} />
       ) : tab === 'timeline' ? (
         <Timeline onEdit={openEdit} />
+      ) : tab === 'review' ? (
+        <Review onGoBoard={() => setTab('dashboard')} />
       ) : (
         <Dashboard showArchived onNew={openNew} onEdit={openEdit} />
       )}
