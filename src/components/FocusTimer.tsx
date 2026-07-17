@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Timer, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
+import { cn } from '@/lib/cn'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -95,7 +96,7 @@ export function FocusTimer() {
 
   const durationMs = end - activeTimer.startedAt
   const remaining = Math.min(durationMs, Math.max(0, end - now))
-  const pct = Math.min(100, Math.max(0, ((now - activeTimer.startedAt) / durationMs) * 100))
+  const remainingPct = Math.min(100, Math.max(0, (remaining / durationMs) * 100))
   const accent = activeTimer.color || 'var(--color-brand-500)'
   const label = activeTimer.todoTitle || activeTimer.projectTitle || '自由专注'
 
@@ -121,25 +122,28 @@ export function FocusTimer() {
       role="timer"
       aria-label="专注倒计时"
     >
-      <div className="w-[172px]">
-        <div className="flex items-center justify-end gap-1.5">
-          <span
-            className="h-1.5 w-1.5 shrink-0 rounded-full"
-            style={{ background: accent }}
-            aria-hidden
-          />
-          <span className="min-w-0 truncate text-xs text-neutral-500 dark:text-neutral-400">
-            {label}
-          </span>
-          <span className="text-xl font-semibold leading-none tabular-nums text-neutral-900 dark:text-neutral-100">
-            {fmtCountdown(remaining)}
-          </span>
+      {/* Time-Timer-style pie: the coloured wedge IS the time left — it starts
+          as a full disk and gets eaten clockwise from 12 o'clock as time burns.
+          Final minute pulses gently (globally neutralised by reduced-motion). */}
+      <div
+        aria-hidden
+        className={cn(
+          'relative h-9 w-9 shrink-0 rounded-full bg-neutral-200/70 dark:bg-neutral-800',
+          remaining <= 60_000 && 'animate-pulse',
+        )}
+      >
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{ background: `conic-gradient(${accent} ${remainingPct}%, transparent 0)` }}
+        />
+        <div className="absolute inset-0 rounded-full ring-1 ring-inset ring-black/5 dark:ring-white/10" />
+      </div>
+      <div className="min-w-0">
+        <div className="max-w-[160px] truncate text-xs leading-tight text-neutral-500 dark:text-neutral-400">
+          {label}
         </div>
-        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-neutral-200/70 dark:bg-neutral-800">
-          <div
-            className="h-full rounded-full"
-            style={{ width: `${pct}%`, background: accent }}
-          />
+        <div className="text-xl font-semibold leading-tight tabular-nums text-neutral-900 dark:text-neutral-100">
+          {fmtCountdown(remaining)}
         </div>
       </div>
       <div className="flex items-center gap-0.5">
