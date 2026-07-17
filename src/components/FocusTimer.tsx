@@ -3,6 +3,12 @@ import { Check, Timer, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
+import { Button } from './ui/Button'
+
+/** Ring geometry — a single instance app-wide, so fixed ids/sizes are safe. */
+const RING_SIZE = 104
+const RING_R = 46
+const RING_C = 2 * Math.PI * RING_R
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -114,57 +120,92 @@ export function FocusTimer() {
     toast({ message: '已取消专注' })
   }
 
+  const sub = [
+    activeTimer.todoTitle ? activeTimer.projectTitle : null,
+    `${activeTimer.plannedMin} 分钟`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
-    // On phones the chip takes its own header row (right-aligned) instead of
-    // crushing the section title into a one-character-per-line column.
+    // The header's whole right side is the countdown stage: task context +
+    // labelled controls stacked left of a large progress ring (digits inside,
+    // canonical pomodoro pattern). Wraps to its own row on phones.
     <div
-      className="flex shrink-0 items-center gap-2 max-sm:w-full max-sm:justify-end"
+      className="flex shrink-0 items-center gap-4 max-sm:w-full max-sm:justify-end"
       role="timer"
       aria-label="专注倒计时"
     >
-      {/* Time-Timer-style pie: the coloured wedge IS the time left — it starts
-          as a full disk and gets eaten clockwise from 12 o'clock as time burns.
-          Final minute pulses gently (globally neutralised by reduced-motion). */}
-      <div
-        aria-hidden
-        className={cn(
-          'relative h-9 w-9 shrink-0 rounded-full bg-neutral-200/70 dark:bg-neutral-800',
-          remaining <= 60_000 && 'animate-pulse',
-        )}
-      >
-        <div
-          className="absolute inset-0 rounded-full"
-          style={{ background: `conic-gradient(${accent} ${remainingPct}%, transparent 0)` }}
-        />
-        <div className="absolute inset-0 rounded-full ring-1 ring-inset ring-black/5 dark:ring-white/10" />
-      </div>
-      <div className="min-w-0">
-        <div className="max-w-[160px] truncate text-xs leading-tight text-neutral-500 dark:text-neutral-400">
+      <div className="min-w-0 text-right">
+        <div className="max-w-[220px] truncate text-sm font-medium text-neutral-800 dark:text-neutral-200">
           {label}
         </div>
-        <div className="text-xl font-semibold leading-tight tabular-nums text-neutral-900 dark:text-neutral-100">
-          {fmtCountdown(remaining)}
+        <div className="mt-0.5 max-w-[220px] truncate text-xs text-neutral-500 dark:text-neutral-400">
+          {sub}
+        </div>
+        <div className="mt-2 flex items-center justify-end gap-1">
+          <Button type="button" variant="ghost" size="sm" onClick={onFinishEarly} title="提前结束并记录本次专注">
+            <Check size={14} /> 提前结束
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            title="取消（不记录）"
+            className="text-neutral-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+          >
+            <X size={14} /> 取消
+          </Button>
         </div>
       </div>
-      <div className="flex items-center gap-0.5">
-        <button
-          type="button"
-          onClick={onFinishEarly}
-          title="提前结束并记录"
-          aria-label="提前结束并记录本次专注"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+
+      <div
+        className={cn('relative shrink-0', remaining <= 60_000 && 'animate-pulse')}
+        aria-hidden
+      >
+        {/* Ambient glow in the project hue — same design DNA as .proj-card. */}
+        <div
+          className="absolute -inset-3 rounded-full opacity-25 blur-md dark:opacity-40"
+          style={{ background: `radial-gradient(closest-side, ${accent}, transparent 74%)` }}
+        />
+        <svg
+          width={RING_SIZE}
+          height={RING_SIZE}
+          viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+          className="relative -rotate-90"
         >
-          <Check size={15} />
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          title="取消（不记录）"
-          aria-label="取消本次专注，不记录"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-red-400"
-        >
-          <X size={15} />
-        </button>
+          <circle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_R}
+            fill="none"
+            strokeWidth={7}
+            className="stroke-neutral-200/80 dark:stroke-neutral-800"
+          />
+          {/* The arc IS the time left: full at start, unwinding toward 12
+              o'clock as it burns. Offset animates so ticks glide, not jump. */}
+          <circle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_R}
+            fill="none"
+            stroke={accent}
+            strokeWidth={7}
+            strokeLinecap="round"
+            strokeDasharray={RING_C}
+            strokeDashoffset={RING_C * (1 - remainingPct / 100)}
+            className="transition-[stroke-dashoffset] duration-500 ease-linear"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-semibold leading-none tabular-nums text-neutral-900 dark:text-neutral-100">
+            {fmtCountdown(remaining)}
+          </span>
+          <span className="mt-1 text-[10px] font-medium tracking-[0.25em] text-neutral-400 dark:text-neutral-500">
+            专注中
+          </span>
+        </div>
       </div>
     </div>
   )

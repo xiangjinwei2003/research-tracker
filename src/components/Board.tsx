@@ -162,40 +162,6 @@ export function Board({ onNew, onEdit }: Props) {
               <FocusTimer />
             </div>
 
-            {items.length > 0 ? (
-              /* Per-project horizontal bars: each project's share of this week. */
-              <ul className="mt-4 max-w-xl space-y-2">
-                {byProject.map(({ project, count }) => {
-                  const pct = Math.round((count / items.length) * 100)
-                  return (
-                    <li key={project.id} className="flex items-center gap-3">
-                      <span
-                        title={project.title || '未命名项目'}
-                        className="w-28 shrink-0 truncate text-xs text-neutral-600 dark:text-neutral-300"
-                      >
-                        {project.title || '未命名项目'}
-                      </span>
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800/70">
-                        {/* One consistent, muted indigo for the chart (project
-                            colours stay on the cards) — lower chroma + lightness
-                            than brand so it reads calm, not neon. */}
-                        <div
-                          className="h-full rounded-full bg-[oklch(0.55_0.12_277)] dark:bg-[oklch(0.6_0.11_277)]"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span
-                        title={`${count} 项`}
-                        className="w-9 shrink-0 text-right text-xs tabular-nums text-neutral-400 dark:text-neutral-500"
-                      >
-                        {pct}%
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-            ) : null}
-
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               {columns.map(({ pri, rows }) => {
                 const meta = PRIORITY_META[pri]
@@ -280,6 +246,46 @@ export function Board({ onNew, onEdit }: Props) {
                 )
               })}
             </div>
+
+            {items.length > 0 ? (
+              /* Per-project share of the week — a quiet footnote under the board
+                 (the header slot above belongs to the focus countdown). */
+              <div className="mt-6">
+                <h3 className="text-xs font-medium text-neutral-400 dark:text-neutral-500">
+                  本周分布
+                </h3>
+                <ul className="mt-2 max-w-xl space-y-2">
+                  {byProject.map(({ project, count }) => {
+                    const pct = Math.round((count / items.length) * 100)
+                    return (
+                      <li key={project.id} className="flex items-center gap-3">
+                        <span
+                          title={project.title || '未命名项目'}
+                          className="w-28 shrink-0 truncate text-xs text-neutral-600 dark:text-neutral-300"
+                        >
+                          {project.title || '未命名项目'}
+                        </span>
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800/70">
+                          {/* One consistent, muted indigo for the chart (project
+                              colours stay on the cards) — lower chroma + lightness
+                              than brand so it reads calm, not neon. */}
+                          <div
+                            className="h-full rounded-full bg-[oklch(0.55_0.12_277)] dark:bg-[oklch(0.6_0.11_277)]"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span
+                          title={`${count} 项`}
+                          className="w-9 shrink-0 text-right text-xs tabular-nums text-neutral-400 dark:text-neutral-500"
+                        >
+                          {pct}%
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ) : null}
           </section>
             </ContextMenuTrigger>
             <ContextMenuContent>
