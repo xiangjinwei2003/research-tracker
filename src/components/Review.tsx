@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn'
 import type { FocusSession, Project } from '@/lib/types'
 import { Container } from './ui/Container'
 import { Button } from './ui/Button'
+import { FocusStats } from './FocusStats'
 
 /** Pixel height of one hour row in the week calendar. */
 const HOUR_PX = 48
@@ -73,18 +74,6 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
   }, [sessions, startMs, endMs, projectById])
 
   const totalMin = useMemo(() => week.reduce((acc, r) => acc + r.minutes, 0), [week])
-
-  // Share of the week per project (自由专注 grouped as its own row).
-  const byProject = useMemo(() => {
-    const map = new Map<string, { name: string; color?: string; min: number }>()
-    for (const r of week) {
-      const key = r.session.projectId ?? '__free'
-      const e = map.get(key)
-      if (e) e.min += r.minutes
-      else map.set(key, { name: r.projectTitle, color: r.color, min: r.minutes })
-    }
-    return [...map.values()].sort((a, b) => b.min - a.min)
-  }, [week])
 
   // Visible hour span: the default window, stretched to cover every session.
   const [fromH, toH] = useMemo(() => {
@@ -163,12 +152,10 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
         </div>
       </div>
 
-      {week.length === 0 ? (
+      {sessions.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-16 text-center dark:border-neutral-700 dark:bg-neutral-900/50">
           <CalendarClock size={28} className="mx-auto mb-3 text-neutral-400" />
-          <p className="text-sm text-neutral-600 dark:text-neutral-300">
-            {isCurrentWeek ? '本周还没有专注记录' : '这一周没有专注记录'}
-          </p>
+          <p className="text-sm text-neutral-600 dark:text-neutral-300">还没有专注记录</p>
           <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-neutral-400 dark:text-neutral-500">
             在「总览」的任务卡片上右键，即可开始 30 或 60 分钟倒计时；完成的专注会按时间落在这里，像日历一样回看每周时间去了哪里。
           </p>
@@ -178,35 +165,6 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
         </div>
       ) : (
         <>
-          {/* Per-project share of the week's focus time. */}
-          <ul className="mb-6 max-w-xl space-y-2">
-            {byProject.map((row) => {
-              const pct = totalMin > 0 ? Math.round((row.min / totalMin) * 100) : 0
-              const fill = row.color
-                ? `color-mix(in oklab, ${row.color} 55%, transparent)`
-                : 'var(--color-neutral-400)'
-              return (
-                <li key={row.name} className="flex items-center gap-3">
-                  <span
-                    title={row.name}
-                    className="w-28 shrink-0 truncate text-xs text-neutral-600 dark:text-neutral-300"
-                  >
-                    {row.name}
-                  </span>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800/70">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${pct}%`, background: fill }}
-                    />
-                  </div>
-                  <span className="w-16 shrink-0 text-right text-xs tabular-nums text-neutral-400 dark:text-neutral-500">
-                    {fmtMinutes(row.min)}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-
           {/* Week calendar. */}
           <div className="overflow-x-auto">
             <div className="min-w-[680px]">
@@ -317,7 +275,11 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
             </div>
           </div>
 
+          {/* 统计区 sits right under the calendar (KPI / bars / donut / heatmap). */}
+          <FocusStats sessions={sessions} projectById={projectById} anchor={start} />
+
           {/* Per-day record list (delete = the only way to fix a mis-record). */}
+          {week.length > 0 ? (
           <section aria-label="全部记录" className="mt-8">
             <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
               全部记录
@@ -377,6 +339,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
               })}
             </div>
           </section>
+          ) : null}
         </>
       )}
     </Container>
