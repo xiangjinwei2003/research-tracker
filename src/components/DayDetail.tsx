@@ -2,7 +2,7 @@ import { format } from 'date-fns'
 import { Trash2 } from 'lucide-react'
 import { fmtHM, fmtMinutes } from '@/lib/date'
 import { cn } from '@/lib/cn'
-import type { ResolvedSession } from '@/lib/focus'
+import { taskShare, type ResolvedSession } from '@/lib/focus'
 
 const WEEKDAY_CN = ['一', '二', '三', '四', '五', '六', '日'] as const
 /** Earliest hour the day track shows before it stretches for an early session. */
@@ -24,6 +24,7 @@ interface Props {
 export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
   const isToday = iso === todayIso
   const minutes = rows.reduce((acc, r) => acc + r.minutes, 0)
+  const shares = taskShare(rows)
 
   // Window: 06:00–24:00 by default, stretched to cover an earlier session so a
   // 2am block never falls off the track.
@@ -69,8 +70,48 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
 
       {rows.length > 0 ? (
         <>
+          {/* How the day split across tasks — the track below answers "when",
+              this answers "on what". Repeat sittings on a task are merged.
+              Kept narrow so it reads as a legend, not a second timeline. */}
+          <div className="mt-3 max-w-2xl">
+            <div className="flex h-2 gap-0.5" role="img" aria-label="当日任务占比">
+              {shares.map((s) => (
+                <div
+                  key={s.key}
+                  // Proportional via flex-grow so the gaps don't overflow 100%.
+                  style={{ flexGrow: s.minutes, background: s.color || 'var(--color-neutral-400)' }}
+                  className="basis-0 rounded-full"
+                  title={`${s.label} · ${fmtMinutes(s.minutes)} · ${Math.round((s.minutes / minutes) * 100)}%`}
+                />
+              ))}
+            </div>
+            <ul className="mt-2.5 space-y-1.5">
+              {shares.map((s) => (
+                <li key={s.key} className="flex items-center gap-2 text-xs">
+                  <span
+                    aria-hidden
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: s.color || 'var(--color-neutral-400)' }}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-300">
+                    {s.label}
+                    {s.label !== s.projectTitle ? (
+                      <span className="text-neutral-400 dark:text-neutral-500"> · {s.projectTitle}</span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 tabular-nums text-neutral-500 dark:text-neutral-400">
+                    {fmtMinutes(s.minutes)}
+                  </span>
+                  <span className="w-9 shrink-0 text-right tabular-nums text-neutral-400 dark:text-neutral-500">
+                    {Math.round((s.minutes / minutes) * 100)}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
           {/* Proportional day track: where the blocks sit IS when they happened. */}
-          <div className="mt-3">
+          <div className="mt-5">
             <div className="relative h-8 overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-900">
               {ticks.map((h) => (
                 <span

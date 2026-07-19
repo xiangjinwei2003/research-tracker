@@ -87,6 +87,40 @@ export function projectShare(resolved: ResolvedSession[]): ProjectShare[] {
   return [...map.values()].sort((a, b) => b.minutes - a.minutes)
 }
 
+export interface TaskShare {
+  key: string
+  /** The task, else the project, else 自由专注. */
+  label: string
+  projectTitle: string
+  color?: string
+  minutes: number
+}
+
+/**
+ * Minutes per TASK over `resolved`, biggest first. Repeated sittings on the
+ * same todo merge into one row — three 30-minute blocks on one task read as
+ * 1.5 hours, which is the number worth seeing.
+ */
+export function taskShare(resolved: ResolvedSession[]): TaskShare[] {
+  const map = new Map<string, TaskShare>()
+  for (const r of resolved) {
+    const key =
+      r.session.todoId ?? (r.session.projectId ? `project:${r.session.projectId}` : '__free')
+    const hit = map.get(key)
+    if (hit) hit.minutes += r.minutes
+    else {
+      map.set(key, {
+        key,
+        label: r.label,
+        projectTitle: r.projectTitle,
+        color: r.color,
+        minutes: r.minutes,
+      })
+    }
+  }
+  return [...map.values()].sort((a, b) => b.minutes - a.minutes)
+}
+
 /**
  * Days the 日均 figure divides by: for a period still running (the current week
  * or month) only the elapsed days count — 周一 through today — so Monday morning
