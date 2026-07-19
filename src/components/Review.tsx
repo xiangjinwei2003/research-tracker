@@ -1,41 +1,34 @@
 import { useMemo, useState } from 'react'
-import { addDays, addWeeks, format } from 'date-fns'
-import { CalendarClock, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
+import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns'
+import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStore } from '@/lib/store'
-import { weekStart, fmtHM, fmtMinutes, today } from '@/lib/date'
+import { weekStart, fmtMinutes, parse, today } from '@/lib/date'
+import {
+  allTimeSummary,
+  buildPeriodStats,
+  dayKey,
+  heatmapWeeks,
+  streakDays,
+  type ResolvedSession,
+} from '@/lib/focus'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
-import type { FocusSession, Project } from '@/lib/types'
+import type { Project } from '@/lib/types'
 import { Container } from './ui/Container'
 import { Button } from './ui/Button'
+import { FocusBars } from './FocusBars'
+import { DayDetail } from './DayDetail'
 import { FocusStats } from './FocusStats'
 
-/** Pixel height of one hour row in the week calendar. */
-const HOUR_PX = 48
-/** Default visible day span; expands when sessions fall outside it. */
-const DEFAULT_FROM_H = 8
-const DEFAULT_TO_H = 22
+/** Trailing window of the contribution heatmap, in weeks (~4 months). */
+const HEATMAP_WEEKS = 16
 
-const WEEKDAY_CN = ['一', '二', '三', '四', '五', '六', '日'] as const
-
-/** Monday-based column index (0–6) for a date. */
-function dayIndex(d: Date): number {
-  return (d.getDay() + 6) % 7
-}
-
-interface Resolved {
-  session: FocusSession
-  /** Live project title/color when the project still exists, else snapshots. */
-  projectTitle: string
-  color?: string
-  /** Block/list label: the task if bound, else the project, else 自由专注. */
-  label: string
-  minutes: number
-}
+type Scope = 'week' | 'month'
 
 /**
- * 时间回顾 — a week calendar of recorded focus sessions (类似日历), plus a
- * per-project share breakdown and a per-day record list for the viewed week.
+ * 时间回顾 — per-day focus bars for the viewed period (click a bar to drill into
+ * that day), the selected day's detail, then the aggregate stats. Weeks start
+ * Monday app-wide; 周/月 switches every section at once.
  */
 export function Review({ onGoBoard }: { onGoBoard: () => void }) {
   const projects = useStore((s) => s.projects)
@@ -43,12 +36,21 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
   const removeSession = useStore((s) => s.removeSession)
   const undo = useStore((s) => s.undo)
 
-  // 0 = current week, -1 = previous, ... Weeks start Monday app-wide.
-  const [weekOffset, setWeekOffset] = useState(0)
-  const start = useMemo(() => addWeeks(weekStart(new Date()), weekOffset), [weekOffset])
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start])
+  const [scope, setScope] = useState<Scope>('week')
+  // Any day inside the period being viewed; nav moves it by week or month.
+  const [anchor, setAnchor] = useState<Date>(() => new Date())
+
+  const now = new Date()
+  const todayIso = today()
+  const isWeek = scope === 'week'
+
+  const start = isWeek ? weekStart(anchor) : startOfMonth(anchor)
+  const end = isWeek ? addDays(start, 7) : addMonths(start, 1)
+  const prevStart = isWeek ? addDays(start, -7) : addMonths(start, -1)
   const startMs = start.getTime()
-  const endMs = addDays(start, 7).getTime()
+  const endMs = end.getTime()
+  const prevStartMs = prevStart.getTime()
+  const isCurrentPeriod = now >= start && now < end
 
   const projectById = useMemo(() => {
     const m = new Map<string, Project>()
@@ -56,50 +58,57 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
     return m
   }, [projects])
 
-  const week: Resolved[] = useMemo(() => {
-    const list = sessions
-      .filter((s) => s.startedAt >= startMs && s.startedAt < endMs)
-      .sort((a, b) => a.startedAt - b.startedAt)
-    return list.map((session) => {
-      const live = session.projectId ? projectById.get(session.projectId) : undefined
-      const projectTitle = live?.title || session.projectTitle || ''
-      return {
-        session,
-        projectTitle: projectTitle || '自由专注',
-        color: live?.color || session.color,
-        label: session.todoTitle || projectTitle || '自由专注',
-        minutes: Math.max(1, Math.round((session.endedAt - session.startedAt) / 60_000)),
-      }
-    })
-  }, [sessions, startMs, endMs, projectById])
+  const stats = useMemo(
+    () =>
+      buildPeriodStats({
+        sessions,
+        projectById,
+        start,
+        end,
+        prevStart,
+        prevEnd: start,
+        now,
+      }),
+    // The ms bounds pin `start`/`end`/`prevStart`, and `todayIso` pins `now` —
+    // those Date objects are new every render and would defeat the memo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sessions, projectById, startMs, endMs, prevStartMs, todayIso],
+  )
 
-  const totalMin = useMemo(() => week.reduce((acc, r) => acc + r.minutes, 0), [week])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const streak = useMemo(() => streakDays(sessions, now), [sessions, todayIso])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const heat = useMemo(() => heatmapWeeks(sessions, HEATMAP_WEEKS, now), [sessions, todayIso])
+  const allTime = useMemo(() => allTimeSummary(sessions), [sessions])
 
-  // Visible hour span: the default window, stretched to cover every session.
-  const [fromH, toH] = useMemo(() => {
-    let lo = DEFAULT_FROM_H
-    let hi = DEFAULT_TO_H
-    for (const r of week) {
-      const s = new Date(r.session.startedAt)
-      const e = new Date(r.session.endedAt)
-      lo = Math.min(lo, s.getHours())
-      // A session ending on a later day stretches its start day to midnight.
-      const endH =
-        dayIndex(e) !== dayIndex(s) || e.getDate() !== s.getDate()
-          ? 24
-          : e.getHours() + (e.getMinutes() > 0 || e.getSeconds() > 0 ? 1 : 0)
-      hi = Math.max(hi, endH)
-    }
-    return [lo, Math.min(24, hi)]
-  }, [week])
-  const gridH = (toH - fromH) * HOUR_PX
+  /** Today when it's in view, else the period's best day, else its first day. */
+  const defaultIso = () => {
+    if (stats.days.some((d) => d.iso === todayIso)) return todayIso
+    return stats.best?.iso ?? stats.days[0]?.iso ?? todayIso
+  }
 
-  const todayIso = today()
-  const isCurrentWeek = weekOffset === 0
-  const now = new Date()
-  const nowTop = (now.getHours() + now.getMinutes() / 60 - fromH) * HOUR_PX
+  // Re-pick the selected day whenever the period changes — done during render
+  // (not in an effect) so the detail below never paints a stale day first.
+  const rangeKey = `${scope}:${format(start, 'yyyy-MM-dd')}`
+  const [selectedIso, setSelectedIso] = useState(defaultIso)
+  const [prevRangeKey, setPrevRangeKey] = useState(rangeKey)
+  if (rangeKey !== prevRangeKey) {
+    setPrevRangeKey(rangeKey)
+    setSelectedIso(defaultIso())
+  }
 
-  const onRemove = (r: Resolved) => {
+  const selectedDay = stats.days.find((d) => d.iso === selectedIso)
+  const selectedDate = selectedDay?.date ?? parse(selectedIso) ?? now
+  const selectedRows: ResolvedSession[] = stats.resolved.filter(
+    (r) => dayKey(r.session.startedAt) === selectedIso,
+  )
+
+  const periodLabel = isWeek
+    ? `${format(start, 'M月d日')} – ${format(addDays(start, 6), 'M月d日')}`
+    : format(start, 'yyyy年M月')
+  const periodWord = isWeek ? (isCurrentPeriod ? '本周' : '当周') : format(start, 'M月')
+
+  const onRemove = (r: ResolvedSession) => {
     const token = removeSession(r.session.id)
     toast({
       message: `已删除专注记录「${r.label}」`,
@@ -115,40 +124,64 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
             时间回顾
           </h2>
           <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
-            {week.length > 0
-              ? `${isCurrentWeek ? '本周' : '该周'}专注 ${fmtMinutes(totalMin)} · ${week.length} 次`
-              : isCurrentWeek
-                ? '本周还没有专注记录'
-                : '这一周没有专注记录'}
+            {stats.count > 0
+              ? `${periodWord}专注 ${fmtMinutes(stats.minutes)} · ${stats.count} 次`
+              : `${periodWord}还没有专注记录`}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setWeekOffset((w) => w - 1)}
-            aria-label="上一周"
-            title="上一周"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div
+            className="flex items-center gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900"
+            role="tablist"
+            aria-label="统计范围"
           >
-            <ChevronLeft size={16} />
-          </button>
-          <span className="min-w-[9.5rem] text-center text-sm tabular-nums text-neutral-700 dark:text-neutral-300">
-            {format(start, 'M月d日')} – {format(addDays(start, 6), 'M月d日')}
-          </span>
-          <button
-            type="button"
-            onClick={() => setWeekOffset((w) => w + 1)}
-            aria-label="下一周"
-            title="下一周"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-          >
-            <ChevronRight size={16} />
-          </button>
-          {!isCurrentWeek ? (
-            <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>
-              本周
-            </Button>
-          ) : null}
+            {(['week', 'month'] as const).map((s) => (
+              <button
+                key={s}
+                role="tab"
+                aria-selected={scope === s}
+                onClick={() => setScope(s)}
+                className={cn(
+                  'rounded-md px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+                  scope === s
+                    ? 'bg-white text-brand-700 shadow-sm dark:bg-neutral-800 dark:text-brand-300'
+                    : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100',
+                )}
+              >
+                {s === 'week' ? '周' : '月'}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setAnchor((a) => (isWeek ? addWeeks(a, -1) : addMonths(a, -1)))}
+              aria-label={isWeek ? '上一周' : '上个月'}
+              title={isWeek ? '上一周' : '上个月'}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="min-w-[9.5rem] text-center text-sm tabular-nums text-neutral-700 dark:text-neutral-300">
+              {periodLabel}
+            </span>
+            <button
+              type="button"
+              onClick={() => setAnchor((a) => (isWeek ? addWeeks(a, 1) : addMonths(a, 1)))}
+              aria-label={isWeek ? '下一周' : '下个月'}
+              title={isWeek ? '下一周' : '下个月'}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+            >
+              <ChevronRight size={16} />
+            </button>
+            {!isCurrentPeriod ? (
+              <Button variant="ghost" size="sm" onClick={() => setAnchor(new Date())}>
+                {isWeek ? '本周' : '本月'}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -157,7 +190,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
           <CalendarClock size={28} className="mx-auto mb-3 text-neutral-400" />
           <p className="text-sm text-neutral-600 dark:text-neutral-300">还没有专注记录</p>
           <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-neutral-400 dark:text-neutral-500">
-            在「总览」的任务卡片上右键，即可开始 30 或 60 分钟倒计时；完成的专注会按时间落在这里，像日历一样回看每周时间去了哪里。
+            在「总览」的任务卡片上右键，即可开始 30 或 60 分钟倒计时；完成的专注会按天落在这里，点柱子就能回看那一天的时间去了哪里。
           </p>
           <Button variant="secondary" size="sm" className="mt-5" onClick={onGoBoard}>
             去总览开始专注
@@ -165,181 +198,31 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
         </div>
       ) : (
         <>
-          {/* Week calendar. */}
-          <div className="overflow-x-auto">
-            <div className="min-w-[680px]">
-              <div
-                className="grid"
-                style={{ gridTemplateColumns: '3.25rem repeat(7, minmax(0, 1fr))' }}
-              >
-                <div />
-                {days.map((d, i) => {
-                  const isToday = format(d, 'yyyy-MM-dd') === todayIso
-                  return (
-                    <div
-                      key={i}
-                      className={cn(
-                        'pb-2 text-center text-xs',
-                        isToday
-                          ? 'font-semibold text-brand-600 dark:text-brand-300'
-                          : 'text-neutral-500 dark:text-neutral-400',
-                      )}
-                    >
-                      周{WEEKDAY_CN[i]}{' '}
-                      <span className="tabular-nums">{format(d, 'M/d')}</span>
-                    </div>
-                  )
-                })}
-              </div>
-              <div
-                className="grid border-y border-neutral-200/80 dark:border-neutral-800/80"
-                style={{ gridTemplateColumns: '3.25rem repeat(7, minmax(0, 1fr))' }}
-              >
-                {/* Hour gutter. */}
-                <div className="relative" style={{ height: gridH }}>
-                  {Array.from({ length: toH - fromH + 1 }, (_, i) => fromH + i).map((h) => (
-                    <span
-                      key={h}
-                      className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-neutral-400 dark:text-neutral-500"
-                      style={{ top: (h - fromH) * HOUR_PX }}
-                    >
-                      {String(h).padStart(2, '0')}:00
-                    </span>
-                  ))}
-                </div>
-                {days.map((d, i) => {
-                  const isToday = format(d, 'yyyy-MM-dd') === todayIso
-                  const rows = week.filter((r) => dayIndex(new Date(r.session.startedAt)) === i)
-                  return (
-                    <div
-                      key={i}
-                      className={cn(
-                        'relative border-l border-neutral-200/70 dark:border-neutral-800/70',
-                        isToday && 'bg-brand-50/40 dark:bg-brand-950/15',
-                      )}
-                      style={{ height: gridH }}
-                    >
-                      {Array.from({ length: toH - fromH - 1 }, (_, k) => fromH + k + 1).map(
-                        (h) => (
-                          <div
-                            key={h}
-                            aria-hidden
-                            className="absolute inset-x-0 border-t border-neutral-200/50 dark:border-neutral-800/50"
-                            style={{ top: (h - fromH) * HOUR_PX }}
-                          />
-                        ),
-                      )}
-                      {rows.map((r) => {
-                        const s = new Date(r.session.startedAt)
-                        const top = (s.getHours() + s.getMinutes() / 60 - fromH) * HOUR_PX
-                        const height = Math.max(
-                          18,
-                          Math.min((r.minutes / 60) * HOUR_PX, gridH - top),
-                        )
-                        const accent = r.color || 'var(--color-neutral-400)'
-                        const timeStr = `${fmtHM(r.session.startedAt)}–${fmtHM(r.session.endedAt)}`
-                        return (
-                          <div
-                            key={r.session.id}
-                            title={`${timeStr} · ${r.projectTitle}${r.session.todoTitle ? ` · ${r.session.todoTitle}` : ''} · ${fmtMinutes(r.minutes)}${r.session.completed ? '' : '（提前结束）'}`}
-                            className="absolute inset-x-1 overflow-hidden rounded-md border-l-2 px-1.5 py-0.5 text-[11px] leading-tight text-neutral-700 dark:text-neutral-200"
-                            style={{
-                              top,
-                              height,
-                              borderLeftColor: accent,
-                              background: `color-mix(in oklab, ${accent} 18%, transparent)`,
-                            }}
-                          >
-                            <div className="truncate font-medium">{r.label}</div>
-                            {height >= 34 ? (
-                              <div className="truncate tabular-nums text-[10px] text-neutral-500 dark:text-neutral-400">
-                                {timeStr}
-                              </div>
-                            ) : null}
-                          </div>
-                        )
-                      })}
-                      {isCurrentWeek && isToday && nowTop >= 0 && nowTop <= gridH ? (
-                        <div
-                          aria-hidden
-                          className="absolute inset-x-0 z-10 border-t border-brand-500"
-                          style={{ top: nowTop }}
-                        >
-                          <span className="absolute -left-[3px] -top-[3px] h-[5px] w-[5px] rounded-full bg-brand-500" />
-                        </div>
-                      ) : null}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
+          <FocusBars
+            days={stats.days}
+            selectedIso={selectedIso}
+            onSelect={setSelectedIso}
+            todayIso={todayIso}
+            scope={scope}
+          />
 
-          {/* 统计区 sits right under the calendar (KPI / bars / donut / heatmap). */}
-          <FocusStats sessions={sessions} projectById={projectById} anchor={start} />
+          <DayDetail
+            date={selectedDate}
+            iso={selectedIso}
+            todayIso={todayIso}
+            rows={selectedRows}
+            onRemove={onRemove}
+          />
 
-          {/* Per-day record list (delete = the only way to fix a mis-record). */}
-          {week.length > 0 ? (
-          <section aria-label="全部记录" className="mt-8">
-            <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-              全部记录
-            </h3>
-            <div className="mt-2 space-y-4">
-              {days.map((d, i) => {
-                const rows = week.filter(
-                  (r) => dayIndex(new Date(r.session.startedAt)) === i,
-                )
-                if (rows.length === 0) return null
-                return (
-                  <div key={i}>
-                    <h4 className="text-xs font-medium tabular-nums text-neutral-400 dark:text-neutral-500">
-                      {format(d, 'M月d日')} 周{WEEKDAY_CN[i]}
-                    </h4>
-                    <ul className="mt-1.5 space-y-1">
-                      {rows.map((r) => (
-                        <li
-                          key={r.session.id}
-                          className="group flex items-center gap-3 rounded-md px-1 py-1 text-sm hover:bg-neutral-100/70 dark:hover:bg-neutral-900/60"
-                        >
-                          <span className="w-24 shrink-0 tabular-nums text-xs text-neutral-500 dark:text-neutral-400">
-                            {fmtHM(r.session.startedAt)}–{fmtHM(r.session.endedAt)}
-                          </span>
-                          <span className="w-20 shrink-0 text-xs tabular-nums text-neutral-500 dark:text-neutral-400">
-                            {fmtMinutes(r.minutes)}
-                            {r.session.completed ? '' : ' · 提前'}
-                          </span>
-                          <span
-                            aria-hidden
-                            className="h-1.5 w-1.5 shrink-0 rounded-full"
-                            style={{ background: r.color || 'var(--color-neutral-400)' }}
-                          />
-                          <span className="min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-300">
-                            {r.label}
-                            {r.session.todoTitle && r.projectTitle !== '自由专注' ? (
-                              <span className="text-neutral-400 dark:text-neutral-500">
-                                {' '}
-                                · {r.projectTitle}
-                              </span>
-                            ) : null}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => onRemove(r)}
-                            aria-label="删除这条专注记录"
-                            title="删除记录"
-                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-neutral-400 opacity-0 transition group-hover:opacity-100 hover:bg-neutral-200/70 hover:text-red-600 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:bg-neutral-800 dark:hover:text-red-400"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-          ) : null}
+          <FocusStats
+            stats={stats}
+            totalLabel={`${periodWord}专注`}
+            deltaLabel={isWeek ? '较上周' : '较上月'}
+            centerLabel={periodWord}
+            streak={streak}
+            heat={heat}
+            allTime={allTime}
+          />
         </>
       )}
     </Container>
