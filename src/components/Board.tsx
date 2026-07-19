@@ -19,6 +19,7 @@ import {
 import { dateFromToday, daysUntil, weekdayLabel, today } from '@/lib/date'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
+import { primeChime, reminderEnabled, requestNotifyPermission } from '@/lib/reminder'
 import { StageChip } from './StageChip'
 import { Container } from './ui/Container'
 import { Dashboard } from './Dashboard'
@@ -100,12 +101,19 @@ export function Board({ onNew, onEdit }: Props) {
     )
   }
 
-  const startFocus = (plannedMin: number) =>
+  const startFocus = (plannedMin: number) => {
+    // Unlock audio (and ask for notifications) inside this click — the autoplay
+    // policy would block a chime scheduled an hour from now.
+    if (reminderEnabled()) {
+      primeChime()
+      void requestNotifyPermission()
+    }
     startTimer({
       plannedMin,
       projectId: ctxTarget?.projectId,
       todoId: ctxTarget?.todoId,
     })
+  }
 
   const ctxLabel = ctxTarget
     ? `专注 · ${(ctxTarget.title || '未命名待办').length > 14 ? `${(ctxTarget.title || '未命名待办').slice(0, 14)}…` : ctxTarget.title || '未命名待办'}`

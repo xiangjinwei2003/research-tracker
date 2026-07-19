@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Timer, X } from 'lucide-react'
+import { Bell, BellOff, Check, Timer, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
+import {
+  notifyFocusDone,
+  playChime,
+  primeChime,
+  reminderEnabled,
+  requestNotifyPermission,
+  setReminderEnabled,
+} from '@/lib/reminder'
 import { Button } from './ui/Button'
 
 /** Ring geometry — a single instance app-wide, so fixed ids/sizes are safe. */
@@ -37,10 +45,40 @@ export function FocusTimer() {
   const cancelTimer = useStore((s) => s.cancelTimer)
 
   const [now, setNow] = useState(() => Date.now())
+  const [remindOn, setRemindOn] = useState(reminderEnabled)
   // One completion per countdown, even though the tick effect fires often.
   const firedRef = useRef(false)
 
   const end = activeTimer ? activeTimer.startedAt + activeTimer.plannedMin * 60_000 : 0
+
+  /** Start from a real click: unlock audio now so the chime isn't blocked later. */
+  const begin = (plannedMin: number) => {
+    if (remindOn) {
+      primeChime()
+      void requestNotifyPermission()
+    }
+    startTimer({ plannedMin })
+  }
+
+  const toggleRemind = async () => {
+    const next = !remindOn
+    setRemindOn(next)
+    setReminderEnabled(next)
+    if (!next) {
+      toast({ message: '已关闭结束提醒' })
+      return
+    }
+    primeChime()
+    const state = await requestNotifyPermission()
+    toast({
+      message:
+        state === 'granted'
+          ? '结束时会响铃并弹出系统通知'
+          : state === 'denied'
+            ? '浏览器已拦截通知权限，结束时只会响铃'
+            : '结束时会响铃提醒',
+    })
+  }
 
   useEffect(() => {
     firedRef.current = false
@@ -60,8 +98,16 @@ export function FocusTimer() {
     if (!activeTimer || firedRef.current || now < end) return
     firedRef.current = true
     const s = completeTimer()
-    if (s) toast({ message: `专注完成 · 已记录 ${s.plannedMin} 分钟` })
-  }, [now, end, activeTimer, completeTimer])
+    if (!s) return
+    if (remindOn) {
+      // The chime + banner are what reach the user when this tab isn't in front.
+      playChime()
+      notifyFocusDone(
+        `${s.todoTitle || s.projectTitle || '自由专注'} · ${s.plannedMin} 分钟已完成`,
+      )
+    }
+    toast({ message: `专注完成 · 已记录 ${s.plannedMin} 分钟` })
+  }, [now, end, activeTimer, completeTimer, remindOn])
 
   // Show the countdown in the tab title while running; restore on stop.
   useEffect(() => {
@@ -77,26 +123,48 @@ export function FocusTimer() {
     document.title = `${fmtCountdown(clamped)} · 专注中`
   }, [activeTimer, end, now])
 
+  const bell = (
+    <button
+      type="button"
+      onClick={toggleRemind}
+      aria-pressed={remindOn}
+      aria-label={remindOn ? '关闭结束提醒' : '开启结束提醒'}
+      title={remindOn ? '结束提醒已开启（响铃 + 系统通知）' : '结束提醒已关闭'}
+      className={cn(
+        'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+        remindOn
+          ? 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
+          : 'text-neutral-300 hover:bg-neutral-100 hover:text-neutral-600 dark:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-300',
+      )}
+    >
+      {remindOn ? <Bell size={14} /> : <BellOff size={14} />}
+    </button>
+  )
+
   if (!activeTimer) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-          aria-label="开始专注倒计时"
-          title="开始专注倒计时（也可右键任务卡片）"
-        >
-          <Timer size={15} /> 专注
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuLabel>自由专注</DropdownMenuLabel>
-          <DropdownMenuItem onSelect={() => startTimer({ plannedMin: 30 })}>
-            <Timer size={15} /> 倒计时 30 分钟
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => startTimer({ plannedMin: 60 })}>
-            <Timer size={15} /> 倒计时 1 小时
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex shrink-0 items-center gap-0.5">
+        {bell}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+            aria-label="开始专注倒计时"
+            title="开始专注倒计时（也可右键任务卡片）"
+          >
+            <Timer size={15} /> 专注
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuLabel>自由专注</DropdownMenuLabel>
+            <DropdownMenuItem onSelect={() => begin(30)}>
+              <Timer size={15} /> 倒计时 30 分钟
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => begin(60)}>
+              <Timer size={15} /> 倒计时 1 小时
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     )
   }
 
@@ -144,6 +212,7 @@ export function FocusTimer() {
           {sub}
         </div>
         <div className="mt-2 flex items-center justify-end gap-1">
+          {bell}
           <Button type="button" variant="ghost" size="sm" onClick={onFinishEarly} title="提前结束并记录本次专注">
             <Check size={14} /> 提前结束
           </Button>
