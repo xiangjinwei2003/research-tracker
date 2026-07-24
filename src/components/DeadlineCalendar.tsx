@@ -1,13 +1,17 @@
 import { useMemo, useState, type ComponentProps } from 'react'
-import { format } from 'date-fns'
+import { addDays, addWeeks, format, isSameWeek } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStore } from '@/lib/store'
-import { parse, today, fmtMD } from '@/lib/date'
+import { weekStart, parse, today } from '@/lib/date'
 import { findStage, type Project } from '@/lib/types'
 import { Calendar, CalendarDayButton } from './ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { Button } from './ui/Button'
 import { cn } from '@/lib/cn'
 
-const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'] as const
+/** Column order is Monday-first, matching the app's week start. */
+const WEEKDAY_CN = ['一', '二', '三', '四', '五', '六', '日'] as const
 
 type EventItem =
   | { kind: 'deadline'; project: Project; label: string }
@@ -21,13 +25,14 @@ interface Props {
 }
 
 /**
- * Month calendar of deadlines, built on the shadcn/react-day-picker Calendar:
- * days carry a dot (red = 投稿截止/Rebuttal, grey = 待办到期), and the selected
- * day's items are listed in the agenda beside it. Clicking an item opens it.
+ * A full-width week view: seven day columns, each listing the items due that day
+ * (▲ 投稿截止 / ◆ Rebuttal on top, then todos by stage colour). Prev/next weeks,
+ * plus a react-day-picker month in a popover on the date label to jump anywhere.
  */
 export function DeadlineCalendar({ onEdit }: Props) {
   const projects = useStore((s) => s.projects).filter((p) => !p.archived)
-  const [selected, setSelected] = useState<Date>(() => new Date())
+  const [anchor, setAnchor] = useState<Date>(() => new Date())
+  const [pickerOpen, setPickerOpen] = useState(false)
   const todayIso = today()
 
   const byDay = useMemo(() => {
@@ -61,7 +66,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
     return map
   }, [projects])
 
-  // Days split by marker colour: any 投稿/Rebuttal → red; todo-only → grey.
+  // Days that carry a marker dot in the mini month-picker.
   const { deadlineDates, todoDates } = useMemo(() => {
     const deadline: Date[] = []
     const todo: Date[] = []
@@ -74,62 +79,142 @@ export function DeadlineCalendar({ onEdit }: Props) {
     return { deadlineDates: deadline, todoDates: todo }
   }, [byDay])
 
-  const selKey = format(selected, 'yyyy-MM-dd')
-  const selEvents = byDay.get(selKey) ?? []
-  const isToday = selKey === todayIso
+  const start = weekStart(anchor)
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start])
+  const weekKeys = days.map((d) => format(d, 'yyyy-MM-dd'))
+
+  const ddlCount = weekKeys.reduce(
+    (n, k) => n + (byDay.get(k)?.filter((e) => e.kind !== 'todo').length ?? 0),
+    0,
+  )
+  const todoCount = weekKeys.reduce(
+    (n, k) => n + (byDay.get(k)?.filter((e) => e.kind === 'todo').length ?? 0),
+    0,
+  )
+  const isThisWeek = isSameWeek(anchor, new Date(), { weekStartsOn: 1 })
+  const rangeLabel = `${format(start, 'M月d日')} – ${format(addDays(start, 6), 'M月d日')}`
+
+  const subtitle =
+    ddlCount === 0 && todoCount === 0
+      ? '本周无到期事项'
+      : [
+          ddlCount > 0 ? `${ddlCount} 个投稿 / Rebuttal 截止` : null,
+          todoCount > 0 ? `${todoCount} 个待办到期` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
 
   return (
-    <section
-      aria-label="截止日历"
-      className="grid gap-6 lg:grid-cols-[auto_minmax(0,1fr)]"
-    >
-      <Calendar
-        mode="single"
-        selected={selected}
-        onSelect={(d) => d && setSelected(d)}
-        defaultMonth={selected}
-        weekStartsOn={1}
-        locale={zhCN}
-        modifiers={{ hasDeadline: deadlineDates, hasTodo: todoDates }}
-        components={{ DayButton: DayWithDot }}
-        className="rounded-xl border bg-card [--cell-size:2.5rem]"
-      />
+    <section aria-label="本周截止">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
 
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <h3 className="text-base font-semibold tracking-tight text-foreground">
-            {fmtMD(selKey)}
-            <span className="ml-1.5 text-sm font-normal text-muted-foreground">
-              周{WEEKDAY_CN[selected.getDay()]}
-            </span>
-          </h3>
-          {isToday ? (
-            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-              今天
-            </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setAnchor((a) => addWeeks(a, -1))}
+            aria-label="上一周"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-sm font-medium tabular-nums text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                {rangeLabel}
+                <ChevronDown size={14} className="text-muted-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={anchor}
+                onSelect={(d) => {
+                  if (d) {
+                    setAnchor(d)
+                    setPickerOpen(false)
+                  }
+                }}
+                defaultMonth={anchor}
+                weekStartsOn={1}
+                locale={zhCN}
+                modifiers={{ hasDeadline: deadlineDates, hasTodo: todoDates }}
+                components={{ DayButton: DayWithDot }}
+                className="[--cell-size:2.25rem]"
+              />
+            </PopoverContent>
+          </Popover>
+
+          <button
+            type="button"
+            onClick={() => setAnchor((a) => addWeeks(a, 1))}
+            aria-label="下一周"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            <ChevronRight size={16} />
+          </button>
+
+          {!isThisWeek ? (
+            <Button variant="ghost" size="sm" onClick={() => setAnchor(new Date())}>
+              本周
+            </Button>
           ) : null}
-          <span className="text-sm text-muted-foreground">
-            {selEvents.length > 0 ? `· ${selEvents.length} 项到期` : ''}
-          </span>
         </div>
+      </div>
 
-        {selEvents.length > 0 ? (
-          <ul className="mt-3 space-y-1.5">
-            {selEvents.map((e, i) => (
-              <EventRow key={i} e={e} onClick={() => onEdit(e.project)} />
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-4 text-sm text-muted-foreground/70">
-            这天没有到期事项。点日历上带圆点的日期查看当天截止。
-          </p>
-        )}
+      <div className="overflow-x-auto">
+        <div className="grid min-w-[52rem] grid-cols-7 divide-x divide-border overflow-hidden rounded-xl border bg-card lg:min-w-0">
+          {days.map((d, i) => {
+            const key = weekKeys[i]
+            const isToday = key === todayIso
+            const evs = byDay.get(key) ?? []
+            return (
+              <div key={key} className={cn('flex min-h-[17rem] flex-col', isToday && 'bg-primary/5')}>
+                <div
+                  className={cn(
+                    'flex items-baseline justify-between gap-1 border-b px-2.5 py-2',
+                    isToday ? 'border-primary/25' : 'border-border',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'text-xs font-medium',
+                      isToday ? 'text-primary' : 'text-muted-foreground',
+                    )}
+                  >
+                    周{WEEKDAY_CN[i]}
+                  </span>
+                  <span
+                    className={cn(
+                      'inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-sm tabular-nums',
+                      isToday ? 'bg-primary font-semibold text-primary-foreground' : 'text-foreground',
+                    )}
+                  >
+                    {d.getDate()}
+                  </span>
+                </div>
+                <div className="flex-1 space-y-1.5 overflow-y-auto p-2">
+                  {evs.map((e, j) => (
+                    <EventChip key={j} e={e} onClick={() => onEdit(e.project)} />
+                  ))}
+                  {evs.length === 0 ? (
+                    <div className="px-1 py-1 text-xs text-muted-foreground/40">—</div>
+                  ) : null}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </section>
   )
 }
 
-/** Day cell + a dot when the day carries deadlines (red) or todos (grey). */
+/** Mini month-picker day cell + a dot when the day carries deadlines / todos. */
 function DayWithDot(props: ComponentProps<typeof CalendarDayButton>) {
   const m = props.modifiers as Record<string, boolean | undefined>
   const hasDeadline = !!m.hasDeadline
@@ -150,62 +235,51 @@ function DayWithDot(props: ComponentProps<typeof CalendarDayButton>) {
   )
 }
 
-function EventRow({ e, onClick }: { e: EventItem; onClick: () => void }) {
+function EventChip({ e, onClick }: { e: EventItem; onClick: () => void }) {
   if (e.kind === 'deadline') {
     return (
-      <li>
-        <button
-          type="button"
-          onClick={onClick}
-          title={`${e.label} · 投稿截止`}
-          className="flex w-full items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span aria-hidden className="shrink-0 leading-none">▲</span>
-          <span className="min-w-0 flex-1 truncate">{e.label}</span>
-          <span className="shrink-0 text-xs font-normal text-destructive/70">投稿截止</span>
-        </button>
-      </li>
+      <button
+        type="button"
+        onClick={onClick}
+        title={`${e.label} · 投稿截止`}
+        className="flex w-full items-center gap-1 rounded-md border border-destructive/30 bg-destructive/10 px-1.5 py-1 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span aria-hidden className="shrink-0 leading-none">▲</span>
+        <span className="min-w-0 truncate">{e.label}</span>
+      </button>
     )
   }
   if (e.kind === 'rebuttal') {
     return (
-      <li>
-        <button
-          type="button"
-          onClick={onClick}
-          title={`${e.label} · Rebuttal`}
-          className="flex w-full items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-left text-sm font-medium text-amber-600 transition-colors hover:bg-amber-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-400"
-        >
-          <span aria-hidden className="shrink-0 leading-none">◆</span>
-          <span className="min-w-0 flex-1 truncate">{e.label}</span>
-          <span className="shrink-0 text-xs font-normal text-amber-600/70 dark:text-amber-400/70">Rebuttal</span>
-        </button>
-      </li>
-    )
-  }
-  return (
-    <li>
       <button
         type="button"
         onClick={onClick}
-        title={`${e.title} · ${e.project.title || '未命名项目'}`}
-        className={cn(
-          'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          e.done && 'opacity-50',
-        )}
+        title={`${e.label} · Rebuttal`}
+        className="flex w-full items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-1 text-left text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-400"
       >
-        <span
-          aria-hidden
-          className="h-2 w-2 shrink-0 rounded-full"
-          style={{ background: e.stageColor }}
-        />
-        <span className={cn('min-w-0 flex-1 truncate text-foreground/90', e.done && 'line-through')}>
-          {e.title}
-        </span>
-        <span className="min-w-0 max-w-[40%] shrink-0 truncate text-xs text-muted-foreground">
-          {e.project.title}
-        </span>
+        <span aria-hidden className="shrink-0 leading-none">◆</span>
+        <span className="min-w-0 truncate">{e.label}</span>
       </button>
-    </li>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`${e.title} · ${e.project.title || '未命名项目'}`}
+      className={cn(
+        'flex w-full items-start gap-1.5 rounded-md px-1.5 py-1 text-left text-xs transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        e.done && 'opacity-50',
+      )}
+    >
+      <span
+        aria-hidden
+        className="mt-1 h-2 w-2 shrink-0 rounded-full"
+        style={{ background: e.stageColor }}
+      />
+      <span className={cn('min-w-0 flex-1 line-clamp-2 text-foreground/90', e.done && 'line-through')}>
+        {e.title}
+      </span>
+    </button>
   )
 }
