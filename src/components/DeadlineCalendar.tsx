@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentProps } from 'react'
+import { useMemo, useRef, useState, type ComponentProps } from 'react'
 import {
   addDays,
   addMonths,
@@ -7,26 +7,36 @@ import {
   format,
   isSameMonth,
   startOfMonth,
+  startOfWeek,
 } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStore } from '@/lib/store'
-import { weekStart, parse, today } from '@/lib/date'
+import { toast } from '@/lib/toast'
+import { fmtMD, parse, today } from '@/lib/date'
 import { findStage, type Project } from '@/lib/types'
 import { Calendar, CalendarDayButton } from './ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Button } from './ui/Button'
 import { cn } from '@/lib/cn'
 
-/** Column order is Monday-first, matching the app's week start. */
-const WEEKDAY_CN = ['一', '二', '三', '四', '五', '六', '日'] as const
+/** 美式排法：周日是一周的第一列（与 Apple Calendar 默认一致）。 */
+const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'] as const
+
+/** Sunday-start week — local to this calendar view; 回顾页的周统计仍按周一起算。 */
+const weekStartSun = (d: Date) => startOfWeek(d, { weekStartsOn: 0 })
 
 type EventItem =
   | { kind: 'deadline'; project: Project; label: string }
   | { kind: 'rebuttal'; project: Project; label: string }
-  | { kind: 'todo'; project: Project; title: string; stageColor: string; done: boolean }
+  | { kind: 'todo'; project: Project; todoId: string; title: string; stageColor: string; done: boolean }
 
 const ORDER: Record<EventItem['kind'], number> = { deadline: 0, rebuttal: 1, todo: 2 }
+
+/** What's mid-drag: enough to write the new date back on drop. */
+type DragPayload =
+  | { kind: 'deadline' | 'rebuttal'; projectId: string; fromKey: string }
+  | { kind: 'todo'; projectId: string; todoId: string; title: string; fromKey: string }
 
 interface Props {
   onEdit: (p: Project) => void
@@ -41,9 +51,39 @@ interface Props {
  */
 export function DeadlineCalendar({ onEdit }: Props) {
   const projects = useStore((s) => s.projects).filter((p) => !p.archived)
+  const updateTodo = useStore((s) => s.updateTodo)
+  const updateProject = useStore((s) => s.updateProject)
   const [anchor, setAnchor] = useState<Date>(() => new Date())
   const [pickerOpen, setPickerOpen] = useState(false)
   const todayIso = today()
+
+  // Drag-to-reschedule: chip being dragged + the day cell currently hovered.
+  const dragRef = useRef<DragPayload | null>(null)
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null)
+
+  const handleDrop = (key: string) => {
+    const d = dragRef.current
+    dragRef.current = null
+    setDragOverKey(null)
+    if (!d || d.fromKey === key) return
+    if (d.kind === 'todo') {
+      updateTodo(d.projectId, d.todoId, { endDate: key })
+      toast({ message: `「${d.title}」已改到 ${fmtMD(key)}` })
+      return
+    }
+    // Venue dates live on the project; rebuild the venue with the dropped day.
+    const p = useStore.getState().projects.find((x) => x.id === d.projectId)
+    if (!p?.venue) return
+    updateProject(d.projectId, {
+      venue:
+        d.kind === 'deadline'
+          ? { ...p.venue, deadline: key }
+          : { ...p.venue, rebuttalAt: key },
+    })
+    toast({
+      message: `${p.venue.name || '投稿'} ${d.kind === 'deadline' ? '投稿截止' : 'Rebuttal'} 已改到 ${fmtMD(key)}`,
+    })
+  }
 
   const byDay = useMemo(() => {
     const map = new Map<string, EventItem[]>()
@@ -66,6 +106,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
         push(t.endDate, {
           kind: 'todo',
           project: p,
+          todoId: t.id,
           title: t.title || '未命名',
           stageColor: findStage(p.stages, t.stage).color,
           done: t.done,
@@ -89,11 +130,11 @@ export function DeadlineCalendar({ onEdit }: Props) {
     return { deadlineDates: deadline, todoDates: todo }
   }, [byDay])
 
-  // Month grid: whole weeks (Mon-start) covering the anchored month.
+  // Month grid: whole weeks (Sunday-start) covering the anchored month.
   const monthStart = startOfMonth(anchor)
-  const gridStart = weekStart(monthStart)
+  const gridStart = weekStartSun(monthStart)
   const weekCount =
-    differenceInCalendarWeeks(weekStart(endOfMonth(anchor)), gridStart, { weekStartsOn: 1 }) + 1
+    differenceInCalendarWeeks(weekStartSun(endOfMonth(anchor)), gridStart, { weekStartsOn: 0 }) + 1
   const days = useMemo(
     () => Array.from({ length: weekCount * 7 }, (_, i) => addDays(gridStart, i)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -166,7 +207,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
                   }
                 }}
                 defaultMonth={anchor}
-                weekStartsOn={1}
+                weekStartsOn={0}
                 locale={zhCN}
                 modifiers={{ hasDeadline: deadlineDates, hasTodo: todoDates }}
                 components={{ DayButton: DayWithDot }}
@@ -224,11 +265,27 @@ export function DeadlineCalendar({ onEdit }: Props) {
             return (
               <div
                 key={key}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = 'move'
+                  if (dragOverKey !== key) setDragOverKey(key)
+                }}
+                onDragLeave={(e) => {
+                  // Ignore leaves that are just moving onto a child chip.
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setDragOverKey((k) => (k === key ? null : k))
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  handleDrop(key)
+                }}
                 className={cn(
-                  'flex min-h-0 flex-col gap-1 p-1.5',
+                  'flex min-h-0 flex-col gap-1 p-1.5 transition-colors',
                   !lastCol && 'border-r',
                   !lastRow && 'border-b',
                   isToday && 'bg-primary/5',
+                  dragOverKey === key && 'bg-primary/10 ring-1 ring-inset ring-ring/50',
                 )}
               >
                 <div className="flex shrink-0 items-center justify-end">
@@ -260,7 +317,27 @@ export function DeadlineCalendar({ onEdit }: Props) {
                     )}
                   >
                     {evs.map((e, j) => (
-                      <EventChip key={j} e={e} onClick={() => onEdit(e.project)} />
+                      <EventChip
+                        key={j}
+                        e={e}
+                        onClick={() => onEdit(e.project)}
+                        onDragStart={() => {
+                          dragRef.current =
+                            e.kind === 'todo'
+                              ? {
+                                  kind: 'todo',
+                                  projectId: e.project.id,
+                                  todoId: e.todoId,
+                                  title: e.title,
+                                  fromKey: key,
+                                }
+                              : { kind: e.kind, projectId: e.project.id, fromKey: key }
+                        }}
+                        onDragEnd={() => {
+                          dragRef.current = null
+                          setDragOverKey(null)
+                        }}
+                      />
                     ))}
                   </div>
                 ) : null}
@@ -294,14 +371,37 @@ function DayWithDot(props: ComponentProps<typeof CalendarDayButton>) {
   )
 }
 
-function EventChip({ e, onClick }: { e: EventItem; onClick: () => void }) {
+function EventChip({
+  e,
+  onClick,
+  onDragStart,
+  onDragEnd,
+}: {
+  e: EventItem
+  onClick: () => void
+  onDragStart: () => void
+  onDragEnd: () => void
+}) {
+  // Shared by all three variants: drag a chip onto another day to reschedule.
+  const dragProps = {
+    draggable: true,
+    onDragStart: (ev: React.DragEvent) => {
+      ev.dataTransfer.effectAllowed = 'move'
+      // Safari won't start a drag without data attached.
+      ev.dataTransfer.setData('text/plain', '')
+      onDragStart()
+    },
+    onDragEnd,
+  }
+
   if (e.kind === 'deadline') {
     return (
       <button
         type="button"
         onClick={onClick}
-        title={`${e.label} · 投稿截止`}
-        className="flex w-full items-center gap-1 rounded border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        title={`${e.label} · 投稿截止 · 拖到别的日期可改期`}
+        {...dragProps}
+        className="flex w-full cursor-grab items-center gap-1 rounded border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
       >
         <span aria-hidden className="shrink-0 leading-none">▲</span>
         <span className="min-w-0 truncate">{e.label}</span>
@@ -313,8 +413,9 @@ function EventChip({ e, onClick }: { e: EventItem; onClick: () => void }) {
       <button
         type="button"
         onClick={onClick}
-        title={`${e.label} · Rebuttal`}
-        className="flex w-full items-center gap-1 rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-left text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-400"
+        title={`${e.label} · Rebuttal · 拖到别的日期可改期`}
+        {...dragProps}
+        className="flex w-full cursor-grab items-center gap-1 rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-left text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing dark:text-amber-400"
       >
         <span aria-hidden className="shrink-0 leading-none">◆</span>
         <span className="min-w-0 truncate">{e.label}</span>
@@ -325,9 +426,10 @@ function EventChip({ e, onClick }: { e: EventItem; onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      title={`${e.title} · ${e.project.title || '未命名项目'}`}
+      title={`${e.title} · ${e.project.title || '未命名项目'} · 拖到别的日期可改期`}
+      {...dragProps}
       className={cn(
-        'flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex w-full cursor-grab items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing',
         e.done && 'opacity-50',
       )}
     >

@@ -16,7 +16,7 @@ export function Timeline({ onEdit }: Props) {
       <div className="mb-5">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">截止日历</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          整月一览：▲ 投稿截止、◆ Rebuttal、待办到期落在对应日期；过去的日子置灰。点月份可跳到任意日期。
+          整月一览：▲ 投稿截止、◆ Rebuttal、待办到期落在对应日期；过去的日子置灰。拖动事项到另一天即可改期，点月份可跳到任意日期。
         </p>
       </div>
 
