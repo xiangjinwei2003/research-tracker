@@ -5,6 +5,7 @@ import { countdownLabel, daysUntil, monthGrid, parse, today } from '@/lib/date'
 import { findStage, type Project, type Todo } from '@/lib/types'
 import { Card } from './ui/Card'
 import { Container } from './ui/Container'
+import { WeekCalendar } from './WeekCalendar'
 import { cn } from '@/lib/cn'
 
 const DAY_WIDTH = 6
@@ -141,12 +142,14 @@ export function Timeline({ onEdit }: Props) {
 
   return (
     <Container className="py-6">
-      <div className="mb-3">
+      <div className="mb-5">
         <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">时间线</h2>
         <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
           灰色背景 = 已过去；圆点 = 待办（按所属阶段着色，可拖动改截止日期）；红线 = 今天；▲ 投稿截止；◆ Rebuttal。
         </p>
       </div>
+
+      <WeekCalendar onEdit={onEdit} />
 
       <Card className="overflow-hidden">
         <div className="flex">
