@@ -1,6 +1,6 @@
 import {
   LayoutGrid,
-  GanttChartSquare,
+  CalendarDays,
   CalendarClock,
   Download,
   Upload,
@@ -39,7 +39,7 @@ interface Props {
 
 const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'dashboard', label: '总览', icon: LayoutGrid },
-  { id: 'timeline', label: '时间线', icon: GanttChartSquare },
+  { id: 'timeline', label: '日历', icon: CalendarDays },
   { id: 'review', label: '回顾', icon: CalendarClock },
   { id: 'archived', label: '归档', icon: Archive },
 ]
