@@ -24,6 +24,8 @@
     { "name": "tooltip", "mode": "install", "note": "@shadcn/tooltip + TooltipProvider（App）；数据管理/提醒开关等悬浮提示" },
     { "name": "switch", "mode": "install", "note": "@shadcn/switch 作专注结束提醒开关" },
     { "name": "sonner", "mode": "install", "note": "@shadcn/sonner 替换自建 zustand toast；接入 App 主题（去 next-themes）" },
-    { "name": "badge", "mode": "custom", "note": "stage 数据色经 --stage + color-mix，主题无关，保留自建" }
+    { "name": "badge", "mode": "custom", "note": "stage 数据色经 --stage + color-mix，主题无关，保留自建" },
+    { "name": "calendar", "mode": "install", "note": "@shadcn/calendar（react-day-picker）；用于月份标题的跳转 popover；修 Button 导入大小写" },
+    { "name": "deadline-month-view", "mode": "custom", "note": "整屏 Apple 式月视图（registry 无月历事件网格），事件 chips 全走 token；过去日子置灰" }
   ]
 }

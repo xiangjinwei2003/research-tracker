@@ -1,5 +1,13 @@
 import { useMemo, useState, type ComponentProps } from 'react'
-import { addDays, addWeeks, format, isSameWeek } from 'date-fns'
+import {
+  addDays,
+  addMonths,
+  differenceInCalendarWeeks,
+  endOfMonth,
+  format,
+  isSameMonth,
+  startOfMonth,
+} from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStore } from '@/lib/store'
@@ -25,9 +33,11 @@ interface Props {
 }
 
 /**
- * A full-width week view: seven day columns, each listing the items due that day
- * (▲ 投稿截止 / ◆ Rebuttal on top, then todos by stage colour). Prev/next weeks,
- * plus a react-day-picker month in a popover on the date label to jump anywhere.
+ * Apple-Calendar-style month view that fills the viewport: a weekday header row,
+ * then week rows stretching evenly to the bottom. Every day cell lists what's due
+ * that day (▲ 投稿截止 / ◆ Rebuttal on top, then todos by stage colour). Past
+ * days are dimmed; today's number gets the filled circle. The month label opens
+ * a react-day-picker popover to jump anywhere.
  */
 export function DeadlineCalendar({ onEdit }: Props) {
   const projects = useStore((s) => s.projects).filter((p) => !p.archived)
@@ -66,7 +76,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
     return map
   }, [projects])
 
-  // Days that carry a marker dot in the mini month-picker.
+  // Days that carry a marker dot in the jump-to mini calendar.
   const { deadlineDates, todoDates } = useMemo(() => {
     const deadline: Date[] = []
     const todo: Date[] = []
@@ -79,24 +89,36 @@ export function DeadlineCalendar({ onEdit }: Props) {
     return { deadlineDates: deadline, todoDates: todo }
   }, [byDay])
 
-  const start = weekStart(anchor)
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start])
-  const weekKeys = days.map((d) => format(d, 'yyyy-MM-dd'))
-
-  const ddlCount = weekKeys.reduce(
-    (n, k) => n + (byDay.get(k)?.filter((e) => e.kind !== 'todo').length ?? 0),
-    0,
+  // Month grid: whole weeks (Mon-start) covering the anchored month.
+  const monthStart = startOfMonth(anchor)
+  const gridStart = weekStart(monthStart)
+  const weekCount =
+    differenceInCalendarWeeks(weekStart(endOfMonth(anchor)), gridStart, { weekStartsOn: 1 }) + 1
+  const days = useMemo(
+    () => Array.from({ length: weekCount * 7 }, (_, i) => addDays(gridStart, i)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gridStart.getTime(), weekCount],
   )
-  const todoCount = weekKeys.reduce(
-    (n, k) => n + (byDay.get(k)?.filter((e) => e.kind === 'todo').length ?? 0),
-    0,
-  )
-  const isThisWeek = isSameWeek(anchor, new Date(), { weekStartsOn: 1 })
-  const rangeLabel = `${format(start, 'M月d日')} – ${format(addDays(start, 6), 'M月d日')}`
 
+  // This month's totals for the header line.
+  const { ddlCount, todoCount } = useMemo(() => {
+    let ddl = 0
+    let todo = 0
+    for (const d of days) {
+      if (!isSameMonth(d, anchor)) continue
+      const evs = byDay.get(format(d, 'yyyy-MM-dd')) ?? []
+      for (const e of evs) {
+        if (e.kind === 'todo') todo += 1
+        else ddl += 1
+      }
+    }
+    return { ddlCount: ddl, todoCount: todo }
+  }, [days, anchor, byDay])
+
+  const isCurMonth = isSameMonth(anchor, new Date())
   const subtitle =
     ddlCount === 0 && todoCount === 0
-      ? '本周无到期事项'
+      ? '本月无到期事项'
       : [
           ddlCount > 0 ? `${ddlCount} 个投稿 / Rebuttal 截止` : null,
           todoCount > 0 ? `${todoCount} 个待办到期` : null,
@@ -105,15 +127,18 @@ export function DeadlineCalendar({ onEdit }: Props) {
           .join(' · ')
 
   return (
-    <section aria-label="本周截止">
+    // 11rem = measured chrome above the grid (app header 57px + page paddings +
+    // title block) + the bottom page padding — the grid takes every remaining
+    // viewport pixel so big screens get a big calendar, not blank space.
+    <section aria-label="截止月历" className="flex h-[calc(100dvh-11rem)] min-h-[30rem] flex-col">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{subtitle}</p>
 
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => setAnchor((a) => addWeeks(a, -1))}
-            aria-label="上一周"
+            onClick={() => setAnchor((a) => addMonths(a, -1))}
+            aria-label="上个月"
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             <ChevronLeft size={16} />
@@ -123,9 +148,10 @@ export function DeadlineCalendar({ onEdit }: Props) {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-sm font-medium tabular-nums text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                title="点击跳到任意日期"
+                className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-base font-semibold tabular-nums text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
-                {rangeLabel}
+                {format(anchor, 'yyyy年M月')}
                 <ChevronDown size={14} className="text-muted-foreground" />
               </button>
             </PopoverTrigger>
@@ -151,60 +177,93 @@ export function DeadlineCalendar({ onEdit }: Props) {
 
           <button
             type="button"
-            onClick={() => setAnchor((a) => addWeeks(a, 1))}
-            aria-label="下一周"
+            onClick={() => setAnchor((a) => addMonths(a, 1))}
+            aria-label="下个月"
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             <ChevronRight size={16} />
           </button>
 
-          {!isThisWeek ? (
+          {!isCurMonth ? (
             <Button variant="ghost" size="sm" onClick={() => setAnchor(new Date())}>
-              本周
+              今天
             </Button>
           ) : null}
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="grid min-w-[52rem] grid-cols-7 divide-x divide-border overflow-hidden rounded-xl border bg-card lg:min-w-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card">
+        {/* Weekday header — right-aligned over the date numbers, Apple style. */}
+        <div className="grid shrink-0 grid-cols-7 border-b">
+          {WEEKDAY_CN.map((w, i) => (
+            <div
+              key={w}
+              className={cn(
+                'px-2 py-1.5 text-right text-xs font-medium text-muted-foreground',
+                i < 6 && 'border-r',
+              )}
+            >
+              周{w}
+            </div>
+          ))}
+        </div>
+
+        {/* Week rows stretch evenly to fill the remaining height. */}
+        <div
+          className="grid min-h-0 flex-1 grid-cols-7"
+          style={{ gridTemplateRows: `repeat(${weekCount}, minmax(0, 1fr))` }}
+        >
           {days.map((d, i) => {
-            const key = weekKeys[i]
+            const key = format(d, 'yyyy-MM-dd')
+            const inMonth = isSameMonth(d, anchor)
             const isToday = key === todayIso
+            const isPast = key < todayIso
             const evs = byDay.get(key) ?? []
+            const lastRow = i >= (weekCount - 1) * 7
+            const lastCol = i % 7 === 6
             return (
-              <div key={key} className={cn('flex min-h-[17rem] flex-col', isToday && 'bg-primary/5')}>
-                <div
-                  className={cn(
-                    'flex items-baseline justify-between gap-1 border-b px-2.5 py-2',
-                    isToday ? 'border-primary/25' : 'border-border',
+              <div
+                key={key}
+                className={cn(
+                  'flex min-h-0 flex-col gap-1 p-1.5',
+                  !lastCol && 'border-r',
+                  !lastRow && 'border-b',
+                  isToday && 'bg-primary/5',
+                )}
+              >
+                <div className="flex shrink-0 items-center justify-end">
+                  {isToday ? (
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-sm font-semibold tabular-nums text-primary-foreground">
+                      {d.getDate()}
+                    </span>
+                  ) : (
+                    <span
+                      className={cn(
+                        'px-0.5 text-sm tabular-nums',
+                        !inMonth
+                          ? 'text-muted-foreground/40'
+                          : isPast
+                            ? 'text-muted-foreground/55'
+                            : 'text-foreground',
+                      )}
+                    >
+                      {d.getDate() === 1 ? format(d, 'M月d日') : d.getDate()}
+                    </span>
                   )}
-                >
-                  <span
+                </div>
+                {evs.length > 0 ? (
+                  <div
                     className={cn(
-                      'text-xs font-medium',
-                      isToday ? 'text-primary' : 'text-muted-foreground',
+                      'min-h-0 flex-1 space-y-1 overflow-y-auto [scrollbar-width:thin]',
+                      // 过去的日子整体置灰（今天及未来保持原色）。
+                      isPast && !isToday && 'opacity-50',
                     )}
                   >
-                    周{WEEKDAY_CN[i]}
-                  </span>
-                  <span
-                    className={cn(
-                      'inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-sm tabular-nums',
-                      isToday ? 'bg-primary font-semibold text-primary-foreground' : 'text-foreground',
-                    )}
-                  >
-                    {d.getDate()}
-                  </span>
-                </div>
-                <div className="flex-1 space-y-1.5 overflow-y-auto p-2">
-                  {evs.map((e, j) => (
-                    <EventChip key={j} e={e} onClick={() => onEdit(e.project)} />
-                  ))}
-                  {evs.length === 0 ? (
-                    <div className="px-1 py-1 text-xs text-muted-foreground/40">—</div>
-                  ) : null}
-                </div>
+                    {evs.map((e, j) => (
+                      <EventChip key={j} e={e} onClick={() => onEdit(e.project)} />
+                    ))}
+                  </div>
+                ) : null}
               </div>
             )
           })}
@@ -242,7 +301,7 @@ function EventChip({ e, onClick }: { e: EventItem; onClick: () => void }) {
         type="button"
         onClick={onClick}
         title={`${e.label} · 投稿截止`}
-        className="flex w-full items-center gap-1 rounded-md border border-destructive/30 bg-destructive/10 px-1.5 py-1 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex w-full items-center gap-1 rounded border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <span aria-hidden className="shrink-0 leading-none">▲</span>
         <span className="min-w-0 truncate">{e.label}</span>
@@ -255,7 +314,7 @@ function EventChip({ e, onClick }: { e: EventItem; onClick: () => void }) {
         type="button"
         onClick={onClick}
         title={`${e.label} · Rebuttal`}
-        className="flex w-full items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-1 text-left text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-400"
+        className="flex w-full items-center gap-1 rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-left text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-400"
       >
         <span aria-hidden className="shrink-0 leading-none">◆</span>
         <span className="min-w-0 truncate">{e.label}</span>
@@ -268,16 +327,16 @@ function EventChip({ e, onClick }: { e: EventItem; onClick: () => void }) {
       onClick={onClick}
       title={`${e.title} · ${e.project.title || '未命名项目'}`}
       className={cn(
-        'flex w-full items-start gap-1.5 rounded-md px-1.5 py-1 text-left text-xs transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         e.done && 'opacity-50',
       )}
     >
       <span
         aria-hidden
-        className="mt-1 h-2 w-2 shrink-0 rounded-full"
+        className="h-2 w-2 shrink-0 rounded-full"
         style={{ background: e.stageColor }}
       />
-      <span className={cn('min-w-0 flex-1 line-clamp-2 text-foreground/90', e.done && 'line-through')}>
+      <span className={cn('min-w-0 flex-1 truncate text-foreground/90', e.done && 'line-through')}>
         {e.title}
       </span>
     </button>
