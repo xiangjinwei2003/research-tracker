@@ -1,39 +1,20 @@
-import { create } from 'zustand'
-import { uid } from './id'
+import { toast as sonnerToast } from 'sonner'
 
-export interface Toast {
-  id: string
+export interface ToastOptions {
   message: string
   action?: { label: string; onClick: () => void }
-  /** Auto-dismiss in ms; default 6000. 0 = no auto-dismiss. */
+  /** Auto-dismiss in ms; default 6000. */
   durationMs?: number
 }
 
-interface ToastStore {
-  toasts: Toast[]
-  show: (t: Omit<Toast, 'id'>) => string
-  dismiss: (id: string) => void
-}
-
-/** Cap how many toasts stack at once so a burst can't cover the viewport. */
-const MAX_TOASTS = 4
-
-export const useToastStore = create<ToastStore>((set) => ({
-  toasts: [],
-  show: (t) => {
-    const id = uid()
-    set((s) => ({ toasts: [...s.toasts, { id, ...t }].slice(-MAX_TOASTS) }))
-    const ms = t.durationMs ?? 6000
-    if (ms > 0) {
-      setTimeout(() => {
-        set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) }))
-      }, ms)
-    }
-    return id
-  },
-  dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-}))
-
-export function toast(t: Omit<Toast, 'id'>) {
-  return useToastStore.getState().show(t)
+/**
+ * App-wide toast, backed by Sonner. Same call shape the app already uses:
+ *   toast({ message, action: { label, onClick } })
+ * The <Toaster /> is mounted once in App.tsx (from ui/sonner).
+ */
+export function toast({ message, action, durationMs }: ToastOptions) {
+  return sonnerToast(message, {
+    duration: durationMs ?? 6000,
+    action: action ? { label: action.label, onClick: () => action.onClick() } : undefined,
+  })
 }

@@ -40,7 +40,15 @@ import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { Dialog } from './ui/Dialog'
 import { Button } from './ui/Button'
-import { Input, Label, Select, Textarea } from './ui/Input'
+import { Input, Label, Textarea } from './ui/Input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Collapsible } from './ui/Collapsible'
 import {
   DropdownMenu,
@@ -275,15 +283,19 @@ function EditDialog({
           <div>
             <Label htmlFor="stage">当前阶段</Label>
             <Select
-              id="stage"
               value={project.stage}
-              onChange={(e) => updateProject(project.id, { stage: e.target.value as Stage })}
+              onValueChange={(v) => updateProject(project.id, { stage: v as Stage })}
             >
-              {project.stages.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
+              <SelectTrigger id="stage" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {project.stages.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div>
@@ -602,15 +614,19 @@ function CreateDialog({
           <div>
             <Label htmlFor="new-stage">当前阶段</Label>
             <Select
-              id="new-stage"
               value={draft.stage}
-              onChange={(e) => setDraft({ ...draft, stage: e.target.value as Stage })}
+              onValueChange={(v) => setDraft({ ...draft, stage: v as Stage })}
             >
-              {draft.stages.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
+              <SelectTrigger id="new-stage" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {draft.stages.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div>
@@ -655,20 +671,18 @@ function ProjectColorPicker({
 }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ring-neutral-300 transition hover:ring-neutral-500 dark:ring-neutral-700"
-        style={{ background: value || 'transparent' }}
-        aria-label="项目颜色"
-        title="项目颜色"
-      />
-      {open ? (
-        <div
-          className="absolute left-0 top-11 z-20 grid w-44 grid-cols-6 gap-1.5 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg animate-menu-in dark:border-neutral-700 dark:bg-neutral-800"
-          onMouseLeave={() => setOpen(false)}
-        >
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ring-border transition hover:ring-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          style={{ background: value || 'transparent' }}
+          aria-label="项目颜色"
+          title="项目颜色"
+        />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-2">
+        <div className="grid grid-cols-6 gap-1.5">
           {PROJECT_COLOR_PRESETS.map((c) => (
             <button
               key={c}
@@ -679,17 +693,15 @@ function ProjectColorPicker({
               }}
               className={cn(
                 'h-5 w-5 rounded-full ring-inset transition hover:scale-110',
-                value === c
-                  ? 'ring-2 ring-neutral-900 dark:ring-white'
-                  : 'ring-1 ring-neutral-300 hover:ring-neutral-500 dark:ring-neutral-600',
+                value === c ? 'ring-2 ring-foreground' : 'ring-1 ring-border hover:ring-ring',
               )}
               style={{ background: c }}
               aria-label={`选择颜色 ${c}`}
             />
           ))}
         </div>
-      ) : null}
-    </div>
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -711,15 +723,19 @@ function CollaboratorRow({
         onChange={(e) => onChange({ name: e.target.value })}
       />
       <Select
-        className="col-span-2"
         value={value.role}
-        onChange={(e) => onChange({ role: e.target.value as Collaborator['role'] })}
+        onValueChange={(v) => onChange({ role: v as Collaborator['role'] })}
       >
-        {ROLES.map((r) => (
-          <option key={r.value} value={r.value}>
-            {r.label}
-          </option>
-        ))}
+        <SelectTrigger className="col-span-2 w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ROLES.map((r) => (
+            <SelectItem key={r.value} value={r.value}>
+              {r.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
       </Select>
       <Input
         className="col-span-5"
@@ -852,20 +868,18 @@ function StageRow({
       >
         <GripVertical size={16} />
       </button>
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setPalOpen((v) => !v)}
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ring-neutral-300 transition hover:ring-neutral-500 dark:ring-neutral-700"
-          style={{ background: value.color }}
-          aria-label="改阶段颜色"
-          title="改阶段颜色"
-        />
-        {palOpen ? (
-          <div
-            className="absolute left-0 top-9 z-20 grid w-44 grid-cols-6 gap-1.5 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg animate-menu-in dark:border-neutral-700 dark:bg-neutral-800"
-            onMouseLeave={() => setPalOpen(false)}
-          >
+      <Popover open={palOpen} onOpenChange={setPalOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-inset ring-border transition hover:ring-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            style={{ background: value.color }}
+            aria-label="改阶段颜色"
+            title="改阶段颜色"
+          />
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-auto p-2">
+          <div className="grid grid-cols-6 gap-1.5">
             {STAGE_COLOR_PRESETS.map((c) => (
               <button
                 key={c}
@@ -874,14 +888,14 @@ function StageRow({
                   onChange({ color: c })
                   setPalOpen(false)
                 }}
-                className="h-5 w-5 rounded-full ring-1 ring-inset ring-neutral-300 transition hover:scale-110 hover:ring-neutral-500 dark:ring-neutral-600"
+                className="h-5 w-5 rounded-full ring-1 ring-inset ring-border transition hover:scale-110 hover:ring-ring"
                 style={{ background: c }}
                 aria-label={`选择颜色 ${c}`}
               />
             ))}
           </div>
-        ) : null}
-      </div>
+        </PopoverContent>
+      </Popover>
       <Input
         className="min-w-0 flex-1"
         placeholder="阶段名称（如：文献调研）"

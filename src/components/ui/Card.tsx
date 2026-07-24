@@ -4,8 +4,9 @@ import { cn } from '@/lib/cn'
 export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      data-slot="card"
       className={cn(
-        'rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900',
+        'rounded-xl border bg-card text-card-foreground shadow-sm',
         className,
       )}
       {...rest}

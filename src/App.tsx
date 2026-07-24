@@ -5,7 +5,8 @@ import { Board } from '@/components/Board'
 import { Timeline } from '@/components/Timeline'
 import { Review } from '@/components/Review'
 import { ProjectDialog } from '@/components/ProjectDialog'
-import { Toaster } from '@/components/Toaster'
+import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import type { Project } from '@/lib/types'
@@ -55,26 +56,28 @@ export default function App() {
   }, [])
 
   return (
-    <div className="min-h-full bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <Header tab={tab} onTabChange={setTab} onNew={openNew} />
-      {tab === 'dashboard' ? (
-        <Board onNew={openNew} onEdit={openEdit} />
-      ) : tab === 'timeline' ? (
-        <Timeline onEdit={openEdit} />
-      ) : tab === 'review' ? (
-        <Review onGoBoard={() => setTab('dashboard')} />
-      ) : (
-        <Dashboard showArchived onNew={openNew} onEdit={openEdit} />
-      )}
-      <ProjectDialog
-        open={dialogOpen}
-        onOpenChange={(o) => {
-          setDialogOpen(o)
-          if (!o) setEditingId(null)
-        }}
-        project={editing}
-      />
-      <Toaster />
-    </div>
+    <TooltipProvider delayDuration={200}>
+      <div className="min-h-full bg-background text-foreground">
+        <Header tab={tab} onTabChange={setTab} onNew={openNew} />
+        {tab === 'dashboard' ? (
+          <Board onNew={openNew} onEdit={openEdit} />
+        ) : tab === 'timeline' ? (
+          <Timeline onEdit={openEdit} />
+        ) : tab === 'review' ? (
+          <Review onGoBoard={() => setTab('dashboard')} />
+        ) : (
+          <Dashboard showArchived onNew={openNew} onEdit={openEdit} />
+        )}
+        <ProjectDialog
+          open={dialogOpen}
+          onOpenChange={(o) => {
+            setDialogOpen(o)
+            if (!o) setEditingId(null)
+          }}
+          project={editing}
+        />
+        <Toaster position="bottom-right" />
+      </div>
+    </TooltipProvider>
   )
 }

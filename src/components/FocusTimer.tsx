@@ -12,6 +12,8 @@ import {
   setReminderEnabled,
 } from '@/lib/reminder'
 import { Button } from './ui/Button'
+import { Switch } from './ui/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 /** Ring geometry — a single instance app-wide, so fixed ids/sizes are safe. */
 const RING_SIZE = 104
@@ -124,22 +126,26 @@ export function FocusTimer() {
   }, [activeTimer, end, now])
 
   const bell = (
-    <button
-      type="button"
-      onClick={toggleRemind}
-      aria-pressed={remindOn}
-      aria-label={remindOn ? '关闭结束提醒' : '开启结束提醒'}
-      title={remindOn ? '结束提醒已开启（响铃 + 系统通知）' : '结束提醒已关闭'}
-      className={cn(
-        'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
-        remindOn
-          ? 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
-          : 'text-neutral-300 hover:bg-neutral-100 hover:text-neutral-600 dark:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-300',
+    <span className="inline-flex shrink-0 items-center gap-1.5">
+      {remindOn ? (
+        <Bell size={14} className="text-muted-foreground" />
+      ) : (
+        <BellOff size={14} className="text-muted-foreground/50" />
       )}
-    >
-      {remindOn ? <Bell size={14} /> : <BellOff size={14} />}
-    </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Switch
+            size="sm"
+            checked={remindOn}
+            onCheckedChange={() => void toggleRemind()}
+            aria-label={remindOn ? '关闭结束提醒' : '开启结束提醒'}
+          />
+        </TooltipTrigger>
+        <TooltipContent>
+          {remindOn ? '结束提醒：响铃 + 系统通知' : '结束提醒已关闭'}
+        </TooltipContent>
+      </Tooltip>
+    </span>
   )
 
   if (!activeTimer) {

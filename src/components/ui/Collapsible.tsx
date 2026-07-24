@@ -15,35 +15,34 @@ interface Props {
 
 /**
  * Frameless disclosure section: hairline top divider + clickable header row.
- * Used to keep rarely-edited config (投稿目标 / 研究阶段 / …) out of the way.
+ * A summary-when-collapsed pattern the registry Collapsible doesn't cover, so
+ * it's hand-built on tokens (kept off the shadcn primitive deliberately).
  */
 export function Collapsible({ title, summary, defaultOpen = false, children }: Props) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <section className="border-t border-neutral-200 dark:border-neutral-800">
+    <section className="border-t border-border">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="group flex w-full items-center gap-2 rounded-md py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        className="group flex w-full items-center gap-2 rounded-md py-3 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
         <ChevronRight
           size={15}
           className={cn(
-            'shrink-0 text-neutral-400 transition-transform group-hover:text-neutral-600 dark:group-hover:text-neutral-300',
+            'shrink-0 text-muted-foreground transition-transform group-hover:text-foreground',
             open && 'rotate-90',
           )}
         />
-        <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-          {title}
-        </span>
+        <span className="text-sm font-medium text-foreground">{title}</span>
         {!open && summary ? (
-          <span className="ml-auto min-w-0 truncate pl-3 text-xs text-neutral-500 dark:text-neutral-400">
+          <span className="ml-auto min-w-0 truncate pl-3 text-xs text-muted-foreground">
             {summary}
           </span>
         ) : null}
       </button>
-      {open ? <div className="pb-4 pl-[23px] pr-1">{children}</div> : null}
+      {open ? <div className="pb-4 pl-6 pr-1">{children}</div> : null}
     </section>
   )
 }

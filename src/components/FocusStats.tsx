@@ -181,7 +181,7 @@ export function FocusStats({
           <h4 className="text-xs font-medium text-neutral-400 dark:text-neutral-500">专注热力图</h4>
           <div className="mt-3 overflow-x-auto">
             <div className="inline-flex gap-1">
-              <div className="mr-1 flex flex-col gap-1 pt-[18px]">
+              <div className="mr-1 flex flex-col gap-1 pt-4.5">
                 {WEEKDAY_CN.map((w, i) => (
                   <span
                     key={w}

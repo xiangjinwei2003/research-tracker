@@ -21,9 +21,10 @@ export function ContextMenuContent({
   return (
     <Radix.Portal>
       <Radix.Content
+        data-slot="context-menu-content"
         className={cn(
-          'z-50 min-w-[12rem] origin-[var(--radix-context-menu-content-transform-origin)] overflow-hidden rounded-lg border border-neutral-200 bg-white p-1 shadow-lg animate-menu-in',
-          'dark:border-neutral-700 dark:bg-neutral-800',
+          'z-50 min-w-[12rem] origin-(--radix-context-menu-content-transform-origin) overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
           className,
         )}
       >
@@ -48,12 +49,13 @@ export function ContextMenuItem({
     <Radix.Item
       disabled={disabled}
       onSelect={onSelect}
+      data-slot="context-menu-item"
       className={cn(
-        'flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-sm outline-none transition-colors',
+        "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         destructive
-          ? 'text-red-600 data-[highlighted]:bg-red-50 dark:text-red-400 dark:data-[highlighted]:bg-red-950/50'
-          : 'text-neutral-700 data-[highlighted]:bg-neutral-100 dark:text-neutral-200 dark:data-[highlighted]:bg-neutral-700/60',
+          ? 'text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive [&_svg:not([class*=text-])]:text-destructive'
+          : 'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground',
       )}
     >
       {children}
@@ -63,12 +65,12 @@ export function ContextMenuItem({
 
 export function ContextMenuLabel({ children }: { children: ReactNode }) {
   return (
-    <Radix.Label className="px-2.5 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+    <Radix.Label className="px-2 pb-1 pt-1.5 text-xs font-medium text-muted-foreground">
       {children}
     </Radix.Label>
   )
 }
 
 export function ContextMenuSeparator() {
-  return <Radix.Separator className="my-1 h-px bg-neutral-200 dark:bg-neutral-700" />
+  return <Radix.Separator className="-mx-1 my-1 h-px bg-border" />
 }

@@ -1,14 +1,17 @@
 import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
 
-const baseCls =
-  'block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 transition-colors ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:border-brand-500 ' +
-  'dark:border-neutral-700 dark:bg-neutral-900 dark:placeholder:text-neutral-500 dark:focus-visible:ring-brand-500/50 dark:focus-visible:border-brand-500'
+/** shadcn/ui field styling (tokens + focus ring), shared by input-like controls. */
+const fieldCls =
+  'flex w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] ' +
+  'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground ' +
+  'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 ' +
+  'disabled:cursor-not-allowed disabled:opacity-50 ' +
+  'aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 dark:bg-input/30'
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...rest }, ref) {
-    return <input ref={ref} className={cn(baseCls, 'h-9', className)} {...rest} />
+    return <input ref={ref} data-slot="input" className={cn(fieldCls, 'h-9', className)} {...rest} />
   },
 )
 
@@ -16,13 +19,24 @@ export const Textarea = forwardRef<
   HTMLTextAreaElement,
   TextareaHTMLAttributes<HTMLTextAreaElement>
 >(function Textarea({ className, ...rest }, ref) {
-  return <textarea ref={ref} className={cn(baseCls, 'min-h-[72px] resize-y', className)} {...rest} />
+  return (
+    <textarea
+      ref={ref}
+      data-slot="textarea"
+      className={cn(fieldCls, 'min-h-16 py-2 field-sizing-content resize-y', className)}
+      {...rest}
+    />
+  )
 })
 
+/**
+ * Native <select> kept as a lightweight fallback for the few remaining plain
+ * pickers; the primary selects use the Radix `Select` in ui/select.tsx.
+ */
 export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   function Select({ className, children, ...rest }, ref) {
     return (
-      <select ref={ref} className={cn(baseCls, 'h-9 pr-8', className)} {...rest}>
+      <select ref={ref} data-slot="native-select" className={cn(fieldCls, 'h-9 pr-8', className)} {...rest}>
         {children}
       </select>
     )
@@ -35,8 +49,9 @@ export function Label({
 }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
+      data-slot="label"
       className={cn(
-        'mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400',
+        'mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground select-none',
         className,
       )}
       {...rest}

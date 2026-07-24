@@ -273,12 +273,11 @@ export function Board({ onNew, onEdit }: Props) {
                         >
                           {project.title || '未命名项目'}
                         </span>
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800/70">
-                          {/* One consistent, muted indigo for the chart (project
-                              colours stay on the cards) — lower chroma + lightness
-                              than brand so it reads calm, not neon. */}
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                          {/* One consistent indigo for the chart — project colours
+                              stay on the cards, so the bar just reads as volume. */}
                           <div
-                            className="h-full rounded-full bg-[oklch(0.55_0.12_277)] dark:bg-[oklch(0.6_0.11_277)]"
+                            className="h-full rounded-full bg-brand-500 dark:bg-brand-400"
                             style={{ width: `${pct}%` }}
                           />
                         </div>

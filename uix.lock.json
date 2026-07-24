@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "stack": "react-tailwind-shadcn",
+  "preset": "custom-neutral-indigo",
+  "presetNote": "保留原有黑底 + 靛蓝身份，未做风格化改色。shadcn/ui 语义 token 层写入 src/index.css（neutral base + indigo --primary/--ring）；组件全面对齐 shadcn registry。",
+  "spacingScale": [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 56, 64, 72, 80, 96],
+  "radius": "0.5rem",
+  "fonts": { "display": "system-ui sans", "body": "system-ui sans", "mono": "ui-monospace" },
+  "tokenFiles": ["src/index.css", "src/lib/types.ts"],
+  "tokenFilesNote": "types.ts 列入 tokenFiles 是因其存放项目/阶段的数据配色常量（identity 色相，用户可在取色器改），属数据色非 chrome 色，故豁免。",
+  "registries": ["@shadcn"],
+  "registryNote": "shadcn CLI 4.14.1。新组件用 CLI add（unified radix-ui 包）；已有 PascalCase 基元因大小写不敏感文件系统会与小写 registry 文件名冲突，改为把 registry 实现内联进原文件（改/adapt），保留调用点 API。",
+  "components": [
+    { "name": "button", "mode": "adapt", "note": "shadcn CVA 内核；保留 primary/secondary/ghost/danger·sm/md API" },
+    { "name": "input", "mode": "adapt", "note": "shadcn field 样式 + focus ring；含 Textarea/Label + 备用原生 Select" },
+    { "name": "select", "mode": "install", "note": "@shadcn/select（Radix）替换 3 处原生 <select>" },
+    { "name": "dialog", "mode": "adapt", "note": "shadcn 结构/动画（data-state），保留 wrapper API + 头尾/滚动区" },
+    { "name": "dropdown-menu", "mode": "adapt", "note": "shadcn 皮肤 + data-state 动画；保留简化 API" },
+    { "name": "context-menu", "mode": "adapt", "note": "与 dropdown 同皮肤" },
+    { "name": "card", "mode": "adapt", "note": "bg-card/border/token" },
+    { "name": "collapsible", "mode": "custom", "note": "summary-when-collapsed 模式 registry 无对应，手写于 token" },
+    { "name": "tabs", "mode": "install", "note": "@shadcn/tabs 作顶栏视图切换（受控 segmented control），真 ARIA tablist" },
+    { "name": "popover", "mode": "install", "note": "@shadcn/popover 替换两处手搓取色浮层（focus/dismiss 更规范）" },
+    { "name": "tooltip", "mode": "install", "note": "@shadcn/tooltip + TooltipProvider（App）；数据管理/提醒开关等悬浮提示" },
+    { "name": "switch", "mode": "install", "note": "@shadcn/switch 作专注结束提醒开关" },
+    { "name": "sonner", "mode": "install", "note": "@shadcn/sonner 替换自建 zustand toast；接入 App 主题（去 next-themes）" },
+    { "name": "badge", "mode": "custom", "note": "stage 数据色经 --stage + color-mix，主题无关，保留自建" }
+  ]
+}

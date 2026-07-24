@@ -17,6 +17,8 @@ import { Button } from './ui/Button'
 import { Container } from './ui/Container'
 import { Logo } from './Logo'
 import { ThemeToggle } from './ThemeToggle'
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -41,6 +43,34 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'review', label: '回顾', icon: CalendarClock },
   { id: 'archived', label: '归档', icon: Archive },
 ]
+
+/** Segmented view switcher (Radix Tabs as a controlled selector; App renders the body). */
+function TabNav({
+  tab,
+  onTabChange,
+  className,
+  full,
+}: Props & { className?: string; full?: boolean }) {
+  return (
+    <Tabs
+      value={tab}
+      onValueChange={(v) => onTabChange(v as Tab)}
+      className={className}
+    >
+      <TabsList className={cn(full && 'w-full')}>
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <TabsTrigger
+            key={id}
+            value={id}
+            className="gap-1.5 px-2.5 text-xs data-[state=active]:text-primary dark:data-[state=active]:text-primary"
+          >
+            <Icon size={14} /> {label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
+  )
+}
 
 export function Header({ tab, onTabChange, onNew }: Props) {
   const replaceState = useStore((s) => s.replaceState)
@@ -108,63 +138,37 @@ export function Header({ tab, onTabChange, onNew }: Props) {
     }
   }
 
-  const tabNav = (className?: string) => (
-    <nav
-      className={cn(
-        'flex items-center gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900',
-        className,
-      )}
-      aria-label="视图切换"
-    >
-      {TABS.map(({ id, label, icon: Icon }) => {
-        const active = tab === id
-        return (
-          <button
-            key={id}
-            onClick={() => onTabChange(id)}
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              'inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:flex-none',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
-              active
-                ? 'bg-white text-brand-700 shadow-sm dark:bg-neutral-800 dark:text-brand-300'
-                : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100',
-            )}
-          >
-            <Icon size={14} /> {label}
-          </button>
-        )
-      })}
-    </nav>
-  )
-
   return (
-    <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/80 backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-950/80">
+    <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-md">
       <Container>
         <div className="flex items-center gap-3 py-2.5">
           <Logo size={30} />
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold leading-tight text-neutral-900 dark:text-neutral-100">
+            <div className="truncate text-sm font-semibold leading-tight text-foreground">
               Research Tracker
             </div>
-            <div className="hidden truncate text-[11px] leading-tight text-neutral-500 dark:text-neutral-400 sm:block">
+            <div className="hidden truncate text-[11px] leading-tight text-muted-foreground sm:block">
               本地版 · 数据存于浏览器
             </div>
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">
-            {tabNav('hidden sm:flex')}
+            <TabNav tab={tab} onTabChange={onTabChange} onNew={onNew} className="hidden sm:block" />
 
             <ThemeToggle />
 
             <DropdownMenu>
-              <DropdownMenuTrigger
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-                aria-label="数据管理"
-                title="数据管理"
-              >
-                <Database size={17} />
-              </DropdownMenuTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    aria-label="数据管理"
+                  >
+                    <Database size={17} />
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>数据管理</TooltipContent>
+              </Tooltip>
               <DropdownMenuContent>
                 <DropdownMenuLabel>备份</DropdownMenuLabel>
                 <DropdownMenuItem onSelect={onExport}>
@@ -203,7 +207,9 @@ export function Header({ tab, onTabChange, onNew }: Props) {
         </div>
 
         {/* Mobile: tabs drop to a full-width row below the brand bar. */}
-        {tabNav('flex pb-2.5 sm:hidden')}
+        <div className="pb-2.5 sm:hidden">
+          <TabNav tab={tab} onTabChange={onTabChange} onNew={onNew} full />
+        </div>
       </Container>
     </header>
   )

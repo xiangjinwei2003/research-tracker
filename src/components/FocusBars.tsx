@@ -94,7 +94,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
                     isWeek ? 'max-w-14 rounded-md' : 'max-w-[9px] rounded-sm',
                     selected
                       ? 'bg-brand-500 dark:bg-brand-400'
-                      : 'bg-[oklch(0.55_0.12_277)]/45 group-hover:bg-[oklch(0.55_0.12_277)]/70 dark:bg-[oklch(0.6_0.11_277)]/40 dark:group-hover:bg-[oklch(0.6_0.11_277)]/65',
+                      : 'bg-brand-500/45 group-hover:bg-brand-500/70 dark:bg-brand-400/40 dark:group-hover:bg-brand-400/65',
                   )}
                 />
               ) : (

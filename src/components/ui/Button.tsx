@@ -1,46 +1,49 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/cn'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
-type Size = 'sm' | 'md'
+/**
+ * shadcn/ui Button internals, kept on this project's variant vocabulary
+ * (primary / secondary / ghost / danger · sm / md) so no call site changes.
+ */
+const buttonVariants = cva(
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium outline-none transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  {
+    variants: {
+      variant: {
+        primary: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90',
+        secondary:
+          'border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
+        ghost:
+          'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
+        danger:
+          'border border-destructive/30 text-destructive shadow-xs hover:bg-destructive/10 dark:hover:bg-destructive/15',
+      },
+      size: {
+        sm: 'h-8 gap-1.5 px-2.5 has-[>svg]:px-2',
+        md: 'h-9 px-3.5 has-[>svg]:px-3',
+      },
+    },
+    defaultVariants: { variant: 'secondary', size: 'md' },
+  },
+)
 
-interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant
-  size?: Size
-}
-
-const variantCls: Record<Variant, string> = {
-  primary:
-    'bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500',
-  secondary:
-    'border border-neutral-300 bg-white hover:bg-neutral-100 text-neutral-900 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800',
-  ghost:
-    'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800',
-  danger:
-    'border border-red-200 bg-white text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-neutral-900 dark:text-red-400 dark:hover:bg-red-950',
-}
-
-const sizeCls: Record<Size, string> = {
-  sm: 'h-8 px-2.5 text-sm gap-1.5',
-  md: 'h-9 px-3 text-sm gap-2',
-}
+interface Props
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
-  { variant = 'secondary', size = 'md', className, ...rest },
+  { variant, size, className, ...rest },
   ref,
 ) {
   return (
     <button
       ref={ref}
-      className={cn(
-        'inline-flex items-center justify-center rounded-md font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-950',
-        'disabled:opacity-50 disabled:pointer-events-none',
-        variantCls[variant],
-        sizeCls[size],
-        className,
-      )}
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size }), className)}
       {...rest}
     />
   )
 })
+
+export { buttonVariants }
