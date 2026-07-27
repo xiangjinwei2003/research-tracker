@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Plus, Archive, Sparkles, ChevronDown } from 'lucide-react'
+import { Plus, Archive, ChevronDown } from 'lucide-react'
 import { useStore, nextDeadline } from '@/lib/store'
 import { daysUntil } from '@/lib/date'
-import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
 import type { Project } from '@/lib/types'
 import { ProjectCard } from './ProjectCard'
@@ -38,8 +37,6 @@ export function Dashboard({
   collapsible = false,
 }: Props) {
   const projects = useStore((s) => s.projects)
-  const resetToSeed = useStore((s) => s.resetToSeed)
-  const undo = useStore((s) => s.undo)
 
   const [collapsed, setCollapsed] = useState(() => collapsible && readCollapsed())
   const toggleCollapsed = () => {
@@ -69,14 +66,6 @@ export function Dashboard({
       }).length,
     [visible],
   )
-
-  const onLoadDemo = () => {
-    const token = resetToSeed()
-    toast({
-      message: '已加载演示数据',
-      action: { label: '撤销', onClick: () => undo(token) },
-    })
-  }
 
   return (
     <Container className="py-6">
@@ -150,9 +139,6 @@ export function Dashboard({
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
               <Button variant="primary" onClick={onNew}>
                 <Plus size={16} /> 新建第一个项目
-              </Button>
-              <Button variant="secondary" onClick={onLoadDemo}>
-                <Sparkles size={15} /> 加载示例数据
               </Button>
             </div>
             <p className="mt-4 text-xs text-neutral-400">

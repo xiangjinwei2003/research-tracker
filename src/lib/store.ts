@@ -19,7 +19,6 @@ import {
 } from './types'
 import { uid } from './id'
 import { today } from './date'
-import { seedProjects } from './seed'
 
 // v5: every project gained a `color` accent (auto-assigned on load if missing).
 // v6: re-spread auto-assigned colours to the new max-distinct palette order.
@@ -99,8 +98,6 @@ interface Store extends AppState {
   /** Returns the undo token. */
   replaceState: (state: AppState) => string
   clearAll: () => void
-  /** Returns the undo token. */
-  resetToSeed: () => string
 
   /** Undo a specific entry by token, or the newest action when no token is given. */
   undo: (token?: string) => UndoEntry | null
@@ -618,23 +615,6 @@ export const useStore = create<Store>()(
 
       clearAll: () => {
         set({ projects: [], sessions: [], activeTimer: null, version: SCHEMA_VERSION })
-      },
-
-      resetToSeed: () => {
-        const prev = {
-          projects: get().projects,
-          sessions: get().sessions,
-          version: get().version,
-        }
-        const entry = makeUndo({ kind: 'replace-state', prev }, '已恢复演示数据')
-        // Demo projects replace the project list only; the user's focus history
-        // stays (sessions render via their own snapshots, so nothing dangles).
-        set((s) => ({
-          projects: seedProjects(),
-          version: SCHEMA_VERSION,
-          undoStack: pushUndo(s, entry),
-        }))
-        return entry.token
       },
 
       undo: (token) => {

@@ -1,7 +1,9 @@
 {
-  "name": "todo-web",
+  "name": "research-tracker",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Local-first research project tracker — stages, venue deadlines, collaborators and focus sessions, stored in your browser.",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",

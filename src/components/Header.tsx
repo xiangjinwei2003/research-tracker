@@ -6,7 +6,6 @@ import {
   Upload,
   Archive,
   Database,
-  Sparkles,
   Trash2,
   Plus,
 } from 'lucide-react'
@@ -74,7 +73,6 @@ function TabNav({
 
 export function Header({ tab, onTabChange, onNew }: Props) {
   const replaceState = useStore((s) => s.replaceState)
-  const resetToSeed = useStore((s) => s.resetToSeed)
   const undo = useStore((s) => s.undo)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -106,16 +104,6 @@ export function Header({ tab, onTabChange, onNew }: Props) {
       })
     } catch (e) {
       alert(`导入失败：${(e as Error).message}`)
-    }
-  }
-
-  const onLoadDemo = () => {
-    if (confirm('加载 3 个演示项目会替换当前所有项目。继续？')) {
-      const token = resetToSeed()
-      toast({
-        message: '已加载演示数据',
-        action: { label: '撤销', onClick: () => undo(token) },
-      })
     }
   }
 
@@ -178,10 +166,7 @@ export function Header({ tab, onTabChange, onNew }: Props) {
                   <Upload size={15} /> 从文件导入
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel>演示 / 重置</DropdownMenuLabel>
-                <DropdownMenuItem onSelect={onLoadDemo}>
-                  <Sparkles size={15} /> 加载示例数据
-                </DropdownMenuItem>
+                <DropdownMenuLabel>重置</DropdownMenuLabel>
                 <DropdownMenuItem destructive onSelect={onClearAll}>
                   <Trash2 size={15} /> 清空全部数据
                 </DropdownMenuItem>

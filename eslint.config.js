@@ -27,4 +27,14 @@ export default defineConfig([
       ],
     },
   },
+  {
+    // shadcn/ui registry files export a component *and* its cva variants
+    // (`buttonVariants`, …) from the same module by convention. That trips
+    // react-refresh's one-export-kind rule for zero real benefit here — these
+    // files are vendored primitives, not hot-edited app components.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

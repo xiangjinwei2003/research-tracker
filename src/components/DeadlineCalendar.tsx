@@ -135,10 +135,12 @@ export function DeadlineCalendar({ onEdit }: Props) {
   const gridStart = weekStartSun(monthStart)
   const weekCount =
     differenceInCalendarWeeks(weekStartSun(endOfMonth(anchor)), gridStart, { weekStartsOn: 0 }) + 1
+  // Depend on the timestamp, not the Date object: `weekStartSun` returns a fresh
+  // instance every render, so an identity dep would rebuild the grid each time.
+  const gridStartMs = gridStart.getTime()
   const days = useMemo(
-    () => Array.from({ length: weekCount * 7 }, (_, i) => addDays(gridStart, i)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [gridStart.getTime(), weekCount],
+    () => Array.from({ length: weekCount * 7 }, (_, i) => addDays(gridStartMs, i)),
+    [gridStartMs, weekCount],
   )
 
   // This month's totals for the header line.
