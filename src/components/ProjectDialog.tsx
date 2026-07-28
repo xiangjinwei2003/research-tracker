@@ -316,7 +316,7 @@ function EditDialog({
           <Collapsible title="投稿目标" summary={venueSummary}>
             {hasVenue && project.venue ? (
               <div className="space-y-3">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-3">
                   <div>
                     <Label>会议 / 期刊</Label>
                     <Input
@@ -406,7 +406,7 @@ function EditDialog({
         {/* 工作栏：项目正在做什么 */}
         <div className="space-y-4">
           {/* 待办 — the dialog's primary body (config folds away below). */}
-          <div className="pt-1">
+          <div>
             <div className="flex items-center gap-2">
               <h3 className="text-[13px] font-semibold text-foreground">待办</h3>
               <span className="mono text-faint">{activeTodoCount} 项未完成</span>
