@@ -5,7 +5,8 @@ import {
   type DragEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
-import { CalendarRange, Check, Pin, Timer } from 'lucide-react'
+import { Check, Pin, Timer } from 'lucide-react'
+import { addDays, format } from 'date-fns'
 import { useStore, weekItems, type WeekItem } from '@/lib/store'
 import {
   findStage,
@@ -15,7 +16,7 @@ import {
   type Priority,
   type Project,
 } from '@/lib/types'
-import { dateFromToday, daysUntil, weekdayLabel, today } from '@/lib/date'
+import { dateFromToday, daysUntil, weekdayLabel, today, weekStart } from '@/lib/date'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
 import { primeChime, reminderEnabled, requestNotifyPermission } from '@/lib/reminder'
@@ -54,6 +55,9 @@ export function Board({ onNew, onEdit }: Props) {
 
   const t = today()
   const end = dateFromToday(WINDOW_DAYS)
+  // Hero kicker label — ISO week + the Mon–Sun range, e.g. `WEEK 31 · 07.27 – 08.02`.
+  const ws = weekStart(new Date())
+  const kickerLabel = `WEEK ${format(ws, 'ww')} · ${format(ws, 'MM.dd')} – ${format(addDays(ws, 6), 'MM.dd')}`
   const items = useMemo(() => weekItems(projects, end), [projects, end])
 
   const columns = useMemo(() => {
@@ -151,17 +155,15 @@ export function Board({ onNew, onEdit }: Props) {
           <ContextMenu>
             <ContextMenuTrigger asChild>
           <section aria-label="本周重点" onContextMenu={onSectionContextMenu}>
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-300">
-                <CalendarRange size={18} />
-              </span>
+            <div className="flex flex-wrap items-end gap-x-3 gap-y-3">
               <div className="min-w-0 flex-1">
-                <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                <div className="kicker">{kickerLabel}</div>
+                <h2 className="mt-1 text-lg font-bold tracking-tight text-foreground">
                   本周重点
                 </h2>
-                <p className="mt-0.5 text-sm text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {items.length > 0
-                    ? `${WINDOW_DAYS} 天内到期 · 右键任务可开始专注 · 共 ${items.length} 项`
+                    ? `${WINDOW_DAYS} 天内到期 · 共 ${items.length} 项 · 右键任务开始专注`
                     : `${WINDOW_DAYS} 天内到期会自动出现，也可从下方项目总览拖入`}
                 </p>
               </div>
@@ -193,23 +195,21 @@ export function Board({ onNew, onEdit }: Props) {
                       handleDrop(pri, e)
                     }}
                     className={cn(
-                      'rounded-xl border border-dashed p-3 transition-colors',
+                      'rounded-lg border p-2 transition-colors',
                       isOver
-                        ? 'border-brand-500/70 bg-brand-500/[0.06]'
-                        : 'border-border bg-panel/50',
+                        ? 'border-dashed border-brand-500/70 bg-brand-500/[0.06]'
+                        : 'border-white/5 bg-white/[0.015]',
                     )}
                   >
-                    <div className="flex items-baseline gap-2 px-1 pb-1.5">
-                      <span
-                        className={cn(
-                          'inline-block h-2 w-2 shrink-0 self-center rounded-full',
-                          meta.dot,
-                        )}
-                      />
-                      <span className="text-[10px] uppercase tracking-[0.16em] text-faint">
-                        {meta.label}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">{rows.length}</span>
+                    <div className="mb-2 flex items-center gap-2 px-1 pt-1">
+                      <span className={cn('inline-block h-2.5 w-2.5 rounded-full', meta.dot)} />
+                      <h3 className="text-[13px] font-semibold text-foreground/90">{meta.label}</h3>
+                      <span className="mono text-faint">{rows.length}</span>
+                      {isOver ? (
+                        <span className="ml-auto text-[10.5px] text-brand-300">
+                          松开设为 {meta.short}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="min-h-[88px] space-y-2.5">
                       {rows.map((it) => (
@@ -263,9 +263,7 @@ export function Board({ onNew, onEdit }: Props) {
               /* Per-project share of the week — a quiet footnote under the board
                  (the header slot above belongs to the focus countdown). */
               <div className="mt-6">
-                <h3 className="text-xs font-medium text-faint">
-                  本周分布
-                </h3>
+                <h3 className="kicker">本周分布</h3>
                 <ul className="mt-2 max-w-xl space-y-2">
                   {byProject.map(({ project, count }) => {
                     const pct = Math.round((count / items.length) * 100)
@@ -277,17 +275,17 @@ export function Board({ onNew, onEdit }: Props) {
                         >
                           {project.title || '未命名项目'}
                         </span>
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                          {/* One consistent indigo for the chart — project colours
-                              stay on the cards, so the bar just reads as volume. */}
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                          {/* Each bar takes its project's colour — share of the week
+                              read straight off the palette. */}
                           <div
-                            className="h-full rounded-full bg-brand-400"
-                            style={{ width: `${pct}%` }}
+                            className="h-full rounded-full"
+                            style={{ width: `${pct}%`, background: project.color }}
                           />
                         </div>
                         <span
                           title={`${count} 项`}
-                          className="w-9 shrink-0 text-right text-xs tabular-nums text-faint"
+                          className="w-9 shrink-0 text-right mono text-faint"
                         >
                           {pct}%
                         </span>
@@ -374,8 +372,8 @@ function BoardCard({
       onClick={onOpen}
       title="拖动调整重要程度 · 右键开始专注"
       className={cn(
-        // Flat card, no elevation layering; hover only lifts the border tint.
-        'cursor-grab rounded-lg border border-border bg-card p-2.5 transition-colors hover:border-ring/35 active:cursor-grabbing',
+        // Flat card with a hairline drop; hover only lifts the border.
+        'group cursor-grab rounded-md border border-border bg-card p-2.5 pl-3 shadow-[0_1px_2px_rgba(0,0,0,.35)] transition hover:border-white/15 active:cursor-grabbing',
         dragging && 'opacity-40',
       )}
     >
@@ -388,9 +386,9 @@ function BoardCard({
           }}
           title="标记完成"
           aria-label={`标记「${todo.title || '未命名待办'}」为已完成`}
-          className="mt-0.5 inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border border-input text-transparent transition-colors hover:border-brand-400 hover:text-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+          className="mt-0.5 inline-flex h-[13px] w-[13px] shrink-0 items-center justify-center rounded-[3.5px] border border-[#3a3e4d] text-transparent transition hover:border-brand-400 hover:text-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         >
-          <Check size={12} />
+          <Check size={10} />
         </button>
         <div className="min-w-0 flex-1">
           <button
@@ -399,11 +397,17 @@ function BoardCard({
               e.stopPropagation()
               onOpen()
             }}
-            className="line-clamp-2 block w-full rounded text-left text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="line-clamp-2 block w-full rounded text-left text-[13px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             {todo.title || <span className="italic text-faint">未命名待办</span>}
           </button>
-          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-faint">
+            <span
+              className="h-[7px] w-[7px] shrink-0 rounded-full"
+              style={{ background: project.color }}
+            />
+            <span className="min-w-0 truncate">{project.title}</span>
+            <StageChip stage={stage} />
             {pinnedExtra ? (
               <button
                 type="button"
@@ -413,25 +417,23 @@ function BoardCard({
                 }}
                 title="已手动加入本周 · 点击移出"
                 aria-label="移出本周重点"
-                className="inline-flex shrink-0 items-center gap-0.5 rounded border border-brand-500/40 bg-brand-500/10 px-1 py-0.5 text-[10px] font-medium text-brand-300 transition-colors hover:bg-brand-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                className="inline-flex shrink-0 items-center gap-0.5 rounded border border-brand-500/40 bg-brand-500/10 px-1 text-[10px] text-brand-300 transition-colors hover:bg-brand-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 <Pin size={10} /> 本周
               </button>
             ) : null}
-            <StageChip stage={stage} />
-            <span className="min-w-0 truncate">{project.title}</span>
-          </div>
-          <div
-            className={cn(
-              'mt-1.5 text-xs tabular-nums',
-              overdue
-                ? 'font-medium text-destructive'
-                : hasDate && dleft === 0
-                  ? 'font-medium text-warn'
-                  : 'text-muted-foreground',
-            )}
-          >
-            {rel}
+            <span
+              className={cn(
+                'mono ml-auto',
+                overdue
+                  ? 'text-destructive'
+                  : hasDate && dleft === 0
+                    ? 'text-warn'
+                    : 'text-muted-foreground',
+              )}
+            >
+              {rel}
+            </span>
           </div>
         </div>
       </div>
