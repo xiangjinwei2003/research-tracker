@@ -151,7 +151,7 @@ export const ProjectCard = memo(function ProjectCard({
         <div className="mt-2.5 flex items-center gap-1.5 text-[11px]">
           <CalendarClock size={13} className={toneCls} />
           <span className={cn('mono', toneCls)}>{cd.text}</span>
-          <span className="text-faint">· {nd.label} · {fmtShort(nd.date)}</span>
+          <span className="min-w-0 flex-1 truncate text-faint">· {nd.label} · {fmtShort(nd.date)}</span>
         </div>
       ) : null}
 

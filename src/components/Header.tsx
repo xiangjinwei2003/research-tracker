@@ -152,7 +152,7 @@ export function Header({ tab, onTabChange, onNew }: Props) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenuTrigger
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
                     aria-label="数据管理"
                   >
                     <Database size={17} />

@@ -66,11 +66,11 @@ export interface PriorityMeta {
   short: string
   /** Lower = more important. Used for sorting. */
   rank: number
-  /** Chip classes (border + bg + text), light + dark — WCAG-AA legible. */
+  /** Chip classes (border + bg + text), dark-only palette — WCAG-AA legible. */
   chip: string
-  /** Accent text color (light + dark) for counts / labels. */
+  /** Accent text color (dark-only) for counts / labels. */
   text: string
-  /** Dot indicator background (light + dark). */
+  /** Dot indicator background (dark-only). */
   dot: string
 }
 
