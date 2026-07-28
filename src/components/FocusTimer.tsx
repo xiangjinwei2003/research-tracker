@@ -14,7 +14,8 @@ import {
 import { Switch } from './ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
-/** Ring geometry — a single instance app-wide, so fixed ids/sizes are safe. */
+/** Ring geometry — a single instance app-wide, so fixed size/viewBox are safe
+    (pure strokeDashoffset animation, no cross-element references). */
 const RING_SIZE = 28
 const RING_R = 10.5
 const RING_C = 2 * Math.PI * RING_R
@@ -258,6 +259,7 @@ export function FocusTimer() {
           type="button"
           onClick={onFinishEarly}
           title="提前结束并记录本次专注"
+          aria-label="提前结束并记录本次专注"
           className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
         >
           <Check size={14} />
@@ -266,6 +268,7 @@ export function FocusTimer() {
           type="button"
           onClick={onCancel}
           title="取消（不记录）"
+          aria-label="取消（不记录）"
           className="inline-flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-accent/60 hover:text-destructive focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
         >
           <X size={14} />
