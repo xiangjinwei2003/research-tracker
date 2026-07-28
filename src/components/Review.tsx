@@ -120,10 +120,8 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
     <Container className="py-6">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-            时间回顾
-          </h2>
-          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">时间回顾</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {stats.count > 0
               ? `${periodWord}专注 ${fmtMinutes(stats.minutes)} · ${stats.count} 次`
               : `${periodWord}还没有专注记录`}
@@ -132,7 +130,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <div
-            className="flex items-center gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-900"
+            className="flex items-center gap-1 rounded-lg border border-border bg-panel p-1"
             role="tablist"
             aria-label="统计范围"
           >
@@ -145,8 +143,8 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
                 className={cn(
                   'rounded-md px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
                   scope === s
-                    ? 'bg-white text-brand-700 shadow-sm dark:bg-neutral-800 dark:text-brand-300'
-                    : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100',
+                    ? 'bg-accent text-accent-foreground shadow-none'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {s === 'week' ? '周' : '月'}
@@ -160,11 +158,11 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
               onClick={() => setAnchor((a) => (isWeek ? addWeeks(a, -1) : addMonths(a, -1)))}
               aria-label={isWeek ? '上一周' : '上个月'}
               title={isWeek ? '上一周' : '上个月'}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="min-w-[9.5rem] text-center text-sm tabular-nums text-neutral-700 dark:text-neutral-300">
+            <span className="min-w-[9.5rem] text-center mono text-xs text-muted-foreground">
               {periodLabel}
             </span>
             <button
@@ -172,7 +170,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
               onClick={() => setAnchor((a) => (isWeek ? addWeeks(a, 1) : addMonths(a, 1)))}
               aria-label={isWeek ? '下一周' : '下个月'}
               title={isWeek ? '下一周' : '下个月'}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
             >
               <ChevronRight size={16} />
             </button>
@@ -186,10 +184,10 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
       </div>
 
       {sessions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-16 text-center dark:border-neutral-700 dark:bg-neutral-900/50">
-          <CalendarClock size={28} className="mx-auto mb-3 text-neutral-400" />
-          <p className="text-sm text-neutral-600 dark:text-neutral-300">还没有专注记录</p>
-          <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-neutral-400 dark:text-neutral-500">
+        <div className="rounded-xl border border-dashed border-white/10 bg-panel px-6 py-16 text-center">
+          <CalendarClock size={28} className="mx-auto mb-3 text-faint" />
+          <p className="text-sm text-muted-foreground">还没有专注记录</p>
+          <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-faint">
             在「总览」的任务卡片上右键，即可开始 30 或 60 分钟倒计时；完成的专注会按天落在这里，点柱子就能回看那一天的时间去了哪里。
           </p>
           <Button variant="secondary" size="sm" className="mt-5" onClick={onGoBoard}>

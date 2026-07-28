@@ -27,15 +27,13 @@ function bigDuration(min: number): { value: string; unit: string } {
 
 function Tile({ label, value, unit, sub }: { label: string; value: string; unit: string; sub: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-neutral-100/70 p-4 dark:bg-neutral-900/50">
-      <div className="text-xs text-neutral-500 dark:text-neutral-400">{label}</div>
+    <div className="rounded-lg border border-border bg-panel p-3.5">
+      <div className="text-[11px] text-faint">{label}</div>
       <div className="mt-1.5 flex items-baseline gap-1">
-        <span className="text-2xl font-semibold leading-none tabular-nums text-neutral-900 dark:text-neutral-100">
-          {value}
-        </span>
-        <span className="text-xs text-neutral-500 dark:text-neutral-400">{unit}</span>
+        <span className="mono text-[22px] font-semibold leading-none text-foreground">{value}</span>
+        <span className="text-xs text-faint">{unit}</span>
       </div>
-      <div className="mt-1.5 truncate text-xs text-neutral-400 dark:text-neutral-500">{sub}</div>
+      <div className="mt-1.5 truncate text-[11px] text-faint">{sub}</div>
     </div>
   )
 }
@@ -46,10 +44,7 @@ function Delta({ cur, prev, label }: { cur: number; prev: number; label: string 
   const pct = Math.round(((cur - prev) / prev) * 100)
   return (
     <span
-      className={cn(
-        pct > 0 && 'text-emerald-600 dark:text-emerald-400',
-        pct < 0 && 'text-orange-600 dark:text-orange-400',
-      )}
+      className={cn(pct > 0 && 'text-success', pct < 0 && 'text-warn')}
     >
       {label} {pct > 0 ? '+' : ''}
       {pct}%
@@ -85,7 +80,7 @@ export function FocusStats({
 
   return (
     <section aria-label="专注统计" className="mt-8">
-      <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">专注统计</h3>
+      <h3 className="kicker">专注统计</h3>
 
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile
@@ -120,7 +115,7 @@ export function FocusStats({
 
       <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
         <div>
-          <h4 className="text-xs font-medium text-neutral-400 dark:text-neutral-500">项目占比</h4>
+          <h4 className="kicker">项目占比</h4>
           {stats.minutes > 0 ? (
             <div className="mt-3 flex items-center gap-5">
               <div className="relative shrink-0">
@@ -140,15 +135,13 @@ export function FocusStats({
                   ))}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-lg font-semibold leading-none tabular-nums text-neutral-900 dark:text-neutral-100">
+                  <span className="mono text-lg font-semibold leading-none text-foreground">
                     {total.value}
-                    <span className="ml-0.5 text-[10px] font-normal text-neutral-500">
+                    <span className="ml-0.5 text-[10px] font-normal text-muted-foreground">
                       {total.unit}
                     </span>
                   </span>
-                  <span className="mt-1 text-[10px] text-neutral-400 dark:text-neutral-500">
-                    {centerLabel}
-                  </span>
+                  <span className="mt-1 text-[10px] text-faint">{centerLabel}</span>
                 </div>
               </div>
               <ul className="min-w-0 flex-1 space-y-1.5">
@@ -159,13 +152,13 @@ export function FocusStats({
                       className="h-2 w-2 shrink-0 rounded-full"
                       style={{ background: s.color || 'var(--color-neutral-400)' }}
                     />
-                    <span className="min-w-0 flex-1 truncate text-neutral-600 dark:text-neutral-300">
+                    <span className="min-w-0 flex-1 truncate text-muted-foreground">
                       {s.name}
                     </span>
-                    <span className="shrink-0 tabular-nums text-neutral-500 dark:text-neutral-400">
+                    <span className="shrink-0 mono text-muted-foreground">
                       {fmtMinutes(s.minutes)}
                     </span>
-                    <span className="w-9 shrink-0 text-right tabular-nums text-neutral-400 dark:text-neutral-500">
+                    <span className="w-9 shrink-0 text-right mono text-faint">
                       {Math.round(s.frac * 100)}%
                     </span>
                   </li>
@@ -173,19 +166,19 @@ export function FocusStats({
               </ul>
             </div>
           ) : (
-            <p className="mt-3 text-xs text-neutral-400 dark:text-neutral-500">该时段没有专注记录</p>
+            <p className="mt-3 text-xs text-faint">该时段没有专注记录</p>
           )}
         </div>
 
         <div>
-          <h4 className="text-xs font-medium text-neutral-400 dark:text-neutral-500">专注热力图</h4>
+          <h4 className="kicker">专注热力图</h4>
           <div className="mt-3 overflow-x-auto">
             <div className="inline-flex gap-1">
               <div className="mr-1 flex flex-col gap-1 pt-4.5">
                 {WEEKDAY_CN.map((w, i) => (
                   <span
                     key={w}
-                    className="flex h-3 w-4 items-center text-[9px] leading-none text-neutral-400 dark:text-neutral-500"
+                    className="flex h-3 w-4 items-center text-[9px] leading-none text-faint"
                   >
                     {i % 2 === 0 ? w : ''}
                   </span>
@@ -193,7 +186,7 @@ export function FocusStats({
               </div>
               {heat.map((week, wi) => (
                 <div key={wi} className="flex flex-col gap-1">
-                  <span className="h-3.5 overflow-visible whitespace-nowrap text-[9px] leading-none text-neutral-400 dark:text-neutral-500">
+                  <span className="h-3.5 overflow-visible whitespace-nowrap text-[9px] leading-none text-faint">
                     {week.monthLabel}
                   </span>
                   {week.days.map((d) => (
@@ -205,18 +198,18 @@ export function FocusStats({
                           : `${format(d.date, 'M月d日')} · ${d.minutes > 0 ? fmtMinutes(d.minutes) : '无记录'}`
                       }
                       className={cn(
-                        'h-3 w-3 rounded-[4px]',
+                        'h-3 w-3 rounded-[3px]',
                         d.future
                           ? 'opacity-0'
                           : d.minutes === 0
-                            ? 'bg-neutral-200/70 dark:bg-neutral-800/70'
+                            ? 'bg-white/[0.05]'
                             : d.minutes < 30
-                              ? 'bg-brand-200 dark:bg-brand-900'
+                              ? 'bg-brand-950'
                               : d.minutes < 60
-                                ? 'bg-brand-300 dark:bg-brand-700'
+                                ? 'bg-brand-800'
                                 : d.minutes < 120
-                                  ? 'bg-brand-500 dark:bg-brand-500'
-                                  : 'bg-brand-600 dark:bg-brand-400',
+                                  ? 'bg-brand-600'
+                                  : 'bg-brand-400',
                       )}
                     />
                   ))}
@@ -224,7 +217,7 @@ export function FocusStats({
               ))}
             </div>
           </div>
-          <p className="mt-3 text-xs text-neutral-400 dark:text-neutral-500">
+          <p className="mt-3 text-[11px] text-faint">
             累计专注 {fmtMinutes(allTime.minutes)} · {allTime.count} 次 · 覆盖 {allTime.days} 天
           </p>
         </div>

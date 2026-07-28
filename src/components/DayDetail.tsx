@@ -42,22 +42,22 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
   return (
     <section aria-label="当日详情" className="mt-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h3 className="text-base font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+        <h3 className="text-base font-semibold tracking-tight text-foreground">
           {format(date, 'M月d日')}
-          <span className="ml-1.5 text-sm font-normal text-neutral-500 dark:text-neutral-400">
+          <span className="ml-1.5 text-sm font-normal text-muted-foreground">
             周{WEEKDAY_CN[(date.getDay() + 6) % 7]}
           </span>
           {isToday ? (
-            <span className="ml-2 rounded bg-brand-50 px-1.5 py-0.5 align-middle text-[10px] font-medium text-brand-600 dark:bg-brand-950/60 dark:text-brand-300">
+            <span className="ml-2 rounded border border-brand-500/40 bg-brand-500/10 px-1.5 py-0.5 align-middle text-[10px] font-medium text-brand-300">
               今天
             </span>
           ) : null}
         </h3>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+        <p className="text-sm text-muted-foreground">
           {rows.length > 0 ? (
             <>
               当日专注{' '}
-              <span className="font-semibold tabular-nums text-neutral-800 dark:text-neutral-100">
+              <span className="font-semibold tabular-nums text-foreground">
                 {fmtMinutes(minutes)}
               </span>{' '}
               · {rows.length} 次
@@ -93,16 +93,16 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
                     className="h-2 w-2 shrink-0 rounded-full"
                     style={{ background: s.color || 'var(--color-neutral-400)' }}
                   />
-                  <span className="min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-300">
+                  <span className="min-w-0 flex-1 truncate text-foreground/90">
                     {s.label}
                     {s.label !== s.projectTitle ? (
-                      <span className="text-neutral-400 dark:text-neutral-500"> · {s.projectTitle}</span>
+                      <span className="text-faint"> · {s.projectTitle}</span>
                     ) : null}
                   </span>
-                  <span className="shrink-0 tabular-nums text-neutral-500 dark:text-neutral-400">
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
                     {fmtMinutes(s.minutes)}
                   </span>
-                  <span className="w-9 shrink-0 text-right tabular-nums text-neutral-400 dark:text-neutral-500">
+                  <span className="w-9 shrink-0 text-right tabular-nums text-faint">
                     {Math.round((s.minutes / minutes) * 100)}%
                   </span>
                 </li>
@@ -112,12 +112,12 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
 
           {/* Proportional day track: where the blocks sit IS when they happened. */}
           <div className="mt-5">
-            <div className="relative h-8 overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-900">
+            <div className="relative h-8 overflow-hidden rounded-lg border border-border bg-panel">
               {ticks.map((h) => (
                 <span
                   key={h}
                   aria-hidden
-                  className="absolute inset-y-0 w-px bg-neutral-200 dark:bg-neutral-800"
+                  className="absolute inset-y-0 w-px bg-white/[0.06]"
                   style={{ left: `${((h - fromH) / span) * 100}%` }}
                 />
               ))}
@@ -143,7 +143,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
               {isToday && nowPct >= 0 && nowPct <= 100 ? (
                 <span
                   aria-hidden
-                  className="absolute inset-y-0 w-px bg-brand-500"
+                  className="absolute inset-y-0 w-px bg-brand-400 shadow-[0_0_6px_rgba(107,124,255,.8)]"
                   style={{ left: `${nowPct}%` }}
                 />
               ) : null}
@@ -152,7 +152,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
               {ticks.map((h) => (
                 <span
                   key={h}
-                  className="absolute -translate-x-1/2 text-[10px] leading-none tabular-nums text-neutral-400 dark:text-neutral-500"
+                  className="absolute -translate-x-1/2 text-[10px] leading-none tabular-nums text-faint"
                   style={{ left: `${((h - fromH) / span) * 100}%` }}
                 >
                   {String(h).padStart(2, '0')}:00
@@ -167,16 +167,16 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
               // truncating it to two characters next to the fixed time columns.
               <li
                 key={r.session.id}
-                className="group flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-md px-1 py-1.5 text-sm hover:bg-neutral-100/70 dark:hover:bg-neutral-900/60"
+                className="group flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-md px-1 py-1.5 text-sm hover:bg-white/[0.03]"
               >
-                <span className="w-24 shrink-0 tabular-nums text-xs text-neutral-500 dark:text-neutral-400">
+                <span className="w-24 shrink-0 mono text-xs text-faint">
                   {fmtHM(r.session.startedAt)}–{fmtHM(r.session.endedAt)}
                 </span>
-                <span className="w-24 shrink-0 whitespace-nowrap text-xs tabular-nums text-neutral-500 dark:text-neutral-400">
+                <span className="w-24 shrink-0 whitespace-nowrap mono text-xs text-faint">
                   {fmtMinutes(r.minutes)}
                   {r.session.completed ? '' : ' · 提前'}
                 </span>
-                <span className="order-last min-w-0 basis-full truncate text-neutral-700 sm:order-none sm:basis-0 sm:flex-1 dark:text-neutral-300">
+                <span className="order-last min-w-0 basis-full truncate text-foreground/90 sm:order-none sm:basis-0 sm:flex-1">
                   <span
                     aria-hidden
                     className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full align-middle"
@@ -184,7 +184,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
                   />
                   {r.label}
                   {r.session.todoTitle && r.projectTitle !== '自由专注' ? (
-                    <span className="text-neutral-400 dark:text-neutral-500"> · {r.projectTitle}</span>
+                    <span className="text-faint"> · {r.projectTitle}</span>
                   ) : null}
                 </span>
                 <button
@@ -193,11 +193,11 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
                   aria-label="删除这条专注记录"
                   title="删除记录"
                   className={cn(
-                    'ml-auto inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-neutral-400 transition sm:ml-0',
+                    'ml-auto inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-faint transition sm:ml-0',
                     // Always reachable on touch, hover-revealed on pointer devices.
                     'sm:opacity-0 sm:group-hover:opacity-100',
-                    'hover:bg-neutral-200/70 hover:text-red-600 focus-visible:opacity-100',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:bg-neutral-800 dark:hover:text-red-400',
+                    'hover:text-destructive focus-visible:opacity-100',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
                   )}
                 >
                   <Trash2 size={14} />
@@ -207,7 +207,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
           </ul>
         </>
       ) : (
-        <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">
+        <p className="mt-2 text-xs text-faint">
           在「总览」的任务卡片上右键即可开始专注；这一天的记录会出现在这里。
         </p>
       )}
