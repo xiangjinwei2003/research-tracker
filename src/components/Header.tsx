@@ -42,11 +42,12 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'archived', label: '归档', icon: Archive },
 ]
 
-/* 页签 active 态加深：原语（Task 2）active 为 bg-accent/text-accent-foreground，
-   顶栏在此之上叠自己的类——底降为 accent/60、文字提至前景色，inactive hover 用更淡的 accent/30。
+/* 页签 active 态加深，本文件只叠增量：原语（Task 2, ui/tabs.tsx）trigger 已自带
+   text-muted-foreground / hover:text-foreground 及 active 的 bg-accent/text-accent-foreground，
+   以下常量仅含覆写与增量——active 底降为 accent/60、文字提至前景色；inactive 补一层 hover:bg-accent/30。
    （计划稿另设 line 变体常量；本应用页签只用 default 变体，无需 line 常量。） */
 const activeBase = 'data-[state=active]:bg-accent/60 data-[state=active]:text-foreground'
-const inactiveBase = 'text-muted-foreground hover:text-foreground hover:bg-accent/30'
+const inactiveBase = 'hover:bg-accent/30'
 
 /** 顶栏常驻メモ的存储键：localStorage 直存（轻量便签，不进 JSON 备份）。 */
 const MEMO_KEY = 'research-tracker.memo'
@@ -130,21 +131,21 @@ export function Header({ tab, onTabChange, onNew }: Props) {
     <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-md">
       <Container>
         <div className="flex items-center gap-3 py-2.5">
-          <img src="/logo-mark.svg" alt="Research Tracker" className="h-6 w-6 rounded-md" />
-          <div className="hidden min-w-0 sm:block">
+          <img src="/logo-mark.svg" alt="" className="h-6 w-6 rounded-md" />
+          <div className="min-w-0 max-sm:hidden">
             <div className="truncate text-sm font-semibold leading-tight text-foreground">
               Research Tracker
             </div>
-            <div className="hidden truncate text-[11px] leading-tight text-muted-foreground sm:block">
+            <div className="truncate text-[11px] leading-tight text-muted-foreground">
               本地版 · 数据存于浏览器
             </div>
           </div>
 
           <TabNav tab={tab} onTabChange={onTabChange} />
 
-          <span className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2">
             <Button variant="primary" size="sm" onClick={onNew} aria-label="新建项目">
-              <Plus size={16} /> <span className="hidden sm:inline">新建</span>
+              <Plus size={16} /> <span className="max-sm:hidden">新建</span>
             </Button>
 
             <DropdownMenu>
@@ -197,7 +198,7 @@ export function Header({ tab, onTabChange, onNew }: Props) {
                 e.target.value = ''
               }}
             />
-          </span>
+          </div>
         </div>
       </Container>
     </header>
