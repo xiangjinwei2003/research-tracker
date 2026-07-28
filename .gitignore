@@ -25,3 +25,6 @@ dist-ssr
 
 # Claude Code local config
 .claude/
+
+# Brainstorming visual companion sessions
+.superpowers/
