@@ -10,13 +10,14 @@ interface Props {
   description?: string
   children: ReactNode
   /** Max width. Defaults to 2xl. */
-  size?: 'md' | 'lg' | '2xl'
+  size?: 'md' | 'lg' | '2xl' | 'xl'
 }
 
 const sizeCls = {
   md: 'sm:max-w-md',
   lg: 'sm:max-w-2xl',
   '2xl': 'sm:max-w-3xl',
+  xl: 'sm:max-w-[880px]',
 }
 
 export function Dialog({

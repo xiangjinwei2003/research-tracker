@@ -155,9 +155,9 @@ function EditDialog({
             className={cn(
               'ml-1.5',
               d < 0
-                ? 'font-medium text-red-600 dark:text-red-400'
+                ? 'font-medium text-destructive'
                 : d <= 14
-                  ? 'font-medium text-orange-600 dark:text-orange-400'
+                  ? 'font-medium text-warn'
                   : '',
             )}
           >
@@ -252,99 +252,67 @@ function EditDialog({
       onOpenChange={onOpenChange}
       title="编辑项目"
       description="改完即时保存。点 Esc 或关闭按钮即可退出。"
+      size="xl"
     >
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="title">项目名称</Label>
-          <div className="flex items-center gap-2">
-            <ProjectColorPicker
-              value={project.color}
-              onChange={(color) => updateProject(project.id, { color })}
-            />
-            <Input
-              id="title"
-              className="flex-1"
-              value={project.title}
-              onChange={(e) => updateProject(project.id, { title: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="desc">一句话描述</Label>
-          <Input
-            id="desc"
-            value={project.description}
-            onChange={(e) => updateProject(project.id, { description: e.target.value })}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-4 lg:grid-cols-[290px_minmax(0,1fr)]">
+        {/* 身份栏：项目是谁 */}
+        <div className="space-y-4 lg:border-r lg:border-border lg:pr-6">
           <div>
-            <Label htmlFor="stage">当前阶段</Label>
-            <Select
-              value={project.stage}
-              onValueChange={(v) => updateProject(project.id, { stage: v as Stage })}
-            >
-              <SelectTrigger id="stage" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {project.stages.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="start">项目起始日期</Label>
-            <Input
-              id="start"
-              type="date"
-              value={project.startDate}
-              onChange={(e) => updateProject(project.id, { startDate: e.target.value })}
-            />
-          </div>
-        </div>
-
-        {/* 待办 — the dialog's primary body (config folds away below). */}
-        <div className="pt-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-medium text-neutral-800 dark:text-neutral-200">待办</h3>
-            <span className="text-xs tabular-nums text-neutral-400 dark:text-neutral-500">
-              {activeTodoCount} 项未完成
-            </span>
-            <div className="ml-auto">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-                  aria-label="待办批量操作"
-                  title="待办批量操作"
-                >
-                  <MoreHorizontal size={15} />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onSelect={onApplyStage}>
-                    <Paintbrush size={14} /> 全部对齐项目阶段
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <Label htmlFor="title">项目名称</Label>
+            <div className="flex items-center gap-2">
+              <ProjectColorPicker
+                value={project.color}
+                onChange={(color) => updateProject(project.id, { color })}
+              />
+              <Input
+                id="title"
+                className="flex-1"
+                value={project.title}
+                onChange={(e) => updateProject(project.id, { title: e.target.value })}
+              />
             </div>
           </div>
-          <QuickAddTodo onAdd={(title) => addTodo(project.id, { title })} />
-          <TodoList
-            todos={project.todos}
-            stages={project.stages}
-            onChange={handleTodoChange}
-            onRemove={handleTodoRemove}
-            onReorder={handleTodoReorder}
-          />
-        </div>
 
-        {/* Rarely-edited config folds away; summaries keep the key facts visible. */}
-        <div>
+          <div>
+            <Label htmlFor="desc">一句话描述</Label>
+            <Input
+              id="desc"
+              value={project.description}
+              onChange={(e) => updateProject(project.id, { description: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="stage">当前阶段</Label>
+              <Select
+                value={project.stage}
+                onValueChange={(v) => updateProject(project.id, { stage: v as Stage })}
+              >
+                <SelectTrigger id="stage" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {project.stages.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="start">项目起始日期</Label>
+              <Input
+                id="start"
+                type="date"
+                value={project.startDate}
+                onChange={(e) => updateProject(project.id, { startDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Rarely-edited config folds away; summaries keep the key facts visible. */}
           <Collapsible title="投稿目标" summary={venueSummary}>
             {hasVenue && project.venue ? (
               <div className="space-y-3">
@@ -414,7 +382,7 @@ function EditDialog({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50"
+                  className="text-destructive hover:bg-destructive/10"
                   onClick={() => updateProject(project.id, { venue: undefined })}
                 >
                   <Trash2 size={13} /> 移除投稿目标
@@ -433,9 +401,44 @@ function EditDialog({
               </Button>
             )}
           </Collapsible>
+        </div>
+
+        {/* 工作栏：项目正在做什么 */}
+        <div className="space-y-4">
+          {/* 待办 — the dialog's primary body (config folds away below). */}
+          <div className="pt-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-[13px] font-semibold text-foreground">待办</h3>
+              <span className="mono text-faint">{activeTodoCount} 项未完成</span>
+              <div className="ml-auto">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                    aria-label="待办批量操作"
+                    title="待办批量操作"
+                  >
+                    <MoreHorizontal size={15} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onSelect={onApplyStage}>
+                      <Paintbrush size={14} /> 全部对齐项目阶段
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            <QuickAddTodo onAdd={(title) => addTodo(project.id, { title })} />
+            <TodoList
+              todos={project.todos}
+              stages={project.stages}
+              onChange={handleTodoChange}
+              onRemove={handleTodoRemove}
+              onReorder={handleTodoReorder}
+            />
+          </div>
 
           <Collapsible title="研究阶段" summary={stageSummary}>
-            <p className="mb-2 text-[11px] text-neutral-500 dark:text-neutral-500">
+            <p className="mb-2 text-[11px] text-faint">
               每个项目自带一份阶段列表。改名、改色、增删、拖拽重排都只影响本项目。
             </p>
             <StageList
@@ -639,7 +642,7 @@ function CreateDialog({
             />
           </div>
         </div>
-        <p className="text-[11px] text-neutral-500 dark:text-neutral-500">
+        <p className="text-[11px] text-faint">
           新项目默认会带上 9 个常用研究阶段（文献调研 → 完成/搁置）。创建后可在编辑页里改名、增删或重排。
         </p>
       </div>
@@ -855,7 +858,7 @@ function StageRow({
       onDragEnd={onDragEnd}
       className={cn(
         'flex items-center gap-1.5 rounded-md border border-transparent p-1 transition',
-        isDropTarget && 'border-brand-400 bg-brand-50/50 dark:bg-brand-950/30',
+        isDropTarget && 'border-brand-500/60 bg-brand-500/[0.06]',
       )}
     >
       <button
@@ -1073,7 +1076,7 @@ function TodoList({
             type="button"
             onClick={() => setDoneOpen((v) => !v)}
             aria-expanded={doneOpen}
-            className="group flex items-center gap-1 rounded-md px-1 py-1 text-xs text-neutral-500 transition-colors hover:text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:text-neutral-200"
+            className="group flex items-center gap-1 rounded-md px-1 py-1 text-xs text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <ChevronRight
               size={13}
@@ -1125,7 +1128,7 @@ const TodoRow = memo(function TodoRow({
       onDragEnd={onDragEnd}
       className={cn(
         'flex items-center gap-1.5 rounded-md border border-transparent p-1 transition',
-        isDropTarget && 'border-brand-400 bg-brand-50/50 dark:bg-brand-950/30',
+        isDropTarget && 'border-brand-500/60 bg-brand-500/[0.06]',
         value.done && 'opacity-55',
       )}
     >
@@ -1145,15 +1148,15 @@ const TodoRow = memo(function TodoRow({
         className={cn(
           'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
           value.done
-            ? 'border-emerald-500 bg-emerald-500 text-white'
-            : 'border-neutral-300 text-neutral-400 hover:border-neutral-400 dark:border-neutral-700',
+            ? 'border-success bg-success text-[#0b0c10]'
+            : 'border-[#3a3e4d] text-faint hover:border-white/25',
         )}
         aria-label={value.done ? '标记为未完成' : '标记为已完成'}
       >
         {value.done ? <Check size={14} /> : <Square size={14} />}
       </button>
       <label
-        className="relative inline-flex shrink-0 cursor-pointer items-center rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+        className="relative inline-flex shrink-0 cursor-pointer items-center rounded border border-white/10 bg-panel px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary"
         title="所属研究阶段"
       >
         {stage.shortLabel || stage.name}
