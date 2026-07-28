@@ -2,7 +2,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
   type DragEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
@@ -153,14 +152,14 @@ export function Board({ onNew, onEdit }: Props) {
             <ContextMenuTrigger asChild>
           <section aria-label="本周重点" onContextMenu={onSectionContextMenu}>
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-300">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-300">
                 <CalendarRange size={18} />
               </span>
               <div className="min-w-0 flex-1">
-                <h2 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">
                   本周重点
                 </h2>
-                <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   {items.length > 0
                     ? `${WINDOW_DAYS} 天内到期 · 右键任务可开始专注 · 共 ${items.length} 项`
                     : `${WINDOW_DAYS} 天内到期会自动出现，也可从下方项目总览拖入`}
@@ -170,7 +169,7 @@ export function Board({ onNew, onEdit }: Props) {
               <FocusTimer />
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-3.5 lg:grid-cols-3">
               {columns.map(({ pri, rows }) => {
                 const meta = PRIORITY_META[pri]
                 const isOver = overCol === pri
@@ -194,20 +193,25 @@ export function Board({ onNew, onEdit }: Props) {
                       handleDrop(pri, e)
                     }}
                     className={cn(
-                      'rounded-xl border p-2 transition-colors',
+                      'rounded-xl border border-dashed p-3 transition-colors',
                       isOver
-                        ? 'border-brand-400 bg-brand-50/60 ring-1 ring-brand-300 dark:border-brand-700 dark:bg-brand-950/30 dark:ring-brand-800'
-                        : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/40',
+                        ? 'border-brand-500/70 bg-brand-500/[0.06]'
+                        : 'border-border bg-panel/50',
                     )}
                   >
-                    <div className="mb-2 flex items-center gap-2 px-1 pt-1">
-                      <span className={cn('inline-block h-2.5 w-2.5 rounded-full', meta.dot)} />
-                      <h3 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+                    <div className="flex items-baseline gap-2 px-1 pb-1.5">
+                      <span
+                        className={cn(
+                          'inline-block h-2 w-2 shrink-0 self-center rounded-full',
+                          meta.dot,
+                        )}
+                      />
+                      <span className="text-[10px] uppercase tracking-[0.16em] text-faint">
                         {meta.label}
-                      </h3>
-                      <span className="tabular-nums text-xs text-neutral-400">{rows.length}</span>
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{rows.length}</span>
                     </div>
-                    <div className="min-h-[88px] space-y-2">
+                    <div className="min-h-[88px] space-y-2.5">
                       {rows.map((it) => (
                         <BoardCard
                           key={it.todo.id}
@@ -245,7 +249,7 @@ export function Board({ onNew, onEdit }: Props) {
                         />
                       ))}
                       {rows.length === 0 ? (
-                        <p className="px-1 py-6 text-center text-xs text-neutral-400 dark:text-neutral-600">
+                        <p className="px-1 py-6 text-center text-xs text-faint">
                           暂无 · 拖动卡片到此
                         </p>
                       ) : null}
@@ -259,7 +263,7 @@ export function Board({ onNew, onEdit }: Props) {
               /* Per-project share of the week — a quiet footnote under the board
                  (the header slot above belongs to the focus countdown). */
               <div className="mt-6">
-                <h3 className="text-xs font-medium text-neutral-400 dark:text-neutral-500">
+                <h3 className="text-xs font-medium text-faint">
                   本周分布
                 </h3>
                 <ul className="mt-2 max-w-xl space-y-2">
@@ -269,7 +273,7 @@ export function Board({ onNew, onEdit }: Props) {
                       <li key={project.id} className="flex items-center gap-3">
                         <span
                           title={project.title || '未命名项目'}
-                          className="w-28 shrink-0 truncate text-xs text-neutral-600 dark:text-neutral-300"
+                          className="w-28 shrink-0 truncate text-xs text-muted-foreground"
                         >
                           {project.title || '未命名项目'}
                         </span>
@@ -277,13 +281,13 @@ export function Board({ onNew, onEdit }: Props) {
                           {/* One consistent indigo for the chart — project colours
                               stay on the cards, so the bar just reads as volume. */}
                           <div
-                            className="h-full rounded-full bg-brand-500 dark:bg-brand-400"
+                            className="h-full rounded-full bg-brand-400"
                             style={{ width: `${pct}%` }}
                           />
                         </div>
                         <span
                           title={`${count} 项`}
-                          className="w-9 shrink-0 text-right text-xs tabular-nums text-neutral-400 dark:text-neutral-500"
+                          className="w-9 shrink-0 text-right text-xs tabular-nums text-faint"
                         >
                           {pct}%
                         </span>
@@ -369,10 +373,9 @@ function BoardCard({
       onDragEnd={onDragEnd}
       onClick={onOpen}
       title="拖动调整重要程度 · 右键开始专注"
-      style={{ '--proj': project.color } as CSSProperties}
       className={cn(
-        // Border/bg + hover border come from .proj-card (project-hue tint).
-        'proj-card cursor-grab rounded-lg border p-2.5 shadow-sm transition hover:shadow active:cursor-grabbing',
+        // Flat card, no elevation layering; hover only lifts the border tint.
+        'cursor-grab rounded-lg border border-border bg-card p-2.5 transition-colors hover:border-ring/35 active:cursor-grabbing',
         dragging && 'opacity-40',
       )}
     >
@@ -385,7 +388,7 @@ function BoardCard({
           }}
           title="标记完成"
           aria-label={`标记「${todo.title || '未命名待办'}」为已完成`}
-          className="mt-0.5 inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border border-neutral-300 text-transparent transition hover:border-brand-500 hover:text-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-neutral-600 dark:hover:border-brand-500 dark:hover:text-brand-400"
+          className="mt-0.5 inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border border-input text-transparent transition-colors hover:border-brand-400 hover:text-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         >
           <Check size={12} />
         </button>
@@ -396,11 +399,11 @@ function BoardCard({
               e.stopPropagation()
               onOpen()
             }}
-            className="line-clamp-2 block w-full rounded text-left text-sm font-medium text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-200"
+            className="line-clamp-2 block w-full rounded text-left text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
-            {todo.title || <span className="italic text-neutral-400">未命名待办</span>}
+            {todo.title || <span className="italic text-faint">未命名待办</span>}
           </button>
-          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
             {pinnedExtra ? (
               <button
                 type="button"
@@ -410,7 +413,7 @@ function BoardCard({
                 }}
                 title="已手动加入本周 · 点击移出"
                 aria-label="移出本周重点"
-                className="inline-flex shrink-0 items-center gap-0.5 rounded bg-brand-50 px-1 py-0.5 text-[10px] font-medium text-brand-600 transition hover:bg-brand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:bg-brand-950/50 dark:text-brand-300 dark:hover:bg-brand-900/60"
+                className="inline-flex shrink-0 items-center gap-0.5 rounded border border-brand-500/40 bg-brand-500/10 px-1 py-0.5 text-[10px] font-medium text-brand-300 transition-colors hover:bg-brand-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 <Pin size={10} /> 本周
               </button>
@@ -422,10 +425,10 @@ function BoardCard({
             className={cn(
               'mt-1.5 text-xs tabular-nums',
               overdue
-                ? 'font-medium text-red-600 dark:text-red-400'
+                ? 'font-medium text-destructive'
                 : hasDate && dleft === 0
-                  ? 'font-medium text-orange-600 dark:text-orange-400'
-                  : 'text-neutral-500 dark:text-neutral-500',
+                  ? 'font-medium text-warn'
+                  : 'text-muted-foreground',
             )}
           >
             {rel}
