@@ -22,12 +22,6 @@
   --color-brand-800: #3d41b8;
   --color-brand-900: #33378f;
   --color-brand-950: #1e2154;
-
-  /* Overlay / dialog / menu open motion */
-  --animate-overlay-in: overlay-in 0.18s ease-out;
-  --animate-content-in: content-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-menu-in: menu-in 0.14s cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-toast-in: toast-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* shadcn/ui 语义令牌 → Tailwind 工具类 */
@@ -125,12 +119,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
 }
 
-/* 拖拽期间锁定选择 + 抓手光标 */
-body.is-dragging {
-  cursor: grabbing;
-  user-select: none;
-}
-
 /* 微标签（section kicker）：全大写 + 拉开字距 */
 .kicker {
   font-size: 10.5px;
@@ -200,24 +188,4 @@ body.is-dragging {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-@keyframes overlay-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes content-in {
-  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-
-@keyframes menu-in {
-  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-@keyframes toast-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
 }

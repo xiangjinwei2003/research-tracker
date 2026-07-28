@@ -192,7 +192,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
               <button
                 type="button"
                 title="点击跳到任意日期"
-                className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-[15px] font-semibold tabular-nums text-foreground transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-[15px] font-semibold tabular-nums text-foreground transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
               >
                 {format(anchor, 'yyyy年M月')}
                 <ChevronDown size={14} className="text-muted-foreground" />

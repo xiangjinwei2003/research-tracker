@@ -57,7 +57,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
           {rows.length > 0 ? (
             <>
               当日专注{' '}
-              <span className="font-semibold tabular-nums text-foreground">
+              <span className="font-semibold mono text-foreground">
                 {fmtMinutes(minutes)}
               </span>{' '}
               · {rows.length} 次
@@ -99,10 +99,10 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
                       <span className="text-faint"> · {s.projectTitle}</span>
                     ) : null}
                   </span>
-                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                  <span className="shrink-0 mono text-muted-foreground">
                     {fmtMinutes(s.minutes)}
                   </span>
-                  <span className="w-9 shrink-0 text-right tabular-nums text-faint">
+                  <span className="w-9 shrink-0 text-right mono text-faint">
                     {Math.round((s.minutes / minutes) * 100)}%
                   </span>
                 </li>
@@ -143,7 +143,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
               {isToday && nowPct >= 0 && nowPct <= 100 ? (
                 <span
                   aria-hidden
-                  className="absolute inset-y-0 w-px bg-brand-400 shadow-[0_0_6px_rgba(107,124,255,.8)]"
+                  className="absolute inset-y-0 w-px bg-brand-400 shadow-[0_0_6px_color-mix(in_oklab,var(--color-brand-400)_80%,transparent)]"
                   style={{ left: `${nowPct}%` }}
                 />
               ) : null}
