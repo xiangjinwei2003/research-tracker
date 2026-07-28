@@ -92,7 +92,7 @@ export function notifyFocusDone(body: string): void {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
   try {
     // `tag` collapses repeats instead of stacking one banner per session.
-    new Notification('专注完成', { body, tag: 'rt-focus-done', icon: '/favicon.svg' })
+    new Notification('专注完成', { body, tag: 'rt-focus-done', icon: '/logo-mark.svg' })
   } catch (err) {
     // Android Chrome only allows notifications through a service worker.
     console.warn('[research-tracker] 系统通知发送失败，已改用页面内提示。', err)
