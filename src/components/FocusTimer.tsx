@@ -11,13 +11,12 @@ import {
   requestNotifyPermission,
   setReminderEnabled,
 } from '@/lib/reminder'
-import { Button } from './ui/Button'
 import { Switch } from './ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 /** Ring geometry — a single instance app-wide, so fixed ids/sizes are safe. */
-const RING_SIZE = 104
-const RING_R = 46
+const RING_SIZE = 28
+const RING_R = 10.5
 const RING_C = 2 * Math.PI * RING_R
 import {
   DropdownMenu,
@@ -128,9 +127,9 @@ export function FocusTimer() {
   const bell = (
     <span className="inline-flex shrink-0 items-center gap-1.5">
       {remindOn ? (
-        <Bell size={14} className="text-muted-foreground" />
+        <Bell size={14} className="text-faint" />
       ) : (
-        <BellOff size={14} className="text-muted-foreground/50" />
+        <BellOff size={14} className="text-faint/50" />
       )}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -154,7 +153,7 @@ export function FocusTimer() {
         {bell}
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
             aria-label="开始专注倒计时"
             title="开始专注倒计时（也可右键任务卡片）"
           >
@@ -202,61 +201,32 @@ export function FocusTimer() {
     .join(' · ')
 
   return (
-    // The header's whole right side is the countdown stage: task context +
-    // labelled controls stacked left of a large progress ring (digits inside,
-    // canonical pomodoro pattern). Wraps to its own row on phones.
+    // Compact capsule in the hero header: a small 28px progress ring, the mono
+    // countdown + task label, then a quiet icon-button column. The planned
+    // duration / project context lives in the capsule's title tooltip.
     <div
-      className="flex shrink-0 items-center gap-4 max-sm:w-full max-sm:justify-end"
+      className={cn(
+        'flex shrink-0 items-center gap-2.5 rounded-lg border border-brand-500/40 bg-card px-3 py-1.5 shadow-[0_0_18px_rgba(107,124,255,.12)] max-sm:w-full',
+        remaining <= 60_000 && 'animate-pulse',
+      )}
       role="timer"
       aria-label="专注倒计时"
+      title={`${sub} · ${fmtCountdown(remaining)}`}
     >
-      <div className="min-w-0 text-right">
-        <div className="max-w-[220px] truncate text-sm font-medium text-neutral-800 dark:text-neutral-200">
-          {label}
-        </div>
-        <div className="mt-0.5 max-w-[220px] truncate text-xs text-neutral-500 dark:text-neutral-400">
-          {sub}
-        </div>
-        <div className="mt-2 flex items-center justify-end gap-1">
-          {bell}
-          <Button type="button" variant="ghost" size="sm" onClick={onFinishEarly} title="提前结束并记录本次专注">
-            <Check size={14} /> 提前结束
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onCancel}
-            title="取消（不记录）"
-            className="text-neutral-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
-          >
-            <X size={14} /> 取消
-          </Button>
-        </div>
-      </div>
-
-      <div
-        className={cn('relative shrink-0', remaining <= 60_000 && 'animate-pulse')}
-        aria-hidden
-      >
-        {/* Ambient glow in the project hue — same design DNA as .proj-card. */}
-        <div
-          className="absolute -inset-3 rounded-full opacity-25 blur-md dark:opacity-40"
-          style={{ background: `radial-gradient(closest-side, ${accent}, transparent 74%)` }}
-        />
+      <div className="relative h-7 w-7 shrink-0" aria-hidden>
         <svg
           width={RING_SIZE}
           height={RING_SIZE}
           viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-          className="relative -rotate-90"
+          className="-rotate-90"
         >
           <circle
             cx={RING_SIZE / 2}
             cy={RING_SIZE / 2}
             r={RING_R}
             fill="none"
-            strokeWidth={7}
-            className="stroke-neutral-200/80 dark:stroke-neutral-800"
+            strokeWidth={3}
+            className="stroke-white/10"
           />
           {/* The arc IS the time left: full at start, unwinding toward 12
               o'clock as it burns. Offset animates so ticks glide, not jump. */}
@@ -266,21 +236,40 @@ export function FocusTimer() {
             r={RING_R}
             fill="none"
             stroke={accent}
-            strokeWidth={7}
+            strokeWidth={3}
             strokeLinecap="round"
             strokeDasharray={RING_C}
             strokeDashoffset={RING_C * (1 - remainingPct / 100)}
             className="transition-[stroke-dashoffset] duration-500 ease-linear"
           />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-semibold leading-none tabular-nums text-neutral-900 dark:text-neutral-100">
-            {fmtCountdown(remaining)}
-          </span>
-          <span className="mt-1 text-[10px] font-medium tracking-[0.25em] text-neutral-400 dark:text-neutral-500">
-            专注中
-          </span>
+      </div>
+      <div className="min-w-0">
+        <div className="mono text-[15px] font-semibold leading-none text-brand-200">
+          {fmtCountdown(remaining)}
         </div>
+        <div className="mt-0.5 max-w-[150px] truncate text-[10.5px] leading-tight text-muted-foreground">
+          {label}
+        </div>
+      </div>
+      <div className="flex items-center gap-0.5">
+        {bell}
+        <button
+          type="button"
+          onClick={onFinishEarly}
+          title="提前结束并记录本次专注"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+        >
+          <Check size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          title="取消（不记录）"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-accent/60 hover:text-destructive focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+        >
+          <X size={14} />
+        </button>
       </div>
     </div>
   )
