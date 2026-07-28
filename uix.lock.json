@@ -1,8 +1,8 @@
 {
   "version": 1,
   "stack": "react-tailwind-shadcn",
-  "preset": "custom-neutral-indigo",
-  "presetNote": "保留原有黑底 + 靛蓝身份，未做风格化改色。shadcn/ui 语义 token 层写入 src/index.css（neutral base + indigo --primary/--ring）；组件全面对齐 shadcn registry。",
+  "preset": "electric-violet-dark-only",
+  "presetNote": "暗夜工作台：深色专属令牌层（#0b0c10 底 + 电紫蓝 brand ramp，#6b7cff 主色），已移除主题切换。布局=上下卷轴（本周重点 hero + 项目任务池）。",
   "spacingScale": [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 56, 64, 72, 80, 96],
   "radius": "0.5rem",
   "fonts": { "display": "system-ui sans", "body": "system-ui sans", "mono": "ui-monospace" },

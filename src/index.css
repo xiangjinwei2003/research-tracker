@@ -1,10 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* 深色专属设计：令牌即最终色值（无 .dark 翻转层）。
-   过渡期保留 @custom-variant，旧 dark: 类继续可编译；
-   收尾任务（Task 10）移除所有 dark: 后，本行一并删除。 */
-@custom-variant dark (&:where(.dark, .dark *));
+/* 文档（plan/spec 里的类名词典）不得作为工具类候选来源 */
+@source not "../docs";
+
+/* 深色专属设计：令牌即最终色值（无主题切换层）。 */
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;

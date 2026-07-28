@@ -348,7 +348,7 @@ function EditDialog({
                   </div>
                 </div>
                 <div>
-                  <label className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
                     <input
                       type="checkbox"
                       checked={hasRebuttal}
@@ -413,7 +413,7 @@ function EditDialog({
               <div className="ml-auto">
                 <DropdownMenu>
                   <DropdownMenuTrigger
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     aria-label="待办批量操作"
                     title="待办批量操作"
                   >
@@ -500,7 +500,7 @@ function EditDialog({
         </div>
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+      <div className="mt-5 flex items-center justify-between gap-2 border-t border-border pt-4">
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={onToggleArchive}>
             {project.archived ? (
@@ -517,7 +517,7 @@ function EditDialog({
             <Trash2 size={14} /> 删除
           </Button>
         </div>
-        <div className="text-xs text-neutral-400">改动已自动保存</div>
+        <div className="text-xs text-faint">改动已自动保存</div>
       </div>
     </Dialog>
   )
@@ -647,7 +647,7 @@ function CreateDialog({
         </p>
       </div>
 
-      <div className="mt-5 flex items-center justify-end gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+      <div className="mt-5 flex items-center justify-end gap-2 border-t border-border pt-4">
         <Button variant="secondary" onClick={() => onOpenChange(false)}>
           取消
         </Button>
@@ -865,7 +865,7 @@ function StageRow({
         type="button"
         draggable
         onDragStart={onDragStart}
-        className="shrink-0 cursor-grab text-neutral-400 hover:text-neutral-600 active:cursor-grabbing dark:hover:text-neutral-300"
+        className="shrink-0 cursor-grab text-muted-foreground hover:text-foreground/90 active:cursor-grabbing"
         aria-label="拖拽以重排"
         title="拖拽以重排"
       >
@@ -1043,7 +1043,7 @@ function TodoList({
 
   if (todos.length === 0) {
     return (
-      <p className="mt-2 text-xs text-neutral-400">还没有待办，输入内容回车即可添加。</p>
+      <p className="mt-2 text-xs text-faint">还没有待办，输入内容回车即可添加。</p>
     )
   }
 
@@ -1068,7 +1068,7 @@ function TodoList({
     <div className="mt-2 space-y-1.5">
       {active.map(renderRow)}
       {active.length === 0 ? (
-        <p className="px-1 py-1.5 text-xs text-neutral-400">没有未完成的待办。</p>
+        <p className="px-1 py-1.5 text-xs text-faint">没有未完成的待办。</p>
       ) : null}
       {done.length > 0 ? (
         <div className="pt-0.5">
@@ -1136,7 +1136,7 @@ const TodoRow = memo(function TodoRow({
         type="button"
         draggable
         onDragStart={(e) => onDragStart(e, id)}
-        className="shrink-0 cursor-grab text-neutral-400 hover:text-neutral-600 active:cursor-grabbing dark:hover:text-neutral-300"
+        className="shrink-0 cursor-grab text-muted-foreground hover:text-foreground/90 active:cursor-grabbing"
         aria-label="拖拽以重排"
         title="拖拽以重排"
       >

@@ -8,7 +8,7 @@ export function Logo({ size = 28, className }: { size?: number; className?: stri
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-lg shadow-sm ring-1 ring-black/5 dark:ring-white/10',
+        'inline-flex shrink-0 items-center justify-center rounded-lg shadow-sm ring-1 ring-white/10',
         className,
       )}
       style={{
