@@ -32,19 +32,19 @@ export function Dialog({
       <Radix.Portal>
         <Radix.Overlay
           data-slot="dialog-overlay"
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          className="fixed inset-0 z-40 bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
         />
         <Radix.Content
           data-slot="dialog-content"
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 grid max-h-[90dvh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg outline-none',
+            'fixed left-1/2 top-1/2 z-50 grid max-h-[90dvh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-2xl outline-none',
             'duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
             sizeCls[size],
           )}
         >
           <div className="flex items-start justify-between gap-4 border-b px-5 py-4">
             <div className="grid gap-1">
-              <Radix.Title className="text-base font-semibold text-foreground">
+              <Radix.Title className="text-[15px] font-semibold text-foreground">
                 {title}
               </Radix.Title>
               {description ? (

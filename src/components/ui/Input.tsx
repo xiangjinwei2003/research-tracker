@@ -3,11 +3,11 @@ import { cn } from '@/lib/cn'
 
 /** shadcn/ui field styling (tokens + focus ring), shared by input-like controls. */
 const fieldCls =
-  'flex w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] ' +
-  'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground ' +
-  'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 ' +
+  'flex w-full min-w-0 rounded-md border border-input bg-panel px-3 py-1 text-sm outline-none transition-[color,box-shadow] ' +
+  'placeholder:text-faint selection:bg-primary selection:text-primary-foreground ' +
+  'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 ' +
   'disabled:cursor-not-allowed disabled:opacity-50 ' +
-  'aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 dark:bg-input/30'
+  'aria-invalid:border-destructive aria-invalid:ring-destructive/20'
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...rest }, ref) {
@@ -51,7 +51,7 @@ export function Label({
     <label
       data-slot="label"
       className={cn(
-        'mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground select-none',
+        'mb-1 flex items-center gap-2 text-[11px] font-medium text-muted-foreground select-none',
         className,
       )}
       {...rest}

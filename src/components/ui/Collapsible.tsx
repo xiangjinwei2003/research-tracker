@@ -26,7 +26,7 @@ export function Collapsible({ title, summary, defaultOpen = false, children }: P
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="group flex w-full items-center gap-2 rounded-md py-3 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="group flex w-full items-center gap-2 rounded-md py-2.5 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
         <ChevronRight
           size={15}
@@ -35,7 +35,7 @@ export function Collapsible({ title, summary, defaultOpen = false, children }: P
             open && 'rotate-90',
           )}
         />
-        <span className="text-sm font-medium text-foreground">{title}</span>
+        <span className="text-[13px] font-medium text-foreground">{title}</span>
         {!open && summary ? (
           <span className="ml-auto min-w-0 truncate pl-3 text-xs text-muted-foreground">
             {summary}
