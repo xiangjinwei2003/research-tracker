@@ -9,12 +9,12 @@ import {
   Trash2,
   Plus,
 } from 'lucide-react'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useStore, exportJSON, importJSON } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { Button } from './ui/Button'
 import { Container } from './ui/Container'
-import { Logo } from './Logo'
+import { Input } from './ui/Input'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import {
@@ -42,27 +42,27 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'archived', label: '归档', icon: Archive },
 ]
 
+/* 页签 active 态加深：原语（Task 2）active 为 bg-accent/text-accent-foreground，
+   顶栏在此之上叠自己的类——底降为 accent/60、文字提至前景色，inactive hover 用更淡的 accent/30。
+   （计划稿另设 line 变体常量；本应用页签只用 default 变体，无需 line 常量。） */
+const activeBase = 'data-[state=active]:bg-accent/60 data-[state=active]:text-foreground'
+const inactiveBase = 'text-muted-foreground hover:text-foreground hover:bg-accent/30'
+
+/** 顶栏常驻メモ的存储键：localStorage 直存（轻量便签，不进 JSON 备份）。 */
+const MEMO_KEY = 'research-tracker.memo'
+
 /** Segmented view switcher (Radix Tabs as a controlled selector; App renders the body). */
-function TabNav({
-  tab,
-  onTabChange,
-  className,
-  full,
-}: Props & { className?: string; full?: boolean }) {
+function TabNav({ tab, onTabChange }: Pick<Props, 'tab' | 'onTabChange'>) {
   return (
-    <Tabs
-      value={tab}
-      onValueChange={(v) => onTabChange(v as Tab)}
-      className={className}
-    >
-      <TabsList className={cn(full && 'w-full')}>
+    <Tabs value={tab} onValueChange={(v) => onTabChange(v as Tab)}>
+      <TabsList>
         {TABS.map(({ id, label, icon: Icon }) => (
           <TabsTrigger
             key={id}
             value={id}
-            className="gap-1.5 px-2.5 text-xs data-[state=active]:text-primary dark:data-[state=active]:text-primary"
+            className={cn('gap-1.5 px-2.5 text-xs', inactiveBase, activeBase)}
           >
-            <Icon size={14} /> {label}
+            <Icon size={14} /> <span className="max-sm:hidden">{label}</span>
           </TabsTrigger>
         ))}
       </TabsList>
@@ -74,6 +74,7 @@ export function Header({ tab, onTabChange, onNew }: Props) {
   const replaceState = useStore((s) => s.replaceState)
   const undo = useStore((s) => s.undo)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [memo, setMemo] = useState(() => localStorage.getItem(MEMO_KEY) ?? '')
 
   const onExport = () => {
     const state = {
@@ -129,8 +130,8 @@ export function Header({ tab, onTabChange, onNew }: Props) {
     <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-md">
       <Container>
         <div className="flex items-center gap-3 py-2.5">
-          <Logo size={30} />
-          <div className="min-w-0">
+          <img src="/logo-mark.svg" alt="Research Tracker" className="h-6 w-6 rounded-md" />
+          <div className="hidden min-w-0 sm:block">
             <div className="truncate text-sm font-semibold leading-tight text-foreground">
               Research Tracker
             </div>
@@ -139,8 +140,12 @@ export function Header({ tab, onTabChange, onNew }: Props) {
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-1.5">
-            <TabNav tab={tab} onTabChange={onTabChange} onNew={onNew} className="hidden sm:block" />
+          <TabNav tab={tab} onTabChange={onTabChange} />
+
+          <span className="ml-auto flex items-center gap-2">
+            <Button variant="primary" size="sm" onClick={onNew} aria-label="新建项目">
+              <Plus size={16} /> <span className="hidden sm:inline">新建</span>
+            </Button>
 
             <DropdownMenu>
               <Tooltip>
@@ -170,9 +175,16 @@ export function Header({ tab, onTabChange, onNew }: Props) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="primary" size="sm" onClick={onNew} aria-label="新建项目">
-              <Plus size={16} /> <span className="hidden sm:inline">新建</span>
-            </Button>
+            <Input
+              value={memo}
+              onChange={(e) => {
+                setMemo(e.target.value)
+                localStorage.setItem(MEMO_KEY, e.target.value)
+              }}
+              placeholder="メモ"
+              aria-label="メモ"
+              className="w-72 max-sm:hidden"
+            />
 
             <input
               ref={fileRef}
@@ -185,12 +197,7 @@ export function Header({ tab, onTabChange, onNew }: Props) {
                 e.target.value = ''
               }}
             />
-          </div>
-        </div>
-
-        {/* Mobile: tabs drop to a full-width row below the brand bar. */}
-        <div className="pb-2.5 sm:hidden">
-          <TabNav tab={tab} onTabChange={onTabChange} onNew={onNew} full />
+          </span>
         </div>
       </Container>
     </header>

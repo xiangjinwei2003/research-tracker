@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 色值：环 stroke 用 brand-500（#6b7cff）保持 favicon 缩小时的主色辨识度；圆心用 brand-300（#8b93ff）提亮 -->
+  <rect width="32" height="32" rx="7" fill="#131523"/>
+  <rect x="8" y="8" width="16" height="16" rx="4.5" fill="none" stroke="#6b7cff" stroke-width="3"/>
+  <circle cx="16" cy="16" r="3.5" fill="#8b93ff"/>
+</svg>
