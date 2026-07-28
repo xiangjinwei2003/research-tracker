@@ -57,7 +57,7 @@ export function Board({ onNew, onEdit }: Props) {
   const end = dateFromToday(WINDOW_DAYS)
   // Hero kicker label — ISO week + the Mon–Sun range, e.g. `WEEK 31 · 07.27 – 08.02`.
   const ws = weekStart(new Date())
-  const kickerLabel = `WEEK ${format(ws, 'ww')} · ${format(ws, 'MM.dd')} – ${format(addDays(ws, 6), 'MM.dd')}`
+  const kickerLabel = `WEEK ${format(ws, 'II')} · ${format(ws, 'MM.dd')} – ${format(addDays(ws, 6), 'MM.dd')}`
   const items = useMemo(() => weekItems(projects, end), [projects, end])
 
   const columns = useMemo(() => {
