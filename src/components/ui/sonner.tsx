@@ -6,18 +6,15 @@ import {
   TriangleAlertIcon,
 } from 'lucide-react'
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
-import { useTheme } from '@/lib/theme'
 
 /**
- * Sonner toaster wired to the app's own theme store (not next-themes). Colours
- * come from the shadcn popover tokens so toasts match dialogs/menus.
+ * Sonner toaster (dark-only design). Colours come from the shadcn popover
+ * tokens so toasts match dialogs/menus.
  */
 const Toaster = ({ ...props }: ToasterProps) => {
-  const theme = useTheme()
-
   return (
     <Sonner
-      theme={theme as ToasterProps['theme']}
+      theme="dark"
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

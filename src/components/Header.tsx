@@ -15,7 +15,6 @@ import { toast } from '@/lib/toast'
 import { Button } from './ui/Button'
 import { Container } from './ui/Container'
 import { Logo } from './Logo'
-import { ThemeToggle } from './ThemeToggle'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 import {
@@ -142,8 +141,6 @@ export function Header({ tab, onTabChange, onNew }: Props) {
 
           <div className="ml-auto flex items-center gap-1.5">
             <TabNav tab={tab} onTabChange={onTabChange} onNew={onNew} className="hidden sm:block" />
-
-            <ThemeToggle />
 
             <DropdownMenu>
               <Tooltip>
