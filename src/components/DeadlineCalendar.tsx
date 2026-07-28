@@ -182,7 +182,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
             type="button"
             onClick={() => setAnchor((a) => addMonths(a, -1))}
             aria-label="上个月"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
           >
             <ChevronLeft size={16} />
           </button>
@@ -192,7 +192,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
               <button
                 type="button"
                 title="点击跳到任意日期"
-                className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-base font-semibold tabular-nums text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-[15px] font-semibold tabular-nums text-foreground transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 {format(anchor, 'yyyy年M月')}
                 <ChevronDown size={14} className="text-muted-foreground" />
@@ -222,7 +222,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
             type="button"
             onClick={() => setAnchor((a) => addMonths(a, 1))}
             aria-label="下个月"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
           >
             <ChevronRight size={16} />
           </button>
@@ -235,14 +235,14 @@ export function DeadlineCalendar({ onEdit }: Props) {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-panel">
         {/* Weekday header — right-aligned over the date numbers, Apple style. */}
         <div className="grid shrink-0 grid-cols-7 border-b">
           {WEEKDAY_CN.map((w, i) => (
             <div
               key={w}
               className={cn(
-                'px-2 py-1.5 text-right text-xs font-medium text-muted-foreground',
+                'px-2 py-1.5 text-right text-[11px] font-medium text-faint',
                 i < 6 && 'border-r',
               )}
             >
@@ -286,13 +286,13 @@ export function DeadlineCalendar({ onEdit }: Props) {
                   'flex min-h-0 flex-col gap-1 p-1.5 transition-colors',
                   !lastCol && 'border-r',
                   !lastRow && 'border-b',
-                  isToday && 'bg-primary/5',
-                  dragOverKey === key && 'bg-primary/10 ring-1 ring-inset ring-ring/50',
+                  isToday && 'bg-brand-500/[0.06]',
+                  dragOverKey === key && 'bg-brand-500/[0.09] ring-1 ring-inset ring-brand-400/60',
                 )}
               >
                 <div className="flex shrink-0 items-center justify-end">
                   {isToday ? (
-                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-sm font-semibold tabular-nums text-primary-foreground">
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-500 px-1.5 text-sm font-semibold tabular-nums text-white">
                       {d.getDate()}
                     </span>
                   ) : (
@@ -365,7 +365,7 @@ function DayWithDot(props: ComponentProps<typeof CalendarDayButton>) {
           aria-hidden
           className={cn(
             'pointer-events-none absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full',
-            hasDeadline ? 'bg-destructive' : 'bg-muted-foreground',
+            hasDeadline ? 'bg-destructive' : 'bg-faint',
           )}
         />
       ) : null}
@@ -403,7 +403,7 @@ function EventChip({
         onClick={onClick}
         title={`${e.label} · 投稿截止 · 拖到别的日期可改期`}
         {...dragProps}
-        className="flex w-full cursor-grab items-center gap-1 rounded border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+        className="flex w-full cursor-grab items-center gap-1 rounded-[4px] border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-left text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
       >
         <span aria-hidden className="shrink-0 leading-none">▲</span>
         <span className="min-w-0 truncate">{e.label}</span>
@@ -417,7 +417,7 @@ function EventChip({
         onClick={onClick}
         title={`${e.label} · Rebuttal · 拖到别的日期可改期`}
         {...dragProps}
-        className="flex w-full cursor-grab items-center gap-1 rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-left text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing dark:text-amber-400"
+        className="flex w-full cursor-grab items-center gap-1 rounded-[4px] border border-warn/30 bg-warn/10 px-1.5 py-0.5 text-left text-[11px] font-medium text-warn transition-colors hover:bg-warn/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
       >
         <span aria-hidden className="shrink-0 leading-none">◆</span>
         <span className="min-w-0 truncate">{e.label}</span>
@@ -431,7 +431,7 @@ function EventChip({
       title={`${e.title} · ${e.project.title || '未命名项目'} · 拖到别的日期可改期`}
       {...dragProps}
       className={cn(
-        'flex w-full cursor-grab items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing',
+        'flex w-full cursor-grab items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11px] transition-colors hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing',
         e.done && 'opacity-50',
       )}
     >
