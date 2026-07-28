@@ -68,13 +68,13 @@ export function Dashboard({
   )
 
   return (
-    <Container className="py-6">
+    <Container className="py-5">
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+          <h2 className="text-[15px] font-semibold text-foreground">
             {showArchived ? '已归档项目' : '项目总览'}
           </h2>
-          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {showArchived ? (
               `${visible.length} 个已归档项目`
             ) : (
@@ -83,7 +83,7 @@ export function Dashboard({
                 {urgentCount > 0 ? (
                   <>
                     {' · '}
-                    <span className="font-medium text-orange-600 dark:text-orange-400">
+                    <span className="font-medium text-warn">
                       {urgentCount} 个有 14 天内的截止
                     </span>
                   </>
@@ -107,7 +107,7 @@ export function Dashboard({
               aria-expanded={!collapsed}
               aria-controls="overview-grid"
               title={collapsed ? '展开项目总览' : '折叠项目总览'}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
             >
               <ChevronDown
                 size={18}
@@ -120,20 +120,20 @@ export function Dashboard({
 
       {collapsed ? null : visible.length === 0 ? (
         showArchived ? (
-          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-12 text-center dark:border-neutral-700 dark:bg-neutral-900/50">
-            <Archive size={28} className="mx-auto mb-2 text-neutral-400" />
-            <p className="text-sm text-neutral-500">还没有归档的项目。</p>
-            <p className="mt-1 text-xs text-neutral-400">
+          <div className="rounded-xl border border-dashed border-white/10 bg-panel p-12 text-center">
+            <Archive size={28} className="mx-auto mb-2 text-faint" />
+            <p className="text-sm text-muted-foreground">还没有归档的项目。</p>
+            <p className="mt-1 text-xs text-faint">
               在项目编辑页点「归档」即可把完成或搁置的课题收纳到这里。
             </p>
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-16 text-center dark:border-neutral-700 dark:bg-neutral-900/50">
+          <div className="rounded-xl border border-dashed border-white/10 bg-panel p-12 text-center">
             <Logo size={48} className="mx-auto" />
-            <h3 className="mt-4 text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+            <h3 className="mt-4 text-lg font-semibold tracking-tight text-foreground">
               开始追踪你的研究项目
             </h3>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
               为每个课题记录投稿目标、研究阶段、待办与合作者。「本周重点」会自动汇总最近到期的事项。
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
@@ -141,7 +141,7 @@ export function Dashboard({
                 <Plus size={16} /> 新建第一个项目
               </Button>
             </div>
-            <p className="mt-4 text-xs text-neutral-400">
+            <p className="mt-4 text-xs text-faint">
               数据只保存在此浏览器，可随时导出 JSON 备份。
             </p>
           </div>
@@ -149,7 +149,7 @@ export function Dashboard({
       ) : (
         <div
           id="overview-grid"
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
         >
           {visible.map((p) => (
             <ProjectCard
@@ -157,6 +157,7 @@ export function Dashboard({
               project={p}
               onEdit={onEdit}
               draggableTodos={draggableTodos}
+              dimmed={showArchived}
             />
           ))}
         </div>

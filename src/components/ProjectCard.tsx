@@ -19,12 +19,15 @@ interface Props {
   onEdit: (p: Project) => void
   /** When true, upcoming todos can be dragged into 本周重点. */
   draggableTodos?: boolean
+  /** Desaturate the whole card — used for the archived projects grid. */
+  dimmed?: boolean
 }
 
 export const ProjectCard = memo(function ProjectCard({
   project,
   onEdit,
   draggableTodos = false,
+  dimmed = false,
 }: Props) {
   const toggleTodoDone = useStore((s) => s.toggleTodoDone)
   const updateTodo = useStore((s) => s.updateTodo)
@@ -86,6 +89,14 @@ export const ProjectCard = memo(function ProjectCard({
   const nd = nextDeadline(project)
   const days = nd ? daysUntil(nd.date) : null
   const cd = days == null ? null : countdownLabel(days)
+  const toneCls =
+    cd?.tone === 'past'
+      ? 'text-destructive'
+      : cd?.tone === 'urgent'
+        ? 'text-warn'
+        : cd?.tone === 'soon'
+          ? 'text-warn/80'
+          : 'text-muted-foreground'
   const waiting = project.collaborators.filter((c) => c.waitingFor.trim())
   const sp = stageProgress(project)
   const currentStage = findStage(project.stages, project.stage)
@@ -100,7 +111,10 @@ export const ProjectCard = memo(function ProjectCard({
     <Card
       onClick={() => onEdit(project)}
       style={{ '--proj': project.color } as CSSProperties}
-      className="proj-card group flex cursor-pointer flex-col p-4 transition hover:shadow-md"
+      className={cn(
+        'proj-card group flex cursor-pointer flex-col p-3.5 transition',
+        dimmed && 'opacity-60 saturate-50 hover:opacity-90 transition',
+      )}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -111,13 +125,13 @@ export const ProjectCard = memo(function ProjectCard({
                 e.stopPropagation()
                 onEdit(project)
               }}
-              className="block w-full truncate rounded text-left text-base font-semibold text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-100"
+              className="block w-full truncate rounded text-left text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
-              {project.title || <span className="italic text-neutral-400">未命名项目</span>}
+              {project.title || <span className="italic text-faint">未命名项目</span>}
             </button>
           </h3>
           {project.description ? (
-            <p className="mt-0.5 line-clamp-2 text-sm text-neutral-500 dark:text-neutral-400">
+            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
               {project.description}
             </p>
           ) : null}
@@ -127,55 +141,39 @@ export const ProjectCard = memo(function ProjectCard({
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <StageBadge stage={currentStage} />
         {project.venue ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+          <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
             {project.venue.name}
           </span>
         ) : null}
       </div>
 
       {nd && cd ? (
-        <div
-          className={cn(
-            'mt-3 flex items-center gap-2 rounded-md border px-2.5 py-2 text-xs',
-            cd.tone === 'past' &&
-              'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300',
-            cd.tone === 'urgent' &&
-              'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300',
-            cd.tone === 'soon' &&
-              'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300',
-            cd.tone === 'far' &&
-              'border-neutral-200 bg-neutral-50 text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300',
-          )}
-        >
-          <CalendarClock size={14} className="shrink-0" />
-          <span className="min-w-0 flex-1 truncate">
-            <span className="font-medium">{cd.text}</span>
-            <span className="ml-1.5 text-neutral-500 dark:text-neutral-500">
-              · {nd.label} · {fmtShort(nd.date)}
-            </span>
-          </span>
+        <div className="mt-2.5 flex items-center gap-1.5 text-[11px]">
+          <CalendarClock size={13} className={toneCls} />
+          <span className={cn('mono', toneCls)}>{cd.text}</span>
+          <span className="text-faint">· {nd.label} · {fmtShort(nd.date)}</span>
         </div>
       ) : null}
 
       <div className="mt-3">
-        <div className="mb-1 flex items-center justify-between text-xs text-neutral-500">
+        <div className="mb-1 flex items-center justify-between text-[11px] text-faint">
           <span>研究阶段</span>
           <span>
-            <span className="text-neutral-700 dark:text-neutral-300">{currentStage.shortLabel || currentStage.name}</span>
-            <span className="ml-1.5 tabular-nums text-neutral-400">
+            <span className="text-secondary-foreground">{currentStage.shortLabel || currentStage.name}</span>
+            <span className="ml-1.5 tabular-nums text-faint">
               {sp.current}/{sp.total}
             </span>
           </span>
         </div>
         {/* Translucent track so it reads correctly on the project-tinted card. */}
-        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10">
+        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]">
           <div
             className="h-full rounded-full transition-all"
             style={{ width: `${sp.percent}%`, background: currentStage.color }}
           />
         </div>
 
-        <div className="mb-1 flex items-center justify-between text-xs text-neutral-500">
+        <div className="mb-1 flex items-center justify-between text-[11px] text-faint">
           <span>待办</span>
           <span className="tabular-nums">
             {doneCount}/{totalCount}
@@ -212,23 +210,19 @@ export const ProjectCard = memo(function ProjectCard({
                     <GripVertical
                       size={11}
                       aria-hidden
-                      className="shrink-0 text-neutral-300 opacity-0 transition group-hover/todo:opacity-100 dark:text-neutral-600"
+                      className="shrink-0 text-faint opacity-0 transition group-hover/todo:opacity-100"
                     />
                   ) : null}
                   <button
                     onClick={() => toggleTodoDone(project.id, todo.id)}
-                    className={cn(
-                      'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                      'border-neutral-300 text-transparent hover:border-brand-500 hover:text-brand-500',
-                      'dark:border-neutral-600 dark:hover:border-brand-500 dark:hover:text-brand-400',
-                    )}
+                    className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3.5px] border border-[#3a3e4d] text-transparent hover:border-brand-400 hover:text-brand-400"
                     aria-label={`标记「${todo.title}」为已完成`}
                   >
                     <Check size={10} />
                   </button>
                   <StageChip stage={stage} />
-                  <span className="min-w-0 flex-1 truncate text-neutral-700 dark:text-neutral-300">
-                    {todo.title || <span className="italic text-neutral-400">未命名</span>}
+                  <span className="min-w-0 flex-1 truncate text-secondary-foreground">
+                    {todo.title || <span className="italic text-faint">未命名</span>}
                   </span>
                   <TodoDateButton
                     value={todo.endDate}
@@ -247,7 +241,7 @@ export const ProjectCard = memo(function ProjectCard({
                     setExpanded((v) => !v)
                   }}
                   aria-expanded={expanded}
-                  className="inline-flex items-center gap-0.5 rounded text-[11px] text-neutral-400 transition hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:text-brand-400"
+                  className="inline-flex items-center gap-0.5 rounded text-[11px] text-faint transition hover:text-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   {expanded ? '收起' : `还有 ${remainingCount - upcoming.length} 个未完成…`}
                   <ChevronDown
@@ -259,9 +253,9 @@ export const ProjectCard = memo(function ProjectCard({
             ) : null}
           </ul>
         ) : project.todos.length > 0 ? (
-          <p className="text-[11px] text-neutral-400">所有待办已完成 🎉</p>
+          <p className="text-[11px] text-faint">所有待办已完成 🎉</p>
         ) : (
-          <p className="text-[11px] text-neutral-400">还没有待办</p>
+          <p className="text-[11px] text-faint">还没有待办</p>
         )}
 
         <div className="relative mt-1.5" onClick={(e) => e.stopPropagation()}>
@@ -292,7 +286,7 @@ export const ProjectCard = memo(function ProjectCard({
             <button
               type="button"
               onClick={openAdd}
-              className="inline-flex items-center gap-1 rounded text-xs text-neutral-400 transition hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-neutral-500 dark:hover:text-brand-400"
+              className="inline-flex items-center gap-1 rounded text-xs text-faint transition hover:text-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <Plus size={12} /> 添加待办
             </button>
@@ -316,13 +310,13 @@ export const ProjectCard = memo(function ProjectCard({
       </div>
 
       {waiting.length > 0 ? (
-        <div className="mt-3 flex items-start gap-1.5 rounded-md bg-amber-50 px-2.5 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+        <div className="mt-3 flex items-start gap-1.5 rounded-md border border-warn/25 bg-warn/[0.07] px-2.5 py-2 text-[11px] text-warn">
           <Users size={14} className="mt-0.5 shrink-0" />
           <div className="min-w-0">
             {waiting.map((c, i) => (
               <div key={c.id} className={i > 0 ? 'mt-0.5' : undefined}>
                 <span className="font-medium">{c.name}</span>
-                <span className="text-amber-700/70 dark:text-amber-300/70">
+                <span className="text-warn/70">
                   {' '}
                   · 等 {c.waitingFor}
                 </span>
@@ -366,10 +360,10 @@ function TodoDateButton({
         title="点击修改截止日期"
         aria-label={`修改截止日期，当前 ${fmtShort(value) || '未设置'}`}
         className={cn(
-          'cursor-pointer rounded tabular-nums underline-offset-2 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+          'mono cursor-pointer rounded text-[11px] underline-offset-2 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
           overdue
-            ? 'font-medium text-red-600 hover:text-red-700 dark:text-red-400'
-            : 'text-neutral-500 hover:text-brand-600 dark:text-neutral-500 dark:hover:text-brand-400',
+            ? 'text-destructive'
+            : 'text-muted-foreground hover:text-brand-300',
         )}
       >
         {fmtShort(value) || '设置日期'}

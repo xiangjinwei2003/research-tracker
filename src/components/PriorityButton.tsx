@@ -33,7 +33,7 @@ export function PriorityButton({ priority, onChange, className }: Props) {
       aria-label={`重要程度：${meta.label}，点击切换`}
       className={cn(
         'inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-1.5 text-xs font-medium transition',
-        'hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-950',
+        'hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 focus-visible:ring-offset-background',
         meta.chip,
         className,
       )}
