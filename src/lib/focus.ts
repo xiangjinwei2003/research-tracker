@@ -1,5 +1,5 @@
 import { addDays, differenceInCalendarDays, format } from 'date-fns'
-import { weekStart } from './date'
+import { parse, weekStart } from './date'
 import type { FocusSession, Project } from './types'
 
 /**
@@ -157,7 +157,8 @@ export function streakDays(
   let run = 0
   let prevIso = ''
   for (const iso of [...days].sort()) {
-    run = prevIso && format(addDays(new Date(prevIso), 1), 'yyyy-MM-dd') === iso ? run + 1 : 1
+    const prev = prevIso ? parse(prevIso) : null
+    run = prev && format(addDays(prev, 1), 'yyyy-MM-dd') === iso ? run + 1 : 1
     if (run > longest) longest = run
     prevIso = iso
   }

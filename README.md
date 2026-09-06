@@ -1,5 +1,13 @@
 # Research Tracker · 科研项目追踪
 
+## 改动记录
+
+2026年9月7日，回答「/review /loop 审核所有代码，写报告书，之后进行修改，改完之后再审核，再修改直到全绿。」
+数据与隐私节补充：GitHub Pages 项目站与账号下其他 Pages 同源，localStorage 可被同 origin 的其他页面读取。给二次开发者第 1 条改为：migrate 用到的 helper 放在独立模块或 `create()` 之前的函数声明里。
+
+2026年9月5日，回答「按照审查结果进行修复」。
+数据与隐私节 localStorage 键名 `research-tracker` 改为 `research-tracker-v1`，与 `src/lib/store.ts` 的 `PERSIST_NAME` 一致。
+
 给研究者用的**科研项目管理面板**：同时推进多个论文项目时，把「每个项目卡在哪个阶段」「哪个 deadline 最近」「在等谁」放在一屏里。
 
 纯前端应用，**数据只存在你自己的浏览器里**（localStorage），没有后端、没有账号、不发任何网络请求。
@@ -47,9 +55,9 @@ npm run build
 
 ## 数据与隐私
 
-- 所有数据存在浏览器的 **localStorage**，键名 `research-tracker`。
+- 所有数据存在浏览器的 **localStorage**，键名 `research-tracker-v1`。
 - **没有任何后端、遥测或第三方请求**——代码里不存在 `fetch` / `XMLHttpRequest`，断网可用。
-- 因此也意味着：**localStorage 是按域名隔离的**。换浏览器、换设备、清缓存、或换一个部署域名访问，数据都不会跟过去。
+- 因此也意味着：**localStorage 按 origin 隔离**（协议、主机、端口），不是按路径。换浏览器、换设备、清缓存、或换一个部署域名访问，数据都不会跟过去。GitHub Pages 的项目站（`https://USER.github.io/repo/`）与该账号下其他 Pages 站点同源，那些页面的脚本也能读取这个键。请用独立 origin（Vercel / Netlify 项目域名，或自定义域名）。
 - 请定期用「导出 JSON」做备份。这是目前唯一的备份/迁移路径，跨设备同步是有意不做的。
 
 ## 技术栈
@@ -67,7 +75,7 @@ src/
 
 ### 给二次开发者的两个坑
 
-1. **`store.ts` 的 hydration 是同步的。** 自定义的 `getItem` 同步返回，所以 `SCHEMA_VERSION` 一变，`migrate` → `normalize*` 会在**模块求值期间**执行——此时写在 `create()` 调用**下方**的 `const` 还处在暂时性死区（TDZ）。任何能被 `migrate` 触达的 helper 必须是**函数声明**（hoisted），不能是 `create()` 下方的 `const` 箭头函数，否则会抛错、被 zustand 吞成一次失败的 hydration，表现为「数据没了」。改 `SCHEMA_VERSION` 前请先拿升级前的真实数据测一遍迁移。
+1. **hydration 是同步的。** 自定义的 `getItem` 同步返回，所以 `SCHEMA_VERSION` 一变，`migrate` 会在**模块求值期间**执行。`migrate` 用到的 helper 必须已经初始化：放在 `src/lib/normalize.ts` 这种独立模块里，或写成 `create()` 之前的函数声明。写在 `create()` 下方的 `const` 箭头函数会落在暂时性死区，抛错后被 zustand 吞成一次失败的 hydration，表现为「数据没了」。改 `SCHEMA_VERSION` 前请先拿升级前的真实数据测一遍迁移。
 2. **JSON 导入走白名单归一化。** `importJSON` → `normalizeProject` 只逐字段拷贝已知字段到新对象，不做 spread，别改成 `{...raw}`。
 
 ## License

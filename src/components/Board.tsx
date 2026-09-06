@@ -23,7 +23,6 @@ import { primeChime, reminderEnabled, requestNotifyPermission } from '@/lib/remi
 import { StageChip } from './StageChip'
 import { Container } from './ui/Container'
 import { Dashboard } from './Dashboard'
-import { FocusTimer } from './FocusTimer'
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -133,7 +132,8 @@ export function Board({ onNew, onEdit }: Props) {
       return
     }
     // Pulled in from 项目总览: pin it into this week at the dropped priority.
-    const raw = e.dataTransfer.getData('application/x-rt-todo')
+    const raw =
+      e.dataTransfer.getData('application/x-rt-todo') || e.dataTransfer.getData('text/plain')
     if (!raw) return
     try {
       const { projectId, todoId } = JSON.parse(raw) as {
@@ -167,8 +167,6 @@ export function Board({ onNew, onEdit }: Props) {
                     : `${WINDOW_DAYS} 天内到期会自动出现，也可从下方项目总览拖入`}
                 </p>
               </div>
-              {/* The focus countdown lives top-right of the section header. */}
-              <FocusTimer />
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3.5 lg:grid-cols-3">

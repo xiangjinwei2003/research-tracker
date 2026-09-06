@@ -35,10 +35,8 @@ function fmtCountdown(ms: number): string {
 }
 
 /**
- * The focus-countdown slot in the 本周重点 header. Idle → a quiet 「专注」button
- * (touch-friendly fallback for the right-click menu on cards). Running → a
- * frameless countdown chip. Remaining time is always DERIVED from the persisted
- * start timestamp, so reloads and long sleeps can't drift the clock.
+ * App-wide focus countdown. Remaining time is derived from the persisted start
+ * timestamp so reloads and long sleeps cannot drift the clock.
  */
 export function FocusTimer() {
   const activeTimer = useStore((s) => s.activeTimer)
@@ -90,8 +88,13 @@ export function FocusTimer() {
   // that invisible (a fresh countdown legitimately shows its full duration).
   useEffect(() => {
     if (!activeTimer) return
-    const t = setInterval(() => setNow(Date.now()), 500)
-    return () => clearInterval(t)
+    const tick = () => setNow(Date.now())
+    const t = setInterval(tick, 500)
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', tick)
+    }
   }, [activeTimer])
 
   // Completion — also heals a countdown that expired while the tab was closed
@@ -207,7 +210,7 @@ export function FocusTimer() {
     // duration / project context lives in the capsule's title tooltip.
     <div
       className={cn(
-        'flex shrink-0 items-center gap-2.5 rounded-lg border border-brand-500/40 bg-card px-3 py-1.5 shadow-[0_0_18px_rgba(107,124,255,.12)] max-sm:w-full',
+        'flex shrink-0 items-center gap-2.5 rounded-lg border border-brand-500/40 bg-card px-3 py-1.5 shadow-[0_0_18px_rgba(107,124,255,.12)]',
         remaining <= 60_000 && 'animate-pulse',
       )}
       role="timer"

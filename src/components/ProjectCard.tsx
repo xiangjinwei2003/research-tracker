@@ -9,6 +9,7 @@ import { Input } from './ui/Input'
 import { StageBadge } from './StageBadge'
 import { StageChip } from './StageChip'
 import { cn } from '@/lib/cn'
+import { isSubmitEnter } from '@/lib/keyboard'
 
 /** How many upcoming todos a collapsed card shows before the expand toggle. */
 const VISIBLE_TODOS = 3
@@ -192,10 +193,12 @@ export const ProjectCard = memo(function ProjectCard({
                     draggableTodos
                       ? (e) => {
                           e.dataTransfer.effectAllowed = 'move'
-                          e.dataTransfer.setData(
-                            'application/x-rt-todo',
-                            JSON.stringify({ projectId: project.id, todoId: todo.id }),
-                          )
+                          const payload = JSON.stringify({
+                            projectId: project.id,
+                            todoId: todo.id,
+                          })
+                          e.dataTransfer.setData('application/x-rt-todo', payload)
+                          e.dataTransfer.setData('text/plain', payload)
                         }
                       : undefined
                   }
@@ -265,8 +268,7 @@ export const ProjectCard = memo(function ProjectCard({
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  // Add the todo, then pop the date picker to set its deadline.
+                if (isSubmitEnter(e)) {
                   commitAndPickDate()
                 } else if (e.key === 'Escape') {
                   committedRef.current = true // discard: block a racing blur-commit

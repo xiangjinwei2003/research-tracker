@@ -58,6 +58,7 @@ export default function App() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="min-h-full bg-background text-foreground">
+        <Toaster position="bottom-right" />
         <Header tab={tab} onTabChange={setTab} onNew={openNew} />
         {tab === 'dashboard' ? (
           <Board onNew={openNew} onEdit={openEdit} />
@@ -76,7 +77,6 @@ export default function App() {
           }}
           project={editing}
         />
-        <Toaster position="bottom-right" />
       </div>
     </TooltipProvider>
   )

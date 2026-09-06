@@ -9,9 +9,11 @@ import {
   Trash2,
   Plus,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore, exportJSON, importJSON } from '@/lib/store'
+import { getPersistHealth, subscribePersistHealth, readRawPersistItem } from '@/lib/persist'
 import { toast } from '@/lib/toast'
+import { FocusTimer } from './FocusTimer'
 import { Button } from './ui/Button'
 import { Container } from './ui/Container'
 import { Input } from './ui/Input'
@@ -42,10 +44,6 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'archived', label: '归档', icon: Archive },
 ]
 
-/* 页签 active 态加深，本文件只叠增量：原语（Task 2, ui/tabs.tsx）trigger 已自带
-   text-muted-foreground / hover:text-foreground 及 active 的 bg-accent/text-accent-foreground，
-   以下常量仅含覆写与增量——active 底降为 accent/60、文字提至前景色；inactive 补一层 hover:bg-accent/30。
-   （计划稿另设 line 变体常量；本应用页签只用 default 变体，无需 line 常量。） */
 const activeBase = 'data-[state=active]:bg-accent/60 data-[state=active]:text-foreground'
 const inactiveBase = 'hover:bg-accent/30'
 
@@ -71,26 +69,68 @@ function TabNav({ tab, onTabChange }: Pick<Props, 'tab' | 'onTabChange'>) {
   )
 }
 
+function readMemo(): string {
+  try {
+    return localStorage.getItem(MEMO_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+let memoWriteWarned = false
+
+function writeMemo(value: string): void {
+  try {
+    localStorage.setItem(MEMO_KEY, value)
+  } catch (err) {
+    console.warn('[research-tracker] メモ未能写入浏览器存储', err)
+    if (!memoWriteWarned) {
+      memoWriteWarned = true
+      toast({ message: 'メモ未能写入浏览器存储' })
+    }
+  }
+}
+
 export function Header({ tab, onTabChange, onNew }: Props) {
   const replaceState = useStore((s) => s.replaceState)
+  const clearAll = useStore((s) => s.clearAll)
   const undo = useStore((s) => s.undo)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [memo, setMemo] = useState(() => localStorage.getItem(MEMO_KEY) ?? '')
+  const [memo, setMemo] = useState(readMemo)
+
+  useEffect(() => {
+    const tell = (h: ReturnType<typeof getPersistHealth>) => {
+      if (h === 'unreadable') {
+        toast({ message: '本地数据无法读取，原记录未覆盖。请导出原始记录，或清空后继续。' })
+      } else if (h === 'write-failed') {
+        toast({ message: '本次改动未能写入浏览器存储' })
+      }
+    }
+    tell(getPersistHealth())
+    return subscribePersistHealth(tell)
+  }, [])
 
   const onExport = () => {
-    const state = {
-      projects: useStore.getState().projects,
-      sessions: useStore.getState().sessions,
-      version: useStore.getState().version,
-    }
-    const blob = new Blob([exportJSON(state)], { type: 'application/json' })
+    const unreadable = getPersistHealth() === 'unreadable'
+    const raw = unreadable ? readRawPersistItem() : null
+    const dumpRaw = unreadable && raw != null
+    const body = dumpRaw
+      ? raw
+      : exportJSON({
+          projects: useStore.getState().projects,
+          sessions: useStore.getState().sessions,
+          version: useStore.getState().version,
+        })
+    const blob = new Blob([body], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `research-tracker-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = dumpRaw
+      ? `research-tracker-unreadable-${new Date().toISOString().slice(0, 10)}.json`
+      : `research-tracker-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
-    toast({ message: '已导出 JSON 备份' })
+    toast({ message: dumpRaw ? '已导出无法解析的原始记录' : '已导出 JSON 备份' })
   }
 
   const onImport = async (file: File) => {
@@ -109,17 +149,14 @@ export function Header({ tab, onTabChange, onNew }: Props) {
   }
 
   const onClearAll = () => {
-    const count = useStore.getState().projects.length
-    if (count === 0) {
+    const { projects, sessions, activeTimer } = useStore.getState()
+    const unreadable = getPersistHealth() === 'unreadable'
+    if (!unreadable && projects.length === 0 && sessions.length === 0 && !activeTimer) {
       toast({ message: '当前没有任何数据' })
       return
     }
-    if (confirm(`确认清空全部 ${count} 个项目？可在通知里点击撤销。`)) {
-      const token = replaceState({
-        projects: [],
-        sessions: [],
-        version: useStore.getState().version,
-      })
+    if (confirm('确认清空全部数据？可在通知里点击撤销。')) {
+      const token = clearAll()
       toast({
         message: '已清空全部数据',
         action: { label: '撤销', onClick: () => undo(token) },
@@ -143,7 +180,8 @@ export function Header({ tab, onTabChange, onNew }: Props) {
 
           <TabNav tab={tab} onTabChange={onTabChange} />
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <FocusTimer />
             <Button variant="primary" size="sm" onClick={onNew} aria-label="新建项目">
               <Plus size={16} /> <span className="max-sm:hidden">新建</span>
             </Button>
@@ -180,7 +218,7 @@ export function Header({ tab, onTabChange, onNew }: Props) {
               value={memo}
               onChange={(e) => {
                 setMemo(e.target.value)
-                localStorage.setItem(MEMO_KEY, e.target.value)
+                writeMemo(e.target.value)
               }}
               placeholder="メモ"
               aria-label="メモ"

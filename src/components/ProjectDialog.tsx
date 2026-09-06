@@ -38,6 +38,7 @@ import {
 import { today, daysUntil } from '@/lib/date'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
+import { isSubmitEnter } from '@/lib/keyboard'
 import { Dialog } from './ui/Dialog'
 import { Button } from './ui/Button'
 import { Input, Label, Textarea } from './ui/Input'
@@ -599,7 +600,7 @@ function CreateDialog({
               value={draft.title}
               onChange={(e) => setDraft({ ...draft, title: e.target.value })}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && draft.title.trim()) save()
+                if (isSubmitEnter(e) && draft.title.trim()) save()
               }}
             />
           </div>
@@ -946,7 +947,7 @@ function QuickAddTodo({ onAdd }: { onAdd: (title: string) => void }) {
         aria-label="快速添加待办"
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+          if (isSubmitEnter(e)) {
             e.preventDefault()
             submit()
           }

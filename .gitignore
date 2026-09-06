@@ -28,3 +28,4 @@ dist-ssr
 
 # Brainstorming visual companion sessions
 .superpowers/
+.vercel

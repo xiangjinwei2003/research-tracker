@@ -5,7 +5,7 @@ export interface StageDef {
   id: string
   name: string
   shortLabel: string
-  /** Any valid CSS color string (hex, rgb, oklch, etc). */
+  /** Concrete CSS color (hex, rgb, oklch, named). url() is rejected on import. */
   color: string
 }
 
