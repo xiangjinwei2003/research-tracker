@@ -719,9 +719,9 @@ function CollaboratorRow({
   onRemove: () => void
 }) {
   return (
-    <div className="grid grid-cols-12 items-start gap-2">
+    <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-12">
       <Input
-        className="col-span-4"
+        className="sm:col-span-4"
         placeholder="姓名"
         value={value.name}
         onChange={(e) => onChange({ name: e.target.value })}
@@ -730,7 +730,7 @@ function CollaboratorRow({
         value={value.role}
         onValueChange={(v) => onChange({ role: v as Collaborator['role'] })}
       >
-        <SelectTrigger className="col-span-2 w-full">
+        <SelectTrigger className="w-full min-w-0 sm:col-span-2">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -742,7 +742,7 @@ function CollaboratorRow({
         </SelectContent>
       </Select>
       <Input
-        className="col-span-5"
+        className="sm:col-span-5"
         placeholder="等什么？（留空 = 不在等）"
         value={value.waitingFor}
         onChange={(e) => onChange({ waitingFor: e.target.value })}
@@ -751,7 +751,7 @@ function CollaboratorRow({
         type="button"
         variant="ghost"
         size="sm"
-        className="col-span-1"
+        className="sm:col-span-1"
         aria-label="移除合作者"
         onClick={onRemove}
       >
@@ -1025,6 +1025,9 @@ function TodoList({
       setOverId(null)
       dragIdRef.current = null
       if (!draggedId || draggedId === targetId) return
+      const dragged = orderedRef.current.find((todo) => todo.id === draggedId)
+      const target = orderedRef.current.find((todo) => todo.id === targetId)
+      if (!dragged || !target || dragged.done !== target.done) return
       const ids = orderedRef.current.map((t) => t.id)
       const from = ids.indexOf(draggedId)
       const to = ids.indexOf(targetId)
@@ -1128,79 +1131,83 @@ const TodoRow = memo(function TodoRow({
       onDrop={(e) => onDrop(e, id)}
       onDragEnd={onDragEnd}
       className={cn(
-        'flex items-center gap-1.5 rounded-md border border-transparent p-1 transition',
+        'flex flex-col gap-1.5 rounded-md border border-transparent p-1 transition sm:flex-row sm:items-center',
         isDropTarget && 'border-brand-500/60 bg-brand-500/[0.06]',
         value.done && 'opacity-55',
       )}
     >
-      <button
-        type="button"
-        draggable
-        onDragStart={(e) => onDragStart(e, id)}
-        className="shrink-0 cursor-grab text-muted-foreground hover:text-foreground/90 active:cursor-grabbing"
-        aria-label="拖拽以重排"
-        title="拖拽以重排"
-      >
-        <GripVertical size={16} />
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange(id, { done: !value.done })}
-        className={cn(
-          'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
-          value.done
-            ? 'border-success bg-success text-[#0b0c10]'
-            : 'border-[#3a3e4d] text-faint hover:border-white/25',
-        )}
-        aria-label={value.done ? '标记为未完成' : '标记为已完成'}
-      >
-        {value.done ? <Check size={14} /> : <Square size={14} />}
-      </button>
-      <label
-        className="relative inline-flex shrink-0 cursor-pointer items-center rounded border border-white/10 bg-panel px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary"
-        title="所属研究阶段"
-      >
-        {stage.shortLabel || stage.name}
-        <select
-          className="absolute inset-0 cursor-pointer opacity-0"
-          value={value.stage}
-          onChange={(e) => onChange(id, { stage: e.target.value as Stage })}
-          aria-label="研究阶段"
+      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <button
+          type="button"
+          draggable
+          onDragStart={(e) => onDragStart(e, id)}
+          className="inline-flex size-6 shrink-0 cursor-grab items-center justify-center text-muted-foreground hover:text-foreground/90 active:cursor-grabbing"
+          aria-label="拖拽以重排"
+          title="拖拽以重排"
         >
-          {stages.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <Input
-        className={cn('min-w-0 flex-1', value.done && 'line-through')}
-        placeholder="待办内容"
-        value={value.title}
-        onChange={(e) => onChange(id, { title: e.target.value })}
-      />
-      <PriorityButton
-        priority={todoPriority(value)}
-        onChange={(p: Priority) => onChange(id, { priority: p })}
-      />
-      <Input
-        className="w-[8.5rem] shrink-0"
-        type="date"
-        value={value.endDate}
-        onChange={(e) => onChange(id, { endDate: e.target.value })}
-        aria-label="结束日期"
-        title="结束日期"
-      />
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        aria-label="移除待办"
-        onClick={() => onRemove(id)}
-      >
-        <Trash2 size={14} />
-      </Button>
+          <GripVertical size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(id, { done: !value.done })}
+          className={cn(
+            'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
+            value.done
+              ? 'border-success bg-success text-[#0b0c10]'
+              : 'border-input text-muted-foreground hover:border-ring',
+          )}
+          aria-label={value.done ? '标记为未完成' : '标记为已完成'}
+        >
+          {value.done ? <Check size={14} /> : <Square size={14} />}
+        </button>
+        <Input
+          className={cn('min-w-0 flex-1', value.done && 'line-through')}
+          placeholder="待办内容"
+          value={value.title}
+          onChange={(e) => onChange(id, { title: e.target.value })}
+        />
+      </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+        <label
+          className="relative inline-flex h-8 max-w-full min-w-0 cursor-pointer items-center rounded border border-border bg-panel px-2 text-xs font-medium text-muted-foreground hover:bg-secondary"
+          title="所属研究阶段"
+        >
+          <span className="max-w-28 truncate">{stage.shortLabel || stage.name}</span>
+          <select
+            className="absolute inset-0 cursor-pointer opacity-0"
+            value={value.stage}
+            onChange={(e) => onChange(id, { stage: e.target.value as Stage })}
+            aria-label="研究阶段"
+          >
+            {stages.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <PriorityButton
+          priority={todoPriority(value)}
+          onChange={(p: Priority) => onChange(id, { priority: p })}
+        />
+        <Input
+          className="w-full min-w-0 sm:w-[8.5rem]"
+          type="date"
+          value={value.endDate}
+          onChange={(e) => onChange(id, { endDate: e.target.value })}
+          aria-label="结束日期"
+          title="结束日期"
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label="移除待办"
+          onClick={() => onRemove(id)}
+        >
+          <Trash2 size={14} />
+        </Button>
+      </div>
     </div>
   )
 })

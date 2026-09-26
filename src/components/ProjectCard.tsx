@@ -3,7 +3,7 @@ import { CalendarClock, Users, Check, GripVertical, Plus, ChevronDown } from 'lu
 import type { Project } from '@/lib/types'
 import { findStage } from '@/lib/types'
 import { nextDeadline, stageProgress, upcomingTodos, useStore } from '@/lib/store'
-import { countdownLabel, daysUntil, fmtShort, today } from '@/lib/date'
+import { countdownLabel, daysUntil, fmtMD, today } from '@/lib/date'
 import { Card } from './ui/Card'
 import { Input } from './ui/Input'
 import { StageBadge } from './StageBadge'
@@ -142,7 +142,7 @@ export const ProjectCard = memo(function ProjectCard({
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <StageBadge stage={currentStage} />
         {project.venue ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
             {project.venue.name}
           </span>
         ) : null}
@@ -152,7 +152,7 @@ export const ProjectCard = memo(function ProjectCard({
         <div className="mt-2.5 flex items-center gap-1.5 text-[11px]">
           <CalendarClock size={13} className={toneCls} />
           <span className={cn('mono', toneCls)}>{cd.text}</span>
-          <span className="min-w-0 flex-1 truncate text-faint">· {nd.label} · {fmtShort(nd.date)}</span>
+          <span className="min-w-0 flex-1 truncate text-muted-foreground">· {nd.label} · {fmtMD(nd.date)}</span>
         </div>
       ) : null}
 
@@ -167,7 +167,7 @@ export const ProjectCard = memo(function ProjectCard({
           </span>
         </div>
         {/* Translucent track so it reads correctly on the project-tinted card. */}
-        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]">
+        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full transition-all"
             style={{ width: `${sp.percent}%`, background: currentStage.color }}
@@ -202,7 +202,7 @@ export const ProjectCard = memo(function ProjectCard({
                         }
                       : undefined
                   }
-                  title={draggableTodos ? '拖到「本周重点」即可本周处理' : undefined}
+                  title={draggableTodos ? '拖到上方的优先级列，加入近期重点，并改成该列的优先级' : undefined}
                   className={cn(
                     'group/todo flex items-center gap-2 text-xs',
                     draggableTodos && 'cursor-grab active:cursor-grabbing',
@@ -213,17 +213,17 @@ export const ProjectCard = memo(function ProjectCard({
                     <GripVertical
                       size={11}
                       aria-hidden
-                      className="shrink-0 text-faint opacity-0 transition group-hover/todo:opacity-100"
+                      className="shrink-0 text-muted-foreground"
                     />
                   ) : null}
                   <button
                     onClick={() => toggleTodoDone(project.id, todo.id)}
-                    className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3.5px] border border-[#3a3e4d] text-transparent hover:border-brand-400 hover:text-brand-400"
+                    className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3.5px] border border-input text-transparent hover:border-ring hover:text-ring"
                     aria-label={`标记「${todo.title}」为已完成`}
                   >
                     <Check size={10} />
                   </button>
-                  <StageChip stage={stage} />
+                  <StageChip stage={stage} className="max-w-16 truncate" />
                   <span className="min-w-0 flex-1 truncate text-secondary-foreground">
                     {todo.title || <span className="italic text-faint">未命名</span>}
                   </span>
@@ -360,7 +360,7 @@ function TodoDateButton({
         type="button"
         onClick={openPicker}
         title="点击修改截止日期"
-        aria-label={`修改截止日期，当前 ${fmtShort(value) || '未设置'}`}
+        aria-label={`修改截止日期，当前 ${fmtMD(value) || '未设置'}`}
         className={cn(
           'mono cursor-pointer rounded text-[11px] underline-offset-2 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
           overdue
@@ -368,7 +368,7 @@ function TodoDateButton({
             : 'text-muted-foreground hover:text-brand-300',
         )}
       >
-        {fmtShort(value) || '设置日期'}
+        {fmtMD(value) || '设置日期'}
       </button>
       <input
         ref={ref}

@@ -76,28 +76,28 @@ export interface PriorityMeta {
 
 export const PRIORITY_META: Record<Priority, PriorityMeta> = {
   high: {
-    label: '本周主攻',
-    short: '主攻',
+    label: '高优先级',
+    short: '高',
     rank: 0,
-    chip: 'border-red-500/35 bg-red-500/10 text-red-300',
-    text: 'text-red-300',
-    dot: 'bg-red-400',
+    chip: 'border-destructive/30 bg-destructive/10 text-destructive',
+    text: 'text-destructive',
+    dot: 'bg-[var(--priority-high)]',
   },
   normal: {
-    label: '一般',
-    short: '一般',
+    label: '普通优先级',
+    short: '普通',
     rank: 1,
-    chip: 'border-brand-500/40 bg-brand-500/10 text-brand-300',
-    text: 'text-brand-300',
-    dot: 'bg-brand-500',
+    chip: 'border-[var(--priority-normal)]/30 bg-[var(--priority-normal)]/10 text-[var(--priority-normal)]',
+    text: 'text-[var(--priority-normal)]',
+    dot: 'bg-[var(--priority-normal)]',
   },
   low: {
-    label: '次要',
-    short: '次要',
+    label: '低优先级',
+    short: '低',
     rank: 2,
-    chip: 'border-white/10 bg-white/[0.04] text-neutral-400',
-    text: 'text-neutral-400',
-    dot: 'bg-neutral-500',
+    chip: 'border-success/30 bg-success/10 text-success',
+    text: 'text-success',
+    dot: 'bg-[var(--priority-low)]',
   },
 }
 

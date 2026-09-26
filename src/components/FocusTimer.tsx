@@ -159,7 +159,7 @@ export function FocusTimer() {
           <DropdownMenuTrigger
             className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
             aria-label="开始专注倒计时"
-            title="开始专注倒计时（也可右键任务卡片）"
+            title="开始自由专注"
           >
             <Timer size={15} /> 专注
           </DropdownMenuTrigger>
@@ -181,7 +181,10 @@ export function FocusTimer() {
   const remaining = Math.min(durationMs, Math.max(0, end - now))
   const remainingPct = Math.min(100, Math.max(0, (remaining / durationMs) * 100))
   const accent = activeTimer.color || 'var(--color-brand-500)'
-  const label = activeTimer.todoTitle || activeTimer.projectTitle || '自由专注'
+  const label =
+    activeTimer.todoTitle?.trim() ||
+    activeTimer.projectTitle?.trim() ||
+    (activeTimer.projectId ? '未命名项目' : '自由专注')
 
   const onFinishEarly = () => {
     const s = completeTimer({ early: true })
@@ -210,7 +213,7 @@ export function FocusTimer() {
     // duration / project context lives in the capsule's title tooltip.
     <div
       className={cn(
-        'flex shrink-0 items-center gap-2.5 rounded-lg border border-brand-500/40 bg-card px-3 py-1.5 shadow-[0_0_18px_rgba(107,124,255,.12)]',
+        'flex shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 shadow-sm',
         remaining <= 60_000 && 'animate-pulse',
       )}
       role="timer"
@@ -230,7 +233,7 @@ export function FocusTimer() {
             r={RING_R}
             fill="none"
             strokeWidth={3}
-            className="stroke-white/10"
+            className="stroke-muted"
           />
           {/* The arc IS the time left: full at start, unwinding toward 12
               o'clock as it burns. Offset animates so ticks glide, not jump. */}
@@ -249,10 +252,10 @@ export function FocusTimer() {
         </svg>
       </div>
       <div className="min-w-0">
-        <div className="mono text-[15px] font-semibold leading-none text-brand-200">
+        <div className="mono text-[15px] font-semibold leading-none text-primary">
           {fmtCountdown(remaining)}
         </div>
-        <div className="mt-0.5 max-w-[150px] truncate text-[10.5px] leading-tight text-muted-foreground">
+        <div className="mt-0.5 hidden max-w-[9rem] truncate text-[10.5px] leading-tight text-muted-foreground sm:block">
           {label}
         </div>
       </div>

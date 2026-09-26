@@ -151,8 +151,9 @@ export function DeadlineCalendar({ onEdit }: Props) {
       if (!isSameMonth(d, anchor)) continue
       const evs = byDay.get(format(d, 'yyyy-MM-dd')) ?? []
       for (const e of evs) {
-        if (e.kind === 'todo') todo += 1
-        else ddl += 1
+        if (e.kind === 'todo') {
+          if (!e.done) todo += 1
+        } else ddl += 1
       }
     }
     return { ddlCount: ddl, todoCount: todo }
@@ -173,7 +174,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
     // 11rem = measured chrome above the grid (app header 57px + page paddings +
     // title block) + the bottom page padding — the grid takes every remaining
     // viewport pixel so big screens get a big calendar, not blank space.
-    <section aria-label="截止月历" className="flex h-[calc(100dvh-11rem)] min-h-[30rem] flex-col">
+    <section aria-label="截止月历" className="flex flex-col">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{subtitle}</p>
 
@@ -235,7 +236,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-panel">
+      <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-panel">
         {/* Weekday header — right-aligned over the date numbers, Apple style. */}
         <div className="grid shrink-0 grid-cols-7 border-b">
           {WEEKDAY_CN.map((w, i) => (
@@ -253,8 +254,8 @@ export function DeadlineCalendar({ onEdit }: Props) {
 
         {/* Week rows stretch evenly to fill the remaining height. */}
         <div
-          className="grid min-h-0 flex-1 grid-cols-7"
-          style={{ gridTemplateRows: `repeat(${weekCount}, minmax(0, 1fr))` }}
+          className="grid grid-cols-7"
+          style={{ gridTemplateRows: `repeat(${weekCount}, minmax(4.5rem, auto))` }}
         >
           {days.map((d, i) => {
             const key = format(d, 'yyyy-MM-dd')
@@ -431,7 +432,7 @@ function EventChip({
       title={`${e.title} · ${e.project.title || '未命名项目'} · 拖到别的日期可改期`}
       {...dragProps}
       className={cn(
-        'flex w-full cursor-grab items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11px] transition-colors hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing',
+        'flex w-full cursor-grab items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11px] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing',
         e.done && 'opacity-50',
       )}
     >

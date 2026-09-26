@@ -8,13 +8,12 @@ import {
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 
 /**
- * Sonner toaster (dark-only design). Colours come from the shadcn popover
+ * Sonner toaster. Colours come from semantic popover tokens
  * tokens so toasts match dialogs/menus.
  */
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
-      theme="dark"
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

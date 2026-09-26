@@ -117,7 +117,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
                 <span
                   key={h}
                   aria-hidden
-                  className="absolute inset-y-0 w-px bg-white/[0.06]"
+                  className="absolute inset-y-0 w-px bg-border"
                   style={{ left: `${((h - fromH) / span) * 100}%` }}
                 />
               ))}
@@ -167,7 +167,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
               // truncating it to two characters next to the fixed time columns.
               <li
                 key={r.session.id}
-                className="group flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-md px-1 py-1.5 text-sm hover:bg-white/[0.03]"
+                className="group flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-md px-1 py-1.5 text-sm hover:bg-muted/60"
               >
                 <span className="w-24 shrink-0 mono text-xs text-faint">
                   {fmtHM(r.session.startedAt)}–{fmtHM(r.session.endedAt)}
@@ -193,9 +193,8 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
                   aria-label="删除这条专注记录"
                   title="删除记录"
                   className={cn(
-                    'ml-auto inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-faint transition sm:ml-0',
-                    // Always reachable on touch, hover-revealed on pointer devices.
-                    'sm:opacity-0 sm:group-hover:opacity-100',
+                    'ml-auto inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition sm:ml-0',
+                    '[@media(hover:hover)]:sm:opacity-0 [@media(hover:hover)]:sm:group-hover:opacity-100',
                     'hover:text-destructive focus-visible:opacity-100',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
                   )}
@@ -208,7 +207,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
         </>
       ) : (
         <p className="mt-2 text-xs text-faint">
-          在「总览」的任务卡片上右键即可开始专注；这一天的记录会出现在这里。
+          在任务看板上点「专注」，这一天的记录会出现在这里。
         </p>
       )}
     </section>

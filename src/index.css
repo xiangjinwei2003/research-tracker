@@ -4,24 +4,26 @@
 /* 文档（plan/spec 里的类名词典）不得作为工具类候选来源 */
 @source not "../docs";
 
-/* 深色专属设计：令牌即最终色值（无主题切换层）。 */
+/* Graphite-first research workbench with a complete light theme. */
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* 电紫蓝主色 ramp（品牌色；500 为基准）。工具类名沿用 brand-* 不变。 */
-  --color-brand-50: #eef0ff;
-  --color-brand-100: #e0e4ff;
-  --color-brand-200: #c3cbff;
-  --color-brand-300: #9aa4ff;
-  --color-brand-400: #8190ff;
-  --color-brand-500: #6b7cff;
-  --color-brand-600: #5b5fff;
-  --color-brand-700: #4a4fe8;
-  --color-brand-800: #3d41b8;
-  --color-brand-900: #33378f;
-  --color-brand-950: #1e2154;
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #dfe6ff;
+  --color-brand-200: #c3d0ff;
+  --color-brand-300: #9eb2ff;
+  --color-brand-400: #6f8cff;
+  --color-brand-500: #355df4;
+  --color-brand-600: #2949d3;
+  --color-brand-700: #243cac;
+  --color-brand-800: #21358b;
+  --color-brand-900: #1f306e;
+  --color-brand-950: #151d43;
 }
 
 /* shadcn/ui 语义令牌 → Tailwind 工具类 */
@@ -53,32 +55,71 @@
 
 :root {
   color-scheme: dark;
+  --background: #151517;
+  --foreground: #f2f2f4;
+  --card: #222225;
+  --card-foreground: #f2f2f4;
+  --popover: #29292e;
+  --popover-foreground: #f2f2f4;
+  --panel: #1c1c1f;
+  --primary: #f2f2f4;
+  --primary-foreground: #18181b;
+  --secondary: #29292e;
+  --secondary-foreground: #e5e5e8;
+  --muted: #29292e;
+  --muted-foreground: #aaaab3;
+  --faint: #89898d;
+  --accent: #302d42;
+  --accent-foreground: #c8befd;
+  --destructive: #ef8396;
+  --destructive-foreground: #1a1013;
+  --warn: #efa768;
+  --success: #78c7b1;
+  --border: #323236;
+  --input: #3a3a40;
+  --ring: #a99af7;
+  --radius: 0.5rem;
+  --priority-high: #ef8396;
+  --priority-normal: #a99af7;
+  --priority-low: #78c7b1;
+  --chart-grid: #38383d;
+  --sidebar: #1c1c1f;
+  --column: #1b1b1e;
+  --today: #efa768;
+}
 
-  /* 明度递进代替阴影分层 */
-  --background: #0b0c10;   /* App 底 */
-  --foreground: #e6e8f0;
-  --card: #14161d;         /* 看板任务卡 */
-  --card-foreground: #e6e8f0;
-  --popover: #181a22;      /* 菜单/弹层（略高于 card） */
-  --popover-foreground: #e6e8f0;
-  --panel: #101218;        /* 项目池卡 / 输入底 / 侧条 */
-  --primary: #5b5fff;
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #fafafb;
+  --foreground: #202126;
+  --card: #ffffff;
+  --card-foreground: #202126;
+  --popover: #ffffff;
+  --popover-foreground: #202126;
+  --panel: #f5f5f7;
+  --primary: #355df4;
   --primary-foreground: #ffffff;
-  --secondary: #1a1d26;
-  --secondary-foreground: #dfe2ec;
-  --muted: #1a1d26;
-  --muted-foreground: #8b8fa3;
-  --faint: #5c6072;        /* 微标签 / 占位 */
-  --accent: #23263a;       /* hover/选中底（电紫蓝着色） */
-  --accent-foreground: #c3cbff;
-  --destructive: #f26d6d;
+  --secondary: #f1f1f4;
+  --secondary-foreground: #34343a;
+  --muted: #f1f1f4;
+  --muted-foreground: #707079;
+  --faint: #737379;
+  --accent: #f0effb;
+  --accent-foreground: #6353c7;
+  --destructive: #cf546b;
   --destructive-foreground: #ffffff;
-  --warn: #f0a03f;         /* 今天 / 临期 */
-  --success: #4cc38a;
-  --border: rgba(255, 255, 255, 0.07);
-  --input: rgba(255, 255, 255, 0.09);
-  --ring: #6b7cff;
-  --radius: 0.375rem;      /* 仅 sonner 等引用 var(--radius) 的部件使用；组件圆角走 Tailwind 默认 scale */
+  --warn: #b76a25;
+  --success: #3a8f79;
+  --border: #e7e7ec;
+  --input: #d7d7de;
+  --ring: #7565dc;
+  --priority-high: #df667c;
+  --priority-normal: #7867de;
+  --priority-low: #4e9c86;
+  --chart-grid: #ececf0;
+  --sidebar: #f5f5f7;
+  --column: #f4f4f6;
+  --today: #d98235;
 }
 
 @layer base {
@@ -90,14 +131,16 @@
   }
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
 
 body {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 13px;             /* 工作台基准字号 */
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
@@ -114,9 +157,8 @@ input[type="radio"] {
   accent-color: var(--primary);
 }
 
-/* 原生 date input 的日历图标在深色下反色 */
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.7);
+  opacity: 0.65;
 }
 
 /* 微标签（section kicker）：全大写 + 拉开字距 */
@@ -134,48 +176,28 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-variant-numeric: tabular-nums;
 }
 
-/* 主按钮微辉光 */
 .btn-glow {
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-brand-400) 40%, transparent), 0 4px 16px color-mix(in oklab, var(--primary) 30%, transparent);
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--primary) 18%, transparent);
 }
 
 /* 阶段徽标：色相来自 --stage（数据色，主题无关） */
 .stage-badge {
-  background: color-mix(in oklab, var(--stage) 24%, transparent);
-  border-color: color-mix(in oklab, var(--stage) 48%, transparent);
-  color: color-mix(in oklab, var(--stage) 74%, white);
+  background: color-mix(in oklab, var(--stage) 14%, var(--card));
+  border-color: color-mix(in oklab, var(--stage) 35%, var(--border));
+  color: color-mix(in oklab, var(--stage) 55%, var(--foreground));
 }
 
-/* 项目卡辉光（数据色，--proj 由内联提供） */
-/* color-mix 声明是 fallback（无 relative color 的引擎用）；@supports 块才是正式配方 —— 两者都保留，勿删其一。 */
 .proj-card {
-  background-color: var(--panel);
-  background-image: radial-gradient(
-    135% 115% at 100% 0%,
-    color-mix(in oklab, var(--proj) 42%, transparent),
-    transparent 60%
-  );
+  background-color: var(--card);
+  border-left: 3px solid var(--proj);
   border-color: var(--border);
+  border-left-color: var(--proj);
 }
 
-@supports (color: oklch(from red 0.5 0.1 h)) {
-  .proj-card {
-    background-image: radial-gradient(
-      135% 115% at 100% 0%,
-      oklch(from var(--proj) 0.62 0.15 h / 0.5) 0%,
-      oklch(from var(--proj) 0.55 0.12 h / 0) 60%
-    );
-    border-color: oklch(from var(--proj) 0.44 0.06 h);
-  }
-  .proj-card:hover {
-    border-color: oklch(from var(--proj) 0.56 0.1 h);
-  }
-}
-
-/* 滚动条（暗色，细） */
 * {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklab, var(--foreground) 13%, transparent) transparent;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent)
+    transparent;
 }
 
 /* prefers-reduced-motion：全部动效瞬时化 */

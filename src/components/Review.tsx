@@ -120,7 +120,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
     <Container className="py-6">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-foreground">时间回顾</h2>
+          <h2 className="text-lg font-bold tracking-tight text-foreground">专注回顾</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {stats.count > 0
               ? `${periodWord}专注 ${fmtMinutes(stats.minutes)} · ${stats.count} 次`
@@ -184,14 +184,14 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
       </div>
 
       {sessions.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 bg-panel px-6 py-16 text-center">
+        <div className="rounded-xl border border-dashed border-border bg-panel px-6 py-16 text-center">
           <CalendarClock size={28} className="mx-auto mb-3 text-faint" />
           <p className="text-sm text-muted-foreground">还没有专注记录</p>
-          <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-faint">
-            在「总览」的任务卡片上右键，即可开始 30 或 60 分钟倒计时；完成的专注会按天落在这里，点柱子就能回看那一天的时间去了哪里。
+          <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-muted-foreground">
+            在任务看板上点任务的「专注」。
           </p>
           <Button variant="secondary" size="sm" className="mt-5" onClick={onGoBoard}>
-            去总览开始专注
+            去任务看板
           </Button>
         </div>
       ) : (

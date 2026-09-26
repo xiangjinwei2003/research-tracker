@@ -34,12 +34,14 @@ export function resolveSession(
   projectById: Map<string, Project>,
 ): ResolvedSession {
   const live = session.projectId ? projectById.get(session.projectId) : undefined
-  const title = live?.title || session.projectTitle || ''
+  const title = (live ? live.title : session.projectTitle || '').trim()
+  const projectTitle = session.projectId ? title || '未命名项目' : '自由专注'
+  const task = (session.todoTitle || '').trim()
   return {
     session,
-    projectTitle: title || '自由专注',
+    projectTitle,
     color: live?.color || session.color,
-    label: session.todoTitle || title || '自由专注',
+    label: task || projectTitle,
     minutes: sessionMinutes(session),
   }
 }

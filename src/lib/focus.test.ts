@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { streakDays, sessionMinutes } from './focus.ts'
+import { resolveSession, streakDays, sessionMinutes } from './focus.ts'
 import type { FocusSession } from './types.ts'
 
 function sess(id: string, startedAt: number): FocusSession {
@@ -60,6 +60,27 @@ test('longest streak does not span a gap', () => {
   const now = new Date(2026, 2, 13, 18, 0, 0)
   const { longest } = streakDays([sess('1', a), sess('2', b), sess('3', c)], now)
   assert.equal(longest, 2)
+})
+
+test('a bound session with an empty title is not free focus', () => {
+  const startedAt = new Date(2026, 8, 24, 9, 0, 0).getTime()
+  const session: FocusSession = {
+    id: 's',
+    plannedMin: 30,
+    startedAt,
+    endedAt: startedAt + 30 * 60_000,
+    completed: true,
+    projectId: 'p1',
+    projectTitle: '',
+  }
+  const projects = new Map([
+    ['p1', { id: 'p1', title: '   ' } as never],
+  ])
+  const resolved = resolveSession(session, projects)
+  assert.equal(resolved.projectTitle, '未命名项目')
+  assert.equal(resolved.label, '未命名项目')
+  const unbound = resolveSession({ ...session, projectId: undefined, projectTitle: undefined }, projects)
+  assert.equal(unbound.projectTitle, '自由专注')
 })
 
 test('sessionMinutes floors at 1', () => {

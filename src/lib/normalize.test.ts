@@ -5,6 +5,8 @@ import {
   respreadAutoColors,
   normalizeProject,
   normalizeState,
+  normalizeSession,
+  normalizeActiveTimer,
   importJSON,
   exportJSON,
   SCHEMA_VERSION,
@@ -102,6 +104,21 @@ test('importJSON requires projects and does not respread palette colors', () => 
   assert.equal(state.projects[1].color, LEGACY_PROJECT_COLOR_PRESETS[1])
   assert.notEqual(state.projects[1].color, PROJECT_COLOR_PRESETS[1])
   assert.equal(state.version, 5)
+})
+
+test('normalizeSession drops an instant Date cannot represent', () => {
+  const tooBig = 8_640_000_000_000_001
+  assert.equal(
+    normalizeSession({ startedAt: tooBig, endedAt: tooBig + 60_000, plannedMin: 1 }),
+    null,
+  )
+  assert.equal(normalizeActiveTimer({ startedAt: tooBig, plannedMin: 30 }), null)
+  const kept = normalizeSession({
+    startedAt: 1_700_000_000_000,
+    endedAt: 1_700_000_060_000,
+    plannedMin: 1,
+  })
+  assert.equal(kept?.startedAt, 1_700_000_000_000)
 })
 
 test('exportJSON round trip keeps known fields and drops unknown ones', () => {

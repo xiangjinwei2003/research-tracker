@@ -146,11 +146,23 @@ export function respreadAutoColors(projects: Project[]): Project[] {
   )
 }
 
+/** Largest instant `Date` can represent. One millisecond past this makes `format` throw. */
+const MAX_DATE_MS = 8_640_000_000_000_000
+
+function clockMs(value: unknown): number {
+  return typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    value <= MAX_DATE_MS
+    ? value
+    : NaN
+}
+
 export function normalizeSession(raw: unknown): FocusSession | null {
   if (!raw || typeof raw !== 'object') return null
   const s = raw as Record<string, unknown>
-  const startedAt = typeof s.startedAt === 'number' && Number.isFinite(s.startedAt) ? s.startedAt : NaN
-  const endedAt = typeof s.endedAt === 'number' && Number.isFinite(s.endedAt) ? s.endedAt : NaN
+  const startedAt = clockMs(s.startedAt)
+  const endedAt = clockMs(s.endedAt)
   const plannedMin =
     typeof s.plannedMin === 'number' && Number.isFinite(s.plannedMin) ? s.plannedMin : NaN
   if (!(startedAt > 0) || !(endedAt > startedAt) || !(plannedMin > 0)) return null
@@ -173,7 +185,7 @@ export function normalizeSession(raw: unknown): FocusSession | null {
 export function normalizeActiveTimer(raw: unknown): ActiveTimer | null {
   if (!raw || typeof raw !== 'object') return null
   const t = raw as Record<string, unknown>
-  const startedAt = typeof t.startedAt === 'number' && Number.isFinite(t.startedAt) ? t.startedAt : NaN
+  const startedAt = clockMs(t.startedAt)
   const plannedMin =
     typeof t.plannedMin === 'number' && Number.isFinite(t.plannedMin) ? t.plannedMin : NaN
   if (!(startedAt > 0) || !(plannedMin > 0)) return null

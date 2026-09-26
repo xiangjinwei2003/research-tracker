@@ -1,440 +1,499 @@
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
-  useMemo,
-  useRef,
-  useState,
-  type DragEvent,
-  type MouseEvent as ReactMouseEvent,
-} from 'react'
-import { Check, Pin, Timer } from 'lucide-react'
-import { addDays, format } from 'date-fns'
-import { useStore, weekItems, type WeekItem } from '@/lib/store'
+  AlertCircle,
+  CalendarDays,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
+import { useStore } from "@/lib/store";
+import { dateFromToday, parse, today, weekStart } from "@/lib/date";
+import { addDays } from "date-fns";
+import { sessionMinutes } from "@/lib/focus";
+import { buildBoard, parseTodoDragPayload, type BoardRange } from "@/lib/board";
+import { buildBoardInsights, taskFocusKey } from "@/lib/boardInsights";
 import {
-  findStage,
-  todoPriority,
   PRIORITY_META,
   PRIORITY_ORDER,
+  todoPriority,
   type Priority,
   type Project,
-} from '@/lib/types'
-import { dateFromToday, daysUntil, weekdayLabel, today, weekStart } from '@/lib/date'
-import { toast } from '@/lib/toast'
-import { cn } from '@/lib/cn'
-import { primeChime, reminderEnabled, requestNotifyPermission } from '@/lib/reminder'
-import { StageChip } from './StageChip'
-import { Container } from './ui/Container'
-import { Dashboard } from './Dashboard'
+} from "@/lib/types";
+import { toast } from "@/lib/toast";
+import { cn } from "@/lib/cn";
+import { BoardTaskCard } from "./BoardTaskCard";
+import { BoardTaskDialog } from "./BoardTaskDialog";
+import { BoardInsights } from "./BoardInsights";
+import { Dashboard } from "./Dashboard";
+import { Button } from "./ui/Button";
+import { Container } from "./ui/Container";
+import { Input } from "./ui/Input";
 import {
-  ContextMenu,
-  ContextMenuTrigger,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuLabel,
-} from './ui/ContextMenu'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 interface Props {
-  onNew: () => void
-  onEdit: (p: Project) => void
+  onNew: () => void;
+  onEdit: (project: Project) => void;
+  onGoReview: () => void;
 }
 
-/** Number of days ahead the board covers (today + this many days). */
-const WINDOW_DAYS = 7
+export function Board({ onNew, onEdit, onGoReview }: Props) {
+  const projects = useStore((s) => s.projects);
+  const sessions = useStore((s) => s.sessions);
+  const updateTodo = useStore((s) => s.updateTodo);
+  const [query, setQuery] = useState("");
+  const [projectId, setProjectId] = useState("all");
+  const [range, setRange] = useState<BoardRange>("recent");
+  const [overdueOnly, setOverdueOnly] = useState(false);
+  const [dueDate, setDueDate] = useState<string | null>(null);
+  const [undatedOnly, setUndatedOnly] = useState(false);
+  const [dialogPriority, setDialogPriority] = useState<Priority>("normal");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [insightsNow, setInsightsNow] = useState(() => Date.now());
+  const [overCol, setOverCol] = useState<Priority | null>(null);
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
+  const dragRef = useRef<{
+    projectId: string;
+    todoId: string;
+    from: Priority;
+  } | null>(null);
+  const activeProjects = useMemo(
+    () => projects.filter((p) => !p.archived),
+    [projects],
+  );
+  const effectiveProjectId =
+    projectId === "all" || activeProjects.some((p) => p.id === projectId)
+      ? projectId
+      : "all";
+  const now = today();
+  const end = dateFromToday(7);
+  const result = useMemo(
+    () =>
+      buildBoard(projects, {
+        today: now,
+        end,
+        query,
+        projectId: effectiveProjectId,
+        range,
+        overdueOnly,
+        dueDate,
+        undatedOnly,
+      }),
+    [
+      projects,
+      now,
+      end,
+      query,
+      effectiveProjectId,
+      range,
+      overdueOnly,
+      dueDate,
+      undatedOnly,
+    ],
+  );
+  const insights = useMemo(
+    () => buildBoardInsights(projects, sessions, now, insightsNow, 7),
+    [projects, sessions, now, insightsNow],
+  );
+  const weekMinutes = useMemo(() => {
+    const start = weekStart(parse(now) ?? new Date());
+    const startMs = start.getTime();
+    const endMs = addDays(start, 7).getTime();
+    return sessions.reduce((sum, session) => {
+      if (session.startedAt < startMs || session.startedAt >= endMs) return sum;
+      return sum + sessionMinutes(session);
+    }, 0);
+  }, [sessions, now]);
+  const filtered =
+    !!query.trim() ||
+    effectiveProjectId !== "all" ||
+    range !== "recent" ||
+    overdueOnly ||
+    !!dueDate ||
+    undatedOnly;
+  const columns = PRIORITY_ORDER.map((priority) => ({
+    priority,
+    items: result.items.filter((x) => todoPriority(x.todo) === priority),
+  }));
 
-/**
- * Home view, split into two clearly separated zones:
- *   1. 本周重点 — a drag-to-prioritise board of everything due in the next 7 days
- *      (plus overdue carry-over) and anything manually pinned from the overview.
- *   2. 项目总览 — the full project grid (collapsible) whose todos can be dragged
- *      up into (1). Priority is set by dragging a card between columns.
- */
-export function Board({ onNew, onEdit }: Props) {
-  const projects = useStore((s) => s.projects)
-  const updateTodo = useStore((s) => s.updateTodo)
-  const toggleTodoDone = useStore((s) => s.toggleTodoDone)
-  const startTimer = useStore((s) => s.startTimer)
+  useEffect(() => {
+    const timer = window.setInterval(() => setInsightsNow(Date.now()), 60_000);
+    const unsubscribe = useStore.subscribe((state, previous) => {
+      if (state.sessions !== previous.sessions) setInsightsNow(Date.now());
+    });
+    return () => {
+      window.clearInterval(timer);
+      unsubscribe();
+    };
+  }, []);
 
-  const t = today()
-  const end = dateFromToday(WINDOW_DAYS)
-  // Hero kicker label — ISO week + the Mon–Sun range, e.g. `WEEK 31 · 07.27 – 08.02`.
-  const ws = weekStart(new Date())
-  const kickerLabel = `WEEK ${format(ws, 'II')} · ${format(ws, 'MM.dd')} – ${format(addDays(ws, 6), 'MM.dd')}`
-  const items = useMemo(() => weekItems(projects, end), [projects, end])
-
-  const columns = useMemo(() => {
-    const byPri: Record<Priority, WeekItem[]> = { high: [], normal: [], low: [] }
-    for (const it of items) byPri[todoPriority(it.todo)].push(it)
-    return PRIORITY_ORDER.map((pri) => ({ pri, rows: byPri[pri] }))
-  }, [items])
-
-  // How this week's items split across projects — drives the proportion bar.
-  const byProject = useMemo(() => {
-    const map = new Map<string, { project: Project; count: number }>()
-    for (const it of items) {
-      const e = map.get(it.project.id)
-      if (e) e.count += 1
-      else map.set(it.project.id, { project: it.project, count: 1 })
+  const clearFilters = () => {
+    setQuery("");
+    setProjectId("all");
+    setRange("recent");
+    setOverdueOnly(false);
+    setDueDate(null);
+    setUndatedOnly(false);
+  };
+  const showAll = () => {
+    setQuery("");
+    setProjectId("all");
+    setRange("all");
+    setOverdueOnly(false);
+    setDueDate(null);
+    setUndatedOnly(false);
+  };
+  const openTaskDialog = (priority: Priority = "normal") => {
+    setDialogPriority(priority);
+    setDialogOpen(true);
+  };
+  const handleDrop = (priority: Priority, e: DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    setOverCol(null);
+    setDraggingKey(null);
+    const own = dragRef.current;
+    dragRef.current = null;
+    if (own) {
+      if (own.from !== priority)
+        updateTodo(own.projectId, own.todoId, { priority });
+      return;
     }
-    return [...map.values()].sort((a, b) => b.count - a.count)
-  }, [items])
-
-  const hasActiveProjects = useMemo(() => projects.some((p) => !p.archived), [projects])
-
-  const dragRef = useRef<{ projectId: string; todoId: string; from: Priority } | null>(null)
-  const [overCol, setOverCol] = useState<Priority | null>(null)
-  const [draggingId, setDraggingId] = useState<string | null>(null)
-
-  // What the last right-click landed on: a task card → the countdown binds to
-  // that todo; anywhere else in the section → 自由专注.
-  const [ctxTarget, setCtxTarget] = useState<{
-    projectId: string
-    todoId: string
-    title: string
-  } | null>(null)
-
-  const onSectionContextMenu = (e: ReactMouseEvent) => {
-    const hit = (e.target as HTMLElement).closest?.('[data-todo-id]') as HTMLElement | null
-    setCtxTarget(
-      hit && hit.dataset.projectId && hit.dataset.todoId
-        ? {
-            projectId: hit.dataset.projectId,
-            todoId: hit.dataset.todoId,
-            title: hit.dataset.todoTitle ?? '',
-          }
-        : null,
-    )
-  }
-
-  const startFocus = (plannedMin: number) => {
-    // Unlock audio (and ask for notifications) inside this click — the autoplay
-    // policy would block a chime scheduled an hour from now.
-    if (reminderEnabled()) {
-      primeChime()
-      void requestNotifyPermission()
-    }
-    startTimer({
-      plannedMin,
-      projectId: ctxTarget?.projectId,
-      todoId: ctxTarget?.todoId,
-    })
-  }
-
-  const ctxLabel = ctxTarget
-    ? `专注 · ${(ctxTarget.title || '未命名待办').length > 14 ? `${(ctxTarget.title || '未命名待办').slice(0, 14)}…` : ctxTarget.title || '未命名待办'}`
-    : '自由专注'
-
-  const handleDrop = (pri: Priority, e: DragEvent) => {
-    const d = dragRef.current
-    setOverCol(null)
-    setDraggingId(null)
-    dragRef.current = null
-    // In-board reprioritise: just move the card to the dropped column.
-    if (d) {
-      if (d.from !== pri) updateTodo(d.projectId, d.todoId, { priority: pri })
-      return
-    }
-    // Pulled in from 项目总览: pin it into this week at the dropped priority.
-    const raw =
-      e.dataTransfer.getData('application/x-rt-todo') || e.dataTransfer.getData('text/plain')
-    if (!raw) return
-    try {
-      const { projectId, todoId } = JSON.parse(raw) as {
-        projectId?: string
-        todoId?: string
-      }
-      if (!projectId || !todoId) return
-      updateTodo(projectId, todoId, { inWeek: true, priority: pri })
-      toast({ message: `已加入本周重点 · ${PRIORITY_META[pri].label}` })
-    } catch {
-      /* ignore malformed payloads */
-    }
-  }
+    const parsed = parseTodoDragPayload(
+      e.dataTransfer.getData("application/x-rt-todo") ||
+        e.dataTransfer.getData("text/plain"),
+    );
+    if (!parsed) return;
+    const project = projects.find(
+      (p) => p.id === parsed.projectId && !p.archived,
+    );
+    const todo = project?.todos.find((t) => t.id === parsed.todoId && !t.done);
+    if (!project || !todo) return;
+    updateTodo(project.id, todo.id, { inWeek: true, priority });
+    toast({ message: `已加入近期重点 · ${PRIORITY_META[priority].label}` });
+  };
 
   return (
-    <>
-      {hasActiveProjects ? (
-        <Container className="pt-6 pb-14">
-          <ContextMenu>
-            <ContextMenuTrigger asChild>
-          <section aria-label="本周重点" onContextMenu={onSectionContextMenu}>
-            <div className="flex flex-wrap items-end gap-x-3 gap-y-3">
-              <div className="min-w-0 flex-1">
-                <div className="kicker">{kickerLabel}</div>
-                <h2 className="mt-1 text-lg font-bold tracking-tight text-foreground">
-                  本周重点
-                </h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {items.length > 0
-                    ? `${WINDOW_DAYS} 天内到期 · 共 ${items.length} 项 · 右键任务开始专注`
-                    : `${WINDOW_DAYS} 天内到期会自动出现，也可从下方项目总览拖入`}
-                </p>
-              </div>
-            </div>
+    <main>
+      <Container className="py-7">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-[26px] font-semibold tracking-[-.025em]">
+            任务看板
+          </h1>
+          <div className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-xs text-muted-foreground">
+            <CalendarDays size={15} />
+            {Number(now.slice(5, 7))}月{Number(now.slice(8, 10))}日
+          </div>
+        </div>
+        <BoardInsights
+          data={insights}
+          weekMinutes={weekMinutes}
+          onShowOpen={showAll}
+          onShowOverdue={() => {
+            showAll();
+            setOverdueOnly(true);
+          }}
+          onShowToday={() => {
+            showAll();
+            setDueDate(now);
+          }}
+          onReview={onGoReview}
+        />
 
-            <div className="mt-4 grid grid-cols-1 gap-3.5 lg:grid-cols-3">
-              {columns.map(({ pri, rows }) => {
-                const meta = PRIORITY_META[pri]
-                const isOver = overCol === pri
-                return (
-                  <section
-                    key={pri}
-                    aria-label={`${meta.label}（${rows.length} 项）`}
-                    onDragOver={(e) => {
-                      e.preventDefault()
-                      e.dataTransfer.dropEffect = 'move'
-                      if (overCol !== pri) setOverCol(pri)
-                    }}
-                    onDragLeave={(e) => {
-                      // Ignore leaves that are just moving onto a child card.
-                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                        setOverCol((c) => (c === pri ? null : c))
-                      }
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      handleDrop(pri, e)
-                    }}
+        {activeProjects.length ? (
+          <>
+            <div
+              id="task-board"
+              className="mt-5 scroll-mt-24 flex flex-wrap items-center gap-2 border-b pb-3"
+            >
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+                {result.stats.total}
+              </span>
+              <div className="inline-flex h-8 rounded-md bg-muted p-0.5">
+                {(["recent", "all"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={range === value}
+                    onClick={() => setRange(value)}
                     className={cn(
-                      'rounded-lg border p-2 transition-colors',
-                      isOver
-                        ? 'border-dashed border-brand-500/70 bg-brand-500/[0.06]'
-                        : 'border-white/5 bg-white/[0.015]',
+                      "rounded px-2.5 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      range === value
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
                     )}
                   >
-                    <div className="mb-2 flex items-center gap-2 px-1 pt-1">
-                      <span className={cn('inline-block h-2.5 w-2.5 rounded-full', meta.dot)} />
-                      <h3 className="text-[13px] font-semibold text-foreground/90">{meta.label}</h3>
-                      <span className="mono text-faint">{rows.length}</span>
-                      {isOver ? (
-                        <span className="ml-auto text-[10.5px] text-brand-300">
-                          松开设为 {meta.short}
-                        </span>
-                      ) : null}
+                    {value === "recent" ? "近期重点" : "全部待办"}
+                  </button>
+                ))}
+              </div>
+              <div className="relative w-full min-w-0 sm:ml-auto sm:w-auto sm:min-w-[180px] sm:max-w-[260px] sm:flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="搜索任务或项目"
+                  aria-label="搜索任务或项目"
+                  className="pl-9"
+                />
+              </div>
+              <Select value={effectiveProjectId} onValueChange={setProjectId}>
+                <SelectTrigger
+                  className="w-full sm:w-[180px]"
+                  aria-label="筛选项目"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部项目</SelectItem>
+                  {activeProjects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.title || "未命名项目"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <button
+                type="button"
+                aria-pressed={overdueOnly}
+                onClick={() => setOverdueOnly((v) => !v)}
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  overdueOnly
+                    ? "border-destructive/35 bg-destructive/[.07] text-destructive"
+                    : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                <AlertCircle size={14} />
+                仅逾期
+              </button>
+              <button
+                type="button"
+                aria-pressed={undatedOnly}
+                onClick={() => {
+                  setUndatedOnly((value) => !value);
+                  if (!undatedOnly) setDueDate(null);
+                }}
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  undatedOnly
+                    ? "border-ring/40 bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                未排期
+              </button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => openTaskDialog()}
+              >
+                <Plus />
+                新建任务
+              </Button>
+              {filtered ? (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} />
+                  清除
+                </button>
+              ) : null}
+            </div>
+            {dueDate || undatedOnly ? (
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <span className="rounded-full border border-ring/30 bg-accent px-2.5 py-1 text-accent-foreground">
+                  {undatedOnly
+                    ? "未排期"
+                    : `${Number(dueDate?.slice(5, 7))}月${Number(dueDate?.slice(8, 10))}日到期`}
+                </span>
+                <button
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setDueDate(null);
+                    setUndatedOnly(false);
+                  }}
+                >
+                  清除日期条件
+                </button>
+              </div>
+            ) : null}
+
+            {result.items.length ? (
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 min-[80rem]:grid-cols-3">
+                {columns.map(({ priority, items }) => (
+                  <section
+                    key={priority}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      setOverCol(priority);
+                    }}
+                    onDragLeave={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node))
+                        setOverCol(null);
+                    }}
+                    onDrop={(e) => handleDrop(priority, e)}
+                    className={cn(
+                      "min-h-[340px] rounded-xl border border-transparent bg-[var(--column)] p-3 transition",
+                      overCol === priority &&
+                        "border-dashed border-ring bg-accent/40",
+                    )}
+                    aria-label={`${PRIORITY_META[priority].label}（${items.length} 项）`}
+                  >
+                    <div className="mb-3 flex items-center gap-2 px-1">
+                      <span
+                        className={cn(
+                          "size-2.5 rounded-full",
+                          PRIORITY_META[priority].dot,
+                        )}
+                      />
+                      <h2 className="text-sm font-semibold">
+                        {PRIORITY_META[priority].label}
+                      </h2>
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+                        {items.length}
+                      </span>
+                      <button
+                        className="ml-auto flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-card hover:text-foreground"
+                        onClick={() => openTaskDialog(priority)}
+                        aria-label={`新建${PRIORITY_META[priority].label}任务`}
+                      >
+                        <Plus size={15} />
+                      </button>
                     </div>
-                    <div className="min-h-[88px] space-y-2.5">
-                      {rows.map((it) => (
-                        <BoardCard
-                          key={it.todo.id}
-                          item={it}
-                          todayIso={t}
-                          pinnedExtra={it.pinnedExtra}
-                          dragging={draggingId === it.todo.id}
-                          onDragStart={() => {
-                            dragRef.current = {
-                              projectId: it.project.id,
-                              todoId: it.todo.id,
-                              from: pri,
+                    <div className="space-y-3">
+                      {items.map((item) => {
+                        const key = taskFocusKey(item.project.id, item.todo.id);
+                        return (
+                          <BoardTaskCard
+                            key={key}
+                            project={item.project}
+                            todo={item.todo}
+                            today={now}
+                            pinnedExtra={item.pinnedExtra}
+                            focusMinutes={
+                              insights.taskFocusMinutes.get(key) ?? 0
                             }
-                            setDraggingId(it.todo.id)
-                          }}
-                          onDragEnd={() => {
-                            setDraggingId(null)
-                            setOverCol(null)
-                            dragRef.current = null
-                          }}
-                          onOpen={() => onEdit(it.project)}
-                          onToggleDone={() => {
-                            toggleTodoDone(it.project.id, it.todo.id)
-                            toast({
-                              message: `已完成「${it.todo.title || '未命名待办'}」`,
-                              action: {
-                                label: '撤销',
-                                onClick: () => toggleTodoDone(it.project.id, it.todo.id),
-                              },
-                            })
-                          }}
-                          onUnpin={() =>
-                            updateTodo(it.project.id, it.todo.id, { inWeek: false })
-                          }
-                        />
-                      ))}
-                      {rows.length === 0 ? (
-                        <p className="px-1 py-6 text-center text-xs text-faint">
-                          暂无 · 拖动卡片到此
+                            dragging={draggingKey === key}
+                            onOpen={() => onEdit(item.project)}
+                            onDragStart={(from, e) => {
+                              dragRef.current = {
+                                projectId: item.project.id,
+                                todoId: item.todo.id,
+                                from,
+                              };
+                              setDraggingKey(key);
+                              const payload = JSON.stringify({
+                                projectId: item.project.id,
+                                todoId: item.todo.id,
+                              });
+                              e.dataTransfer.setData(
+                                "application/x-rt-todo",
+                                payload,
+                              );
+                              e.dataTransfer.setData("text/plain", payload);
+                            }}
+                            onDragEnd={() => {
+                              dragRef.current = null;
+                              setDraggingKey(null);
+                              setOverCol(null);
+                            }}
+                          />
+                        );
+                      })}
+                      {items.length === 0 ? (
+                        <p className="px-2 py-8 text-center text-xs text-faint">
+                          暂无此优先级任务
                         </p>
                       ) : null}
                     </div>
                   </section>
-                )
-              })}
-            </div>
-
-            {items.length > 0 ? (
-              /* Per-project share of the week — a quiet footnote under the board
-                 (the header slot above belongs to the focus countdown). */
-              <div className="mt-6">
-                <h3 className="kicker">本周分布</h3>
-                <ul className="mt-2 max-w-xl space-y-2">
-                  {byProject.map(({ project, count }) => {
-                    const pct = Math.round((count / items.length) * 100)
-                    return (
-                      <li key={project.id} className="flex items-center gap-3">
-                        <span
-                          title={project.title || '未命名项目'}
-                          className="w-28 shrink-0 truncate text-xs text-muted-foreground"
-                        >
-                          {project.title || '未命名项目'}
-                        </span>
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                          {/* Each bar takes its project's colour — share of the week
-                              read straight off the palette. */}
-                          <div
-                            className="h-full rounded-full"
-                            style={{ width: `${pct}%`, background: project.color }}
-                          />
-                        </div>
-                        <span
-                          title={`${count} 项`}
-                          className="w-9 shrink-0 text-right mono text-faint"
-                        >
-                          {pct}%
-                        </span>
-                      </li>
-                    )
-                  })}
-                </ul>
+                ))}
               </div>
-            ) : null}
-          </section>
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <ContextMenuLabel>{ctxLabel}</ContextMenuLabel>
-              <ContextMenuItem onSelect={() => startFocus(30)}>
-                <Timer size={15} /> 倒计时 30 分钟
-              </ContextMenuItem>
-              <ContextMenuItem onSelect={() => startFocus(60)}>
-                <Timer size={15} /> 倒计时 1 小时
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
-        </Container>
+            ) : (
+              <Empty
+                filtered={filtered}
+                onClear={clearFilters}
+                onAll={() => setRange("all")}
+                onNew={() => openTaskDialog()}
+              />
+            )}
+          </>
+        ) : (
+          <p className="mt-6 text-sm text-muted-foreground">
+            还没有进行中的项目。用右上角的新建项目开始。
+          </p>
+        )}
+      </Container>
+      <div className="border-t bg-panel/35">
+        <Dashboard
+          showArchived={false}
+          onNew={onNew}
+          onEdit={onEdit}
+          draggableTodos
+          collapsible
+        />
+      </div>
+      {dialogOpen ? (
+        <BoardTaskDialog
+          open
+          onOpenChange={setDialogOpen}
+          preferredProjectId={
+            effectiveProjectId === "all" ? undefined : effectiveProjectId
+          }
+          initialPriority={dialogPriority}
+          onNewProject={onNew}
+          onCreated={(createdProjectId) => {
+            setQuery("");
+            setOverdueOnly(false);
+            setDueDate(null);
+            setUndatedOnly(false);
+            setRange("recent");
+            setProjectId(createdProjectId);
+          }}
+        />
       ) : null}
-
-      <Dashboard
-        showArchived={false}
-        onNew={onNew}
-        onEdit={onEdit}
-        collapsible
-        draggableTodos
-      />
-    </>
-  )
+    </main>
+  );
 }
 
-function BoardCard({
-  item,
-  todayIso,
-  pinnedExtra,
-  dragging,
-  onDragStart,
-  onDragEnd,
-  onOpen,
-  onToggleDone,
-  onUnpin,
+function Empty({
+  filtered,
+  onClear,
+  onAll,
+  onNew,
 }: {
-  item: WeekItem
-  todayIso: string
-  pinnedExtra: boolean
-  dragging: boolean
-  onDragStart: () => void
-  onDragEnd: () => void
-  onOpen: () => void
-  onToggleDone: () => void
-  onUnpin: () => void
+  filtered: boolean;
+  onClear: () => void;
+  onAll: () => void;
+  onNew: () => void;
 }) {
-  const { project, todo } = item
-  const stage = findStage(project.stages, todo.stage)
-  const hasDate = !!todo.endDate
-  const overdue = hasDate && todo.endDate < todayIso
-  const dleft = daysUntil(todo.endDate) ?? 0
-  const rel = !hasDate
-    ? '未排期'
-    : overdue
-      ? `逾期 ${-dleft} 天`
-      : dleft === 0
-        ? '今天'
-        : dleft === 1
-          ? '明天'
-          : weekdayLabel(todo.endDate, todayIso)
-
   return (
-    <article
-      draggable
-      data-todo-id={todo.id}
-      data-project-id={project.id}
-      data-todo-title={todo.title}
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = 'move'
-        e.dataTransfer.setData('text/plain', todo.id)
-        onDragStart()
-      }}
-      onDragEnd={onDragEnd}
-      onClick={onOpen}
-      title="拖动调整重要程度 · 右键开始专注"
-      className={cn(
-        // Flat card with a hairline drop; hover only lifts the border.
-        'group cursor-grab rounded-md border border-border bg-card p-2.5 pl-3 shadow-[0_1px_2px_rgba(0,0,0,.35)] transition hover:border-white/15 active:cursor-grabbing',
-        dragging && 'opacity-40',
-      )}
-    >
-      <div className="flex items-start gap-2">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleDone()
-          }}
-          title="标记完成"
-          aria-label={`标记「${todo.title || '未命名待办'}」为已完成`}
-          className="mt-0.5 inline-flex h-[13px] w-[13px] shrink-0 items-center justify-center rounded-[3.5px] border border-[#3a3e4d] text-transparent transition hover:border-brand-400 hover:text-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-        >
-          <Check size={10} />
-        </button>
-        <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpen()
-            }}
-            className="line-clamp-2 block w-full rounded text-left text-[13px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-          >
-            {todo.title || <span className="italic text-faint">未命名待办</span>}
-          </button>
-          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-faint">
-            <span
-              className="h-[7px] w-[7px] shrink-0 rounded-full"
-              style={{ background: project.color }}
-            />
-            <span className="min-w-0 truncate">{project.title}</span>
-            <StageChip stage={stage} />
-            {pinnedExtra ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onUnpin()
-                }}
-                title="已手动加入本周 · 点击移出"
-                aria-label="移出本周重点"
-                className="inline-flex shrink-0 items-center gap-0.5 rounded border border-brand-500/40 bg-brand-500/10 px-1 text-[10px] text-brand-300 transition-colors hover:bg-brand-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-              >
-                <Pin size={10} /> 本周
-              </button>
-            ) : null}
-            <span
-              className={cn(
-                'mono ml-auto',
-                overdue
-                  ? 'text-destructive'
-                  : hasDate && dleft === 0
-                    ? 'text-warn'
-                    : 'text-muted-foreground',
-              )}
-            >
-              {rel}
-            </span>
-          </div>
-        </div>
+    <div className="mt-5 rounded-xl border border-dashed bg-card px-6 py-10 text-center">
+      <CalendarDays className="mx-auto size-7 text-faint" />
+      <h2 className="mt-3 text-sm font-semibold">
+        {filtered ? "没有符合筛选的任务" : "近期没有待处理任务"}
+      </h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {filtered
+          ? "调整条件或清除筛选，查看其他任务。"
+          : "可以查看全部待办，或创建一个新任务。"}
+      </p>
+      <div className="mt-4 flex justify-center gap-2">
+        <Button onClick={filtered ? onClear : onAll}>
+          {filtered ? "清除筛选" : "查看全部待办"}
+        </Button>
+        <Button variant="primary" onClick={onNew}>
+          新建任务
+        </Button>
       </div>
-    </article>
-  )
+    </div>
+  );
 }

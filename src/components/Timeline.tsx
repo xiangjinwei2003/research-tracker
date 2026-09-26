@@ -9,22 +9,23 @@ interface Props {
 
 /** 截止日历页：整屏月视图，投稿截止 / Rebuttal / 待办到期都落到对应日期。 */
 export function Timeline({ onEdit }: Props) {
-  const hasProjects = useStore((s) => s.projects.some((p) => !p.archived))
+  const projects = useStore((s) => s.projects)
+  const hasActive = projects.some((p) => !p.archived)
+  const hasArchived = projects.some((p) => p.archived)
 
   return (
     <Container className="py-6">
       <div className="mb-5">
-        <h2 className="text-lg font-bold tracking-tight text-foreground">截止日历</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          整月一览：▲ 投稿截止、◆ Rebuttal、待办到期落在对应日期；过去的日子置灰。拖动事项到另一天即可改期，点月份可跳到任意日期。
-        </p>
+        <h2 className="text-lg font-bold tracking-tight text-foreground">日历</h2>
       </div>
 
-      {hasProjects ? (
+      {hasActive ? (
         <DeadlineCalendar onEdit={onEdit} />
       ) : (
-        <div className="rounded-xl border border-dashed border-white/10 bg-panel p-12 text-center text-sm text-muted-foreground">
-          还没有项目，去「总览」新建一个吧。
+        <div className="rounded-xl border border-dashed border-border bg-panel p-12 text-center text-sm text-muted-foreground">
+          {hasArchived
+            ? '进行中的项目都已归档。截止日期在归档页的项目里。'
+            : '还没有项目。用右上角的新建项目开始。'}
         </div>
       )}
     </Container>

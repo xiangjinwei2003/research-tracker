@@ -202,7 +202,7 @@ export function FocusStats({
                         d.future
                           ? 'opacity-0'
                           : d.minutes === 0
-                            ? 'bg-white/[0.05]'
+                            ? 'bg-muted'
                             : d.minutes < 30
                               ? 'bg-brand-950'
                               : d.minutes < 60
