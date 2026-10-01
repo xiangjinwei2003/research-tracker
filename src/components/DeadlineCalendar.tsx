@@ -171,10 +171,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
           .join(' · ')
 
   return (
-    // 11rem = measured chrome above the grid (app header 57px + page paddings +
-    // title block) + the bottom page padding — the grid takes every remaining
-    // viewport pixel so big screens get a big calendar, not blank space.
-    <section aria-label="截止月历" className="flex min-w-0 flex-col">
+    <section aria-label="截止月历" className="flex min-w-0 flex-1 flex-col">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{subtitle}</p>
 
@@ -236,7 +233,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
         </div>
       </div>
 
-      <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-panel">
+      <div className="flex flex-1 flex-col rounded-lg border border-border bg-panel">
         {/* Weekday header — right-aligned over the date numbers, Apple style. */}
         <div className="cal-grid shrink-0 border-b">
           {WEEKDAY_CN.map((w, i) => (
@@ -254,8 +251,8 @@ export function DeadlineCalendar({ onEdit }: Props) {
 
         {/* Week rows stretch evenly to fill the remaining height. */}
         <div
-          className="cal-grid"
-          style={{ gridTemplateRows: `repeat(${weekCount}, minmax(4.5rem, auto))` }}
+          className="cal-grid flex-1"
+          style={{ gridTemplateRows: `repeat(${weekCount}, minmax(4.5rem, 1fr))` }}
         >
           {days.map((d, i) => {
             const key = format(d, 'yyyy-MM-dd')

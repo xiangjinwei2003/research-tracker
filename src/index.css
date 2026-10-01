@@ -134,7 +134,7 @@
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
@@ -260,7 +260,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .app-main {
   container: pane / inline-size;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  min-width: 0;
+  min-height: 100dvh;
+}
+
+.app-main > :last-child {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   min-width: 0;
 }
 
@@ -286,11 +296,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
-/* 任务看板顶部：只有色条，高度跟着内容，不预留空带。 */
+/* 任务看板顶部：空闲是轨道本身，已用部分从底部盖上去。不设最大高度。 */
 .outlook-band {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  align-items: start;
+  align-items: stretch;
   gap: 8px;
   margin-top: 12px;
   min-width: 0;
@@ -303,19 +313,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .outlook-panel {
-  display: block;
+  display: flex;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
   margin: 0;
-  padding: 8px;
+  padding: 4px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--card);
   color: inherit;
   font: inherit;
   text-align: left;
-  align-self: start;
 }
 
 button.outlook-panel {
@@ -329,45 +338,49 @@ button.outlook-panel:hover {
 
 .outlook-plot {
   display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 48px;
+  flex: 1 1 auto;
+  align-items: stretch;
+  gap: 3px;
+  width: 100%;
+  min-height: 36px;
 }
 
 .outlook-col {
   position: relative;
   flex: 1 1 0;
+  align-self: stretch;
   min-width: 0;
-  height: 100%;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--foreground) 10%, var(--muted));
+}
+
+.outlook-col.is-future {
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+.outlook-col.is-today {
+  box-shadow: inset 0 0 0 1px var(--ring);
 }
 
 .outlook-stack {
   position: absolute;
-  right: 2px;
+  right: 0;
   bottom: 0;
-  left: 2px;
+  left: 0;
   display: flex;
   flex-direction: column-reverse;
   overflow: hidden;
-  border-radius: 3px;
-}
-
-.outlook-baseline {
-  position: absolute;
-  right: 2px;
-  bottom: 0;
-  left: 2px;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--muted);
+  border-radius: 2px;
 }
 
 .outlook-share {
   display: flex;
-  height: 28px;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 36px;
   overflow: hidden;
-  border-radius: 4px;
-  background: var(--muted);
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--foreground) 10%, var(--muted));
 }
 
 .outlook-share button {
@@ -383,23 +396,27 @@ button.outlook-panel:hover {
 
 .outlook-cal {
   display: grid;
+  flex: 1 1 auto;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 2px;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  width: 100%;
+  min-height: 36px;
 }
 
 .outlook-day {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 1px;
   box-sizing: border-box;
   min-width: 0;
-  min-height: 20px;
+  min-height: 0;
   margin: 0;
-  padding: 1px;
+  padding: 0;
+  overflow: hidden;
   border: 0;
   border-radius: 2px;
-  background: transparent;
+  background: color-mix(in oklab, var(--foreground) 10%, var(--muted));
   cursor: pointer;
 }
 
@@ -408,7 +425,7 @@ button.outlook-panel:hover {
 }
 
 .outlook-day.is-today {
-  background: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--ring);
 }
 
 .outlook-day.is-past {
@@ -417,8 +434,13 @@ button.outlook-panel:hover {
 
 .outlook-tick {
   display: block;
+  flex: none;
   width: 100%;
-  border-radius: 1px;
+  height: 45%;
+}
+
+.outlook-tick.is-deadline {
+  height: 100%;
 }
 
 .cal-grid {

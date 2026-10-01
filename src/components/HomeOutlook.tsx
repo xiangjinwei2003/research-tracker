@@ -106,12 +106,19 @@ export function HomeOutlook({
 
 function DayBar({ day, maxMinutes }: { day: OutlookDay; maxMinutes: number }) {
   return (
-    <div className="outlook-col" aria-hidden="true">
+    <div
+      className={cn(
+        "outlook-col",
+        day.isToday && "is-today",
+        day.isFuture && "is-future",
+      )}
+      aria-hidden="true"
+    >
       {day.minutes > 0 ? (
         <div
           className="outlook-stack"
           style={{
-            height: `${Math.max((day.minutes / maxMinutes) * 100, 8)}%`,
+            height: `${Math.max((day.minutes / maxMinutes) * 100, 18)}%`,
           }}
         >
           {day.parts.map((part) => (
@@ -126,9 +133,7 @@ function DayBar({ day, maxMinutes }: { day: OutlookDay; maxMinutes: number }) {
             />
           ))}
         </div>
-      ) : (
-        <div className="outlook-baseline" />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -136,11 +141,8 @@ function DayBar({ day, maxMinutes }: { day: OutlookDay; maxMinutes: number }) {
 function Tick({ mark }: { mark: OutlookMark }) {
   return (
     <span
-      className="outlook-tick"
-      style={{
-        height: mark.kind === "deadline" ? 6 : 3,
-        background: mark.color,
-      }}
+      className={cn("outlook-tick", mark.kind === "deadline" && "is-deadline")}
+      style={{ background: mark.color }}
     />
   );
 }

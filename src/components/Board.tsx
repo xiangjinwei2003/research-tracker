@@ -335,7 +335,7 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
                     )}
                     aria-label={`${PRIORITY_META[priority].label}（${items.length} 项）`}
                   >
-                    <div className="mb-3 flex items-center gap-2 px-1">
+                    <div className="mb-2 flex items-center gap-2 px-1">
                       <span
                         className={cn(
                           "size-2.5 rounded-full",
@@ -356,7 +356,7 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
                         <Plus size={15} />
                       </button>
                     </div>
-                    <div className="space-y-3">
+                    <div className="flex flex-col gap-2">
                       {items.map((item) => {
                         const key = taskFocusKey(item.project.id, item.todo.id);
                         return (
@@ -397,7 +397,7 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
                         );
                       })}
                       {items.length === 0 ? (
-                        <p className="px-2 py-8 text-center text-xs text-faint">
+                        <p className="px-2 py-3 text-center text-xs text-faint">
                           暂无此优先级任务
                         </p>
                       ) : null}

@@ -108,11 +108,11 @@ export function BoardTaskCard({
       onDragStart={(e) => onDragStart(todoPriority(todo), e)}
       onDragEnd={onDragEnd}
       className={cn(
-        "group overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,.10)] transition hover:border-ring/40 active:cursor-grabbing",
+        "group shrink-0 overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,.10)] transition hover:border-ring/40 active:cursor-grabbing",
         dragging && "opacity-45",
       )}
     >
-      <div className="p-4 pb-3">
+      <div className="px-3 pt-2.5 pb-2">
         <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
@@ -157,11 +157,11 @@ export function BoardTaskCard({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="mt-3 flex items-start">
+        <div className="mt-2 flex items-start">
           <button
             type="button"
             onClick={onOpen}
-            className="line-clamp-3 min-w-0 flex-1 text-left text-[15px] font-semibold leading-[1.5] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-w-0 flex-1 break-words text-left text-[15px] font-semibold leading-snug text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {todo.title || (
               <span className="italic text-faint">未命名待办</span>
@@ -169,11 +169,11 @@ export function BoardTaskCard({
           </button>
         </div>
         {todo.notes?.trim() ? (
-          <p className="mt-2 line-clamp-1 text-xs leading-5 text-muted-foreground">
+          <p className="mt-1.5 break-words text-xs leading-5 text-muted-foreground">
             {todo.notes.trim()}
           </p>
         ) : null}
-        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span
             className={cn(
               "inline-flex shrink-0 items-center gap-1 rounded-md bg-muted px-2 py-1 tabular-nums",
@@ -195,7 +195,7 @@ export function BoardTaskCard({
           ) : null}
         </div>
       </div>
-      <div className="flex min-h-12 min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-border px-4 py-2.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-border px-3 py-1.5">
         {collaborators.length ? (
           <div
             className="flex items-center -space-x-1.5"

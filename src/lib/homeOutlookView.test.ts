@@ -123,7 +123,9 @@ test("shell width is one variable and the old insets are gone", () => {
   assert.equal(header.includes("w-[68px]"), false);
   assert.equal(board.includes("min-h-[340px]"), false);
   assert.equal(container.includes("max-w-[1500px]"), false);
-  assert.match(css, /\.outlook-plot[\s\S]*height:\s*48px/);
-  assert.match(css, /\.outlook-panel[\s\S]*padding:\s*8px/);
-  assert.match(css, /align-items:\s*start/);
+  assert.match(css, /\.outlook-col\s*\{[^}]*background:/);
+  assert.equal(css.includes("height: 48px"), false);
+  assert.match(css, /\.outlook-plot\s*\{[^}]*min-height:\s*36px/);
+  assert.equal(/\.outlook-plot\s*\{[^}]*max-height:/.test(css), false);
+  assert.match(css, /\.app-main\s*\{[^}]*min-height:\s*100dvh/);
 });

@@ -14,7 +14,7 @@ export function Timeline({ onEdit }: Props) {
   const hasArchived = projects.some((p) => p.archived)
 
   return (
-    <Container className="py-6">
+    <Container className="flex flex-1 flex-col py-6">
       <div className="mb-5">
         <h2 className="text-lg font-bold tracking-tight text-foreground">日历</h2>
       </div>
