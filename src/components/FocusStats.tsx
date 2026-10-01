@@ -113,7 +113,7 @@ export function FocusStats({
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
+      <div className="review-split mt-6">
         <div>
           <h4 className="kicker">项目占比</h4>
           {stats.minutes > 0 ? (
@@ -172,7 +172,7 @@ export function FocusStats({
 
         <div>
           <h4 className="kicker">专注热力图</h4>
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 max-w-full overflow-x-auto">
             <div className="inline-flex gap-1">
               <div className="mr-1 flex flex-col gap-1 pt-4.5">
                 {WEEKDAY_CN.map((w, i) => (

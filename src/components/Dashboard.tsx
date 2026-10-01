@@ -113,7 +113,7 @@ export function Dashboard({
       ) : (
         <div
           id="overview-grid"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2 min-[80rem]:grid-cols-3"
+          className="pane-grid cols-2 cols-3 gap-3"
         >
           {visible.map((p) => (
             <ProjectCard

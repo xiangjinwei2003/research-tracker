@@ -7,9 +7,7 @@ import {
   X,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { dateFromToday, parse, today, weekStart } from "@/lib/date";
-import { addDays } from "date-fns";
-import { sessionMinutes } from "@/lib/focus";
+import { dateFromToday, today } from "@/lib/date";
 import { buildBoard, parseTodoDragPayload, type BoardRange } from "@/lib/board";
 import { buildBoardInsights, taskFocusKey } from "@/lib/boardInsights";
 import {
@@ -23,7 +21,7 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/cn";
 import { BoardTaskCard } from "./BoardTaskCard";
 import { BoardTaskDialog } from "./BoardTaskDialog";
-import { BoardInsights } from "./BoardInsights";
+import { HomeOutlook } from "./HomeOutlook";
 import { Dashboard } from "./Dashboard";
 import { Button } from "./ui/Button";
 import { Container } from "./ui/Container";
@@ -100,15 +98,6 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
     () => buildBoardInsights(projects, sessions, now, insightsNow, 7),
     [projects, sessions, now, insightsNow],
   );
-  const weekMinutes = useMemo(() => {
-    const start = weekStart(parse(now) ?? new Date());
-    const startMs = start.getTime();
-    const endMs = addDays(start, 7).getTime();
-    return sessions.reduce((sum, session) => {
-      if (session.startedAt < startMs || session.startedAt >= endMs) return sum;
-      return sum + sessionMinutes(session);
-    }, 0);
-  }, [sessions, now]);
   const filtered =
     !!query.trim() ||
     effectiveProjectId !== "all" ||
@@ -180,26 +169,25 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
   return (
     <main>
       <Container className="py-7">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-[26px] font-semibold tracking-[-.025em]">
-            任务看板
-          </h1>
-          <div className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-xs text-muted-foreground">
-            <CalendarDays size={15} />
-            {Number(now.slice(5, 7))}月{Number(now.slice(8, 10))}日
-          </div>
-        </div>
-        <BoardInsights
-          data={insights}
-          weekMinutes={weekMinutes}
-          onShowOpen={showAll}
+        <h1 className="text-[26px] font-semibold tracking-[-.025em]">
+          任务看板
+        </h1>
+        <HomeOutlook
+          projects={projects}
+          sessions={sessions}
+          todayIso={now}
+          nowMs={insightsNow}
+          onOpenDay={(iso) => {
+            showAll();
+            setDueDate(iso);
+          }}
           onShowOverdue={() => {
             showAll();
             setOverdueOnly(true);
           }}
-          onShowToday={() => {
+          onOpenProject={(id) => {
             showAll();
-            setDueDate(now);
+            setProjectId(id);
           }}
           onReview={onGoReview}
         />
@@ -208,7 +196,7 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
           <>
             <div
               id="task-board"
-              className="mt-5 scroll-mt-24 flex flex-wrap items-center gap-2 border-b pb-3"
+              className="mt-5 scroll-mt-24 flex min-w-0 max-w-full flex-wrap items-center gap-2 border-b pb-3"
             >
               <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
                 {result.stats.total}
@@ -243,7 +231,7 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
               </div>
               <Select value={effectiveProjectId} onValueChange={setProjectId}>
                 <SelectTrigger
-                  className="w-full sm:w-[180px]"
+                  className="w-full min-w-0 max-w-full sm:w-[180px]"
                   aria-label="筛选项目"
                 >
                   <SelectValue />
@@ -326,7 +314,7 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
             ) : null}
 
             {result.items.length ? (
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 min-[80rem]:grid-cols-3">
+              <div className="pane-grid cols-2 cols-3 mt-4 gap-4">
                 {columns.map(({ priority, items }) => (
                   <section
                     key={priority}
@@ -341,7 +329,7 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
                     }}
                     onDrop={(e) => handleDrop(priority, e)}
                     className={cn(
-                      "min-h-[340px] rounded-xl border border-transparent bg-[var(--column)] p-3 transition",
+                      "rounded-xl border border-transparent bg-[var(--column)] p-3 transition",
                       overCol === priority &&
                         "border-dashed border-ring bg-accent/40",
                     )}

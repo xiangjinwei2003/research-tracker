@@ -13,7 +13,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { exportJSON, importJSON, useStore } from "@/lib/store";
 import {
   getPersistHealth,
@@ -41,6 +41,7 @@ interface Props {
   onTabChange: (tab: Tab) => void;
   onNew: () => void;
   onEdit: (project: Project) => void;
+  children: ReactNode;
 }
 const TABS = [
   { id: "dashboard", label: "任务看板", icon: LayoutGrid },
@@ -69,7 +70,7 @@ const writeMemo = (value: string) => {
   }
 };
 
-export function Header({ tab, onTabChange, onNew, onEdit }: Props) {
+export function Header({ tab, onTabChange, onNew, onEdit, children }: Props) {
   const projects = useStore((s) => s.projects);
   const replaceState = useStore((s) => s.replaceState);
   const clearAll = useStore((s) => s.clearAll);
@@ -167,8 +168,8 @@ export function Header({ tab, onTabChange, onNew, onEdit }: Props) {
   };
 
   return (
-    <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[68px] flex-col border-r bg-[var(--sidebar)] md:flex min-[68.75rem]:w-56">
+    <div className="app-shell">
+      <aside className="app-sidebar z-40 border-r bg-[var(--sidebar)]">
         <div className="flex h-16 items-center gap-2.5 border-b px-4">
           <img src="/logo-mark.svg" alt="" className="size-8 rounded-lg" />
           <div className="hidden min-w-0 min-[68.75rem]:block">
@@ -212,16 +213,13 @@ export function Header({ tab, onTabChange, onNew, onEdit }: Props) {
                 key={p.id}
                 type="button"
                 onClick={() => onEdit(p)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted"
+                style={{ "--proj": p.color } as CSSProperties}
               >
-                <span
-                  className="size-2 shrink-0 rounded-full"
-                  style={{ background: p.color }}
-                />
-                <span className="min-w-0 flex-1 truncate">
+                <span className="proj-name min-w-0">
                   {p.title || "未命名项目"}
                 </span>
-                <span className="tabular-nums text-faint">
+                <span className="ml-auto shrink-0 tabular-nums text-faint">
                   {p.todos.filter((todo) => !todo.done).length}
                 </span>
               </button>
@@ -290,8 +288,9 @@ export function Header({ tab, onTabChange, onNew, onEdit }: Props) {
           </p>
         </div>
       </aside>
-      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur md:ml-[68px] min-[68.75rem]:ml-56">
-        <div className="flex min-h-16 min-w-0 flex-wrap items-center gap-2 px-3 py-2 sm:px-5 lg:px-8">
+      <div className="app-main" data-app-main>
+      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
+        <div className="flex min-h-16 min-w-0 max-w-full flex-wrap items-center gap-2 px-4 py-2 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 md:hidden">
             <img src="/logo-mark.svg" alt="" className="size-7 rounded-md" />
             <span className="text-sm font-bold max-[420px]:hidden">
@@ -322,7 +321,7 @@ export function Header({ tab, onTabChange, onNew, onEdit }: Props) {
               </button>
             ))}
           </nav>
-          <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5">
             <FocusTimer />
             <Button
               variant="primary"
@@ -383,6 +382,8 @@ export function Header({ tab, onTabChange, onNew, onEdit }: Props) {
           />
         </div>
       </header>
-    </>
+      {children}
+      </div>
+    </div>
   );
 }

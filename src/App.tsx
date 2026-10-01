@@ -64,8 +64,7 @@ export default function App() {
           onTabChange={setTab}
           onNew={openNew}
           onEdit={openEdit}
-        />
-        <div className="min-w-0 md:pl-[68px] min-[68.75rem]:pl-56">
+        >
           {tab === "dashboard" ? (
             <Board
               onNew={openNew}
@@ -79,7 +78,7 @@ export default function App() {
           ) : (
             <Dashboard showArchived onNew={openNew} onEdit={openEdit} />
           )}
-        </div>
+        </Header>
         <ProjectDialog
           open={dialogOpen}
           onOpenChange={(o) => {

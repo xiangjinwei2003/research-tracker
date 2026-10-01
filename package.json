@@ -10,7 +10,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "tsx --test --test-concurrency=1 src/**/*.test.ts"
+    "test": "tsx --tsconfig tsconfig.app.json --test --test-concurrency=1 src/**/*.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-context-menu": "^2.3.3",

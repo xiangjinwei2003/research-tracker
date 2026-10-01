@@ -108,7 +108,6 @@ export const ProjectCard = memo(function ProjectCard({
   const upcoming = upcomingTodos(project, expanded ? remainingCount : VISIBLE_TODOS)
 
   return (
-    // Border/bg + hover border come from .proj-card (project-hue tint).
     <Card
       onClick={() => onEdit(project)}
       style={{ '--proj': project.color } as CSSProperties}
@@ -126,9 +125,9 @@ export const ProjectCard = memo(function ProjectCard({
                 e.stopPropagation()
                 onEdit(project)
               }}
-              className="block w-full truncate rounded text-left text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="proj-name max-w-full text-left text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {project.title || <span className="italic text-faint">未命名项目</span>}
+              {project.title || "未命名项目"}
             </button>
           </h3>
           {project.description ? (

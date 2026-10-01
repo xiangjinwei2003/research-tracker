@@ -213,7 +213,7 @@ export function FocusTimer() {
     // duration / project context lives in the capsule's title tooltip.
     <div
       className={cn(
-        'flex shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 shadow-sm',
+        'flex max-w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 shadow-sm',
         remaining <= 60_000 && 'animate-pulse',
       )}
       role="timer"

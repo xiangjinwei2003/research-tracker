@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 右缘与标题下划线</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #151517;
+    color: #f2f2f4;
+    font: 14px/1.5 ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 28px 20px 48px; }
+  .kicker { margin: 0; color: #89898d; font-size: 11px; letter-spacing: 0.14em; }
+  h1 { margin: 8px 0 0; font-size: 22px; font-weight: 650; letter-spacing: 0; }
+  .lead { margin: 8px 0 0; color: #aaaab3; }
+  .stage { display: grid; gap: 16px; margin-top: 22px; }
+  @media (min-width: 800px) {
+    .stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  }
+  .sample-card {
+    display: block;
+    margin: 0;
+    padding: 16px;
+    border: 1px solid #323236;
+    border-radius: 12px;
+    background: #222225;
+  }
+  .sample-card .mark { display: none; }
+  .project-name { font-size: 12px; color: #aaaab3; }
+  .sample-card h2 { margin: 8px 0 0; font-size: 16px; line-height: 1.45; }
+  .note { margin: 8px 0 0; color: #aaaab3; font-size: 12px; }
+  .meta { display: flex; gap: 8px; margin-top: 12px; color: #aaaab3; font-size: 12px; }
+  .meta span { padding: 4px 8px; border-radius: 6px; background: #29292e; }
+  .outlook-label { margin: 0 0 8px; color: #89898d; font-size: 12px; }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 48px; }
+  .bars i { display: flex; flex: 1 1 0; flex-direction: column-reverse; height: 8%; overflow: hidden; border-radius: 3px; background: #29292e; }
+  .share { display: flex; height: 28px; margin-top: 8px; overflow: hidden; border-radius: 4px; background: #29292e; }
+  .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin-top: 8px; }
+  .cal s { display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; min-height: 18px; text-decoration: none; }
+  .cal i { display: block; width: 100%; border-radius: 1px; }
+  .cal i.todo { height: 3px; }
+  .cal i.due { height: 6px; }
+  .key { margin: 10px 0 0; color: #89898d; font-size: 12px; }
+  .sw { display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 2px; vertical-align: 0; }
+</style>
+<style id="id-treatment">
+.sample-card { border-right: 4px solid #6f8cff; }
+.sample-card h2 { text-decoration-line: underline; text-decoration-color: #6f8cff; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">项目颜色标识</p>
+  <h1>10 右缘与标题下划线</h1>
+  <p class="lead">项目色画在卡片右缘，并作为标题下划线。</p>
+  <div class="stage">
+    <article class="sample-card" data-sample-card>
+      <span class="mark" aria-hidden="true"></span>
+      <div class="card-copy">
+        <div class="project-name">注意力机制综述</div>
+        <h2>补全第三周的文献矩阵</h2>
+        <p class="note">只保留有全文的条目</p>
+        <div class="meta"><span>10月6日</span><span>45 分钟</span></div>
+      </div>
+    </article>
+    <section aria-label="看板色条">
+      <p class="outlook-label">看板顶部的色条，十个方案用同一组。</p>
+      <!-- marks-start -->
+      <div id="outlook-marks">
+      <div class="bars" aria-hidden="true">
+        <i style="height:72%"><b style="flex:3;background:#6f8cff"></b><b style="flex:1;background:#e07a5f"></b></i>
+        <i style="height:40%"><b style="flex:1;background:#6f8cff"></b></i>
+        <i style="height:8%"></i>
+        <i style="height:88%"><b style="flex:2;background:#e07a5f"></b><b style="flex:3;background:#6f8cff"></b></i>
+        <i style="height:55%"><b style="flex:1;background:#6f8cff"></b><b style="flex:1;background:#e07a5f"></b></i>
+        <i style="height:8%"></i>
+        <i style="height:8%"></i>
+      </div>
+      <div class="share" aria-hidden="true">
+        <i style="flex:62;background:#6f8cff"></i>
+        <i style="flex:38;background:#e07a5f"></i>
+      </div>
+      <div class="cal" aria-hidden="true">
+        <s></s><s><i class="todo" style="background:#6f8cff"></i></s><s></s>
+        <s><i class="due" style="background:#e07a5f"></i><i class="todo" style="background:#6f8cff"></i></s>
+        <s></s><s><i class="todo" style="background:#e07a5f"></i></s><s></s>
+        <s></s><s><i class="due" style="background:#6f8cff"></i></s><s></s>
+        <s><i class="todo" style="background:#6f8cff"></i><i class="todo" style="background:#e07a5f"></i></s>
+        <s></s><s></s><s><i class="due" style="background:#e07a5f"></i></s>
+      </div>
+    </div>
+      <!-- marks-end -->
+      <p class="key"><span class="sw" style="background:#6f8cff"></span>注意力机制综述<span class="sw" style="margin-left:12px;background:#e07a5f"></span>临床队列随访</p>
+    </section>
+  </div>
+</main>
+</body>
+</html>

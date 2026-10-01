@@ -7,7 +7,7 @@ import {
   Pin,
   Timer,
 } from "lucide-react";
-import type { DragEvent } from "react";
+import { type CSSProperties, type DragEvent } from "react";
 import { useStore } from "@/lib/store";
 import {
   PRIORITY_META,
@@ -114,21 +114,18 @@ export function BoardTaskCard({
     >
       <div className="p-4 pb-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span
-            className="size-2.5 shrink-0 rounded-full"
-            style={{ background: project.color }}
-          />
           <button
             type="button"
             onClick={onOpen}
             title={project.title || "未命名项目"}
-            className="min-w-0 flex-1 truncate text-left text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="proj-name min-w-0 shrink text-left text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            style={{ "--proj": project.color } as CSSProperties}
           >
             {project.title || "未命名项目"}
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="ml-auto inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`管理「${todo.title || "未命名待办"}」`}
             >
               <MoreHorizontal size={17} />
