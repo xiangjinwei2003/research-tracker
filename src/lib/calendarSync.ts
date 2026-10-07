@@ -31,6 +31,11 @@ interface Settings {
   lastSyncAt: number | null
   /** SHA-256 of the last uploaded body; an identical body is not sent again. */
   uploadedHash: string | null
+  /**
+   * https URL of the .ics as returned by the server. It may be on a different
+   * host than this page (the unprotected production domain).
+   */
+  icsUrl: string | null
 }
 
 export type SyncPhase = 'off' | 'syncing' | 'ok' | 'error' | 'unconfigured'
@@ -65,6 +70,7 @@ function readSettings(): Settings | null {
       key: s.key,
       lastSyncAt: typeof s.lastSyncAt === 'number' ? s.lastSyncAt : null,
       uploadedHash: typeof s.uploadedHash === 'string' ? s.uploadedHash : null,
+      icsUrl: typeof s.icsUrl === 'string' ? s.icsUrl : null,
     }
   } catch {
     return null
@@ -88,15 +94,11 @@ function randomToken(): string {
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-export function subscriptionUrl(id: string): string {
-  return `webcal://${location.host}/api/calendar/${id}.ics`
+export function webcalUrl(icsUrl: string): string {
+  return icsUrl.replace(/^https?:/, 'webcal:')
 }
 
-export function httpsUrl(id: string): string {
-  return `${location.protocol}//${location.host}/api/calendar/${id}.ics`
-}
-
-type Outcome = { kind: 'ok' } | { kind: 'unconfigured'; message: string } | { kind: 'error'; message: string }
+type Outcome = { kind: 'ok'; icsUrl?: string } | { kind: 'unconfigured'; message: string } | { kind: 'error'; message: string }
 
 async function call(method: 'PUT' | 'DELETE', s: Settings, body?: string): Promise<Outcome> {
   let res: Response
@@ -112,7 +114,12 @@ async function call(method: 'PUT' | 'DELETE', s: Settings, body?: string): Promi
   } catch (err) {
     return { kind: 'error', message: `网络错误：${err instanceof Error ? err.message : String(err)}` }
   }
-  if (res.ok) return { kind: 'ok' }
+  if (res.ok) {
+    if (method === 'DELETE') return { kind: 'ok' }
+    const data = (await res.json()) as { url?: unknown }
+    if (typeof data.url !== 'string') return { kind: 'error', message: '服务端响应缺少订阅地址' }
+    return { kind: 'ok', icsUrl: data.url }
+  }
   let info: { error?: string; message?: string } = {}
   try {
     info = (await res.json()) as typeof info
@@ -141,7 +148,7 @@ function report(o: Outcome, uploadedHash: string): void {
   if (o.kind === 'ok') {
     failureNotified = false
     const s = useCalendarSync.getState().settings
-    if (s) saveSettings({ ...s, lastSyncAt: Date.now(), uploadedHash })
+    if (s) saveSettings({ ...s, lastSyncAt: Date.now(), uploadedHash, icsUrl: o.icsUrl ?? s.icsUrl })
     useCalendarSync.setState({ phase: 'ok', error: null })
   } else if (o.kind === 'unconfigured') {
     useCalendarSync.setState({ phase: 'unconfigured', error: o.message })
@@ -210,7 +217,7 @@ async function deleteRemote(s: Settings): Promise<boolean> {
 
 export async function enableSync(): Promise<void> {
   const cur = useCalendarSync.getState().settings
-  saveSettings(cur ? { ...cur, enabled: true, uploadedHash: null } : { enabled: true, id: randomToken(), key: randomToken(), lastSyncAt: null, uploadedHash: null })
+  saveSettings(cur ? { ...cur, enabled: true, uploadedHash: null } : { enabled: true, id: randomToken(), key: randomToken(), lastSyncAt: null, uploadedHash: null, icsUrl: null })
   await syncNow(true)
 }
 
@@ -223,7 +230,7 @@ export async function disableSync(): Promise<void> {
     timer = null
   }
   if (!(await deleteRemote(s))) return
-  saveSettings({ ...s, enabled: false, lastSyncAt: null, uploadedHash: null })
+  saveSettings({ ...s, enabled: false, lastSyncAt: null, uploadedHash: null, icsUrl: null })
   useCalendarSync.setState({ phase: 'off', error: null })
 }
 
@@ -237,6 +244,7 @@ export async function regenerate(): Promise<void> {
     key: randomToken(),
     lastSyncAt: null,
     uploadedHash: null,
+    icsUrl: null,
   })
   if (useCalendarSync.getState().settings?.enabled) await syncNow(true)
   else useCalendarSync.setState({ phase: 'off', error: null })

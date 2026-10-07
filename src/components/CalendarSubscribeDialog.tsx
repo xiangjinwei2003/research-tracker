@@ -9,8 +9,8 @@ import {
   disableSync,
   enableSync,
   regenerate,
-  subscriptionUrl,
   syncNow,
+  webcalUrl,
   useCalendarSync,
 } from '@/lib/calendarSync'
 
@@ -30,7 +30,7 @@ export function CalendarSubscribeDialog({ open, onOpenChange }: Props) {
   const [busy, setBusy] = useState(false)
   const [confirmRegen, setConfirmRegen] = useState(false)
   const enabled = settings?.enabled === true
-  const url = settings ? subscriptionUrl(settings.id) : ''
+  const url = settings?.icsUrl ? webcalUrl(settings.icsUrl) : ''
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true)
@@ -98,7 +98,7 @@ export function CalendarSubscribeDialog({ open, onOpenChange }: Props) {
           </div>
         </div>
 
-        {settings ? (
+        {settings && url ? (
           <div>
             <Label htmlFor="cal-sub-url">订阅地址</Label>
             <div className="flex items-center gap-1.5">

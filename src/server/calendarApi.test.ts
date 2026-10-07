@@ -57,7 +57,8 @@ const get = (id = ID) => new Request(`${BASE}${id}.ics`)
 test('PUT then GET returns the calendar', async () => {
   const env = { store: new MemoryStore() }
   const w = await handleCalendarRequest(put(JSON.stringify(SNAP)), env, NOW)
-  assert.equal(w.status, 204)
+  assert.equal(w.status, 200)
+  assert.deepEqual(await w.json(), { url: `https://example.test/api/calendar/${ID}.ics` })
 
   const r = await handleCalendarRequest(get(), env, NOW)
   assert.equal(r.status, 200)
@@ -86,7 +87,7 @@ test('snapshot fields outside the whitelist are dropped', async () => {
 
 test('PUT with a different key after registration returns 401', async () => {
   const env = { store: new MemoryStore() }
-  assert.equal((await handleCalendarRequest(put(JSON.stringify(SNAP)), env, NOW)).status, 204)
+  assert.equal((await handleCalendarRequest(put(JSON.stringify(SNAP)), env, NOW)).status, 200)
   const r = await handleCalendarRequest(put(JSON.stringify({ v: 1, todos: [] }), OTHER_KEY), env, NOW)
   assert.equal(r.status, 401)
   // The original snapshot is untouched.
@@ -188,4 +189,10 @@ test('writes and reads both refresh the expiry', async () => {
 test('DELETE of an id that was never written returns 204', async () => {
   const req = new Request(BASE + ID, { method: 'DELETE', headers: { authorization: `Bearer ${KEY}` } })
   assert.equal((await handleCalendarRequest(req, { store: new MemoryStore() }, NOW)).status, 204)
+})
+
+test('PUT returns the subscription URL on the public host when one is set', async () => {
+  const env = { store: new MemoryStore(), publicHost: 'prod.example.test' }
+  const w = await handleCalendarRequest(put(JSON.stringify(SNAP)), env, NOW)
+  assert.deepEqual(await w.json(), { url: `https://prod.example.test/api/calendar/${ID}.ics` })
 })

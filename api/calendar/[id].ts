@@ -13,7 +13,8 @@ function env(): CalendarEnv {
   const token = process.env[TOKEN_VAR]
   const missing = [!url && URL_VAR, !token && TOKEN_VAR].filter((x): x is string => !!x)
   if (missing.length) return { missing }
-  return { store: createRedisStore(url!, token!) }
+  // Set by Vercel on every deployment: the production domain, without protocol.
+  return { store: createRedisStore(url!, token!), publicHost: process.env.VERCEL_PROJECT_PRODUCTION_URL }
 }
 
 const handle = (req: Request) => handleCalendarRequest(req, env())

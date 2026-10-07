@@ -7,6 +7,7 @@ import { buildIcs } from '../lib/ics.js'
  * store. api/calendar/[id].ts wires it to Upstash.
  *
  *   PUT    /api/calendar/:id       Authorization: Bearer <key>, JSON snapshot
+ *                                  → 200 { url } (https URL of the .ics)
  *   DELETE /api/calendar/:id       Authorization: Bearer <key>
  *   GET    /api/calendar/:id.ics   text/calendar
  *
@@ -35,7 +36,17 @@ export interface CalendarStore {
   remove(id: string, hash: string): Promise<'ok' | 'forbidden' | 'missing'>
 }
 
-export type CalendarEnv = { store: CalendarStore } | { missing: string[] }
+export type CalendarEnv =
+  | {
+      store: CalendarStore
+      /**
+       * Host the subscription URL should use. On Vercel this is the production
+       * domain: other deployment URLs can sit behind Vercel Authentication,
+       * which Apple Calendar cannot pass. Absent = the host of the request.
+       */
+      publicHost?: string
+    }
+  | { missing: string[] }
 
 export const MAX_BODY_BYTES = 256 * 1024
 
@@ -143,6 +154,7 @@ export async function handleCalendarRequest(
     })
   }
   const { store } = env
+  const publicHost = env.publicHost || new URL(req.url).host
 
   try {
     if (method === 'GET') {
@@ -184,7 +196,7 @@ export async function handleCalendarRequest(
     const stored: Stored = { updatedAt: now().toISOString(), snapshot: parsed.snapshot }
     const r = await storage(() => store.put(id, hash, JSON.stringify(stored), TTL_SECONDS))
     if (r === 'forbidden') return json(401, { error: 'unauthorized' })
-    return new Response(null, { status: 204 })
+    return json(200, { url: `https://${publicHost}/api/calendar/${id}.ics` })
   } catch (err) {
     if (err instanceof StorageError) {
       return json(502, { error: 'storage-failed', message: err.message })
