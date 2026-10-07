@@ -2,6 +2,10 @@
 
 ## 改动记录
 
+2026年10月7日，回答「把投稿目标 研究阶段、合作者都删了 感觉没什么必要 全是多余信息 其他的多余信息也可以删除」。
+开头原句「把「每个项目卡在哪个阶段」「哪个 deadline 最近」「在等谁」放在一屏里」改为「把各项目的待办、截止日期和专注记录放在一处」；英文简介同步去掉 stages、venue deadlines、collaborators。
+其它节删除「9 段默认科研流程……」和「合作者与「在等 X 做什么」的阻塞状态」两条；「Todo 优先级、拖拽排序、按阶段归类」改为「Todo 优先级、拖拽排序」。
+
 2026年10月7日，回答「从优美的UI设计的角度 重构整个UI」（配色可重定、可删减信息、参照 Things 3、只做深色）。
 功能节「任务看板」原句「首页先排任务列，概况是未完成、逾期、今天到期和本周专注四个数字。任务按高、普通、低优先级分列。」改为「首页是单列任务列表，按高、普通、低优先级分组，标题下写逾期与今天到期的数量，点击即筛选。」，并补「列表下方是可折叠的项目列表」。
 功能节「归档」原句「不占任务看板」改为「不占任务列表」。
@@ -19,11 +23,11 @@
 2026年9月5日，回答「按照审查结果进行修复」。
 数据与隐私节 localStorage 键名 `research-tracker` 改为 `research-tracker-v1`，与 `src/lib/store.ts` 的 `PERSIST_NAME` 一致。
 
-给研究者用的**科研项目管理面板**：同时推进多个论文项目时，把「每个项目卡在哪个阶段」「哪个 deadline 最近」「在等谁」放在一屏里。
+给研究者用的**科研项目任务清单**：同时推进多个论文项目时，把各项目的待办、截止日期和专注记录放在一处。
 
 纯前端应用，**数据只存在你自己的浏览器里**（localStorage），没有后端、没有账号、不发任何网络请求。
 
-> A local-first research project tracker for academics juggling several papers at once — stages, venue deadlines, collaborators, todos, and focus sessions. Pure frontend, no backend, no account; all data stays in your browser's localStorage. UI is in Chinese.
+> A local-first task list for academics juggling several papers at once: todos grouped by project, due dates, and focus sessions. Pure frontend, no backend, no account; all data stays in your browser's localStorage. UI is in Chinese.
 
 ---
 
@@ -36,9 +40,7 @@
 
 其它：
 
-- 9 段默认科研流程（文献调研 → 研究设计 → IRB → 数据采集 → 数据分析 → 论文写作 → 投稿/审稿 → Rebuttal → 完成），**每个项目的阶段可自行增删改名改色**。
-- 合作者与「在等 X 做什么」的阻塞状态。
-- Todo 优先级、拖拽排序、按阶段归类。
+- Todo 优先级、拖拽排序。
 - 首页四个数字来自现有本地数据。专注的按日分布在专注回顾。
 - 只有深色界面。
 - 全局 `Cmd/Ctrl + Z` 撤销，删除操作都可从通知里点「撤销」。

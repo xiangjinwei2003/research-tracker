@@ -24,26 +24,7 @@ export function defaultStages(): StageDef[] {
   ]
 }
 
-const FALLBACK_STAGE: StageDef = {
-  id: '__unknown',
-  name: '未指定',
-  shortLabel: '未指定',
-  color: 'oklch(0.70 0.02 250)',
-}
-
-/** Lookup a stage definition by id within a project's stages, with a safe fallback. */
-export function findStage(stages: StageDef[], id: string): StageDef {
-  return stages.find((s) => s.id === id) ?? FALLBACK_STAGE
-}
-
 export type CollaboratorRole = 'advisor' | 'coauthor' | 'student' | 'other'
-
-export const ROLES: { value: CollaboratorRole; label: string }[] = [
-  { value: 'advisor', label: '导师' },
-  { value: 'coauthor', label: '合作者' },
-  { value: 'student', label: '学生' },
-  { value: 'other', label: '其他' },
-]
 
 export interface Collaborator {
   id: string
@@ -66,8 +47,6 @@ export interface PriorityMeta {
   short: string
   /** Lower = more important. Used for sorting. */
   rank: number
-  /** Chip classes (border + bg + text), dark-only palette — WCAG-AA legible. */
-  chip: string
   /** Accent text color (dark-only) for counts / labels. */
   text: string
   /** Dot indicator background (dark-only). */
@@ -79,7 +58,6 @@ export const PRIORITY_META: Record<Priority, PriorityMeta> = {
     label: '高优先级',
     short: '高',
     rank: 0,
-    chip: 'border-destructive/30 bg-destructive/10 text-destructive',
     text: 'text-destructive',
     dot: 'bg-[var(--priority-high)]',
   },
@@ -87,7 +65,6 @@ export const PRIORITY_META: Record<Priority, PriorityMeta> = {
     label: '普通优先级',
     short: '普通',
     rank: 1,
-    chip: 'border-[var(--priority-normal)]/30 bg-[var(--priority-normal)]/10 text-[var(--priority-normal)]',
     text: 'text-[var(--priority-normal)]',
     dot: 'bg-[var(--priority-normal)]',
   },
@@ -95,7 +72,6 @@ export const PRIORITY_META: Record<Priority, PriorityMeta> = {
     label: '低优先级',
     short: '低',
     rank: 2,
-    chip: 'border-[var(--priority-low)]/30 bg-[var(--priority-low)]/10 text-[var(--priority-low)]',
     text: 'text-[var(--priority-low)]',
     dot: 'bg-[var(--priority-low)]',
   },
@@ -203,18 +179,6 @@ export interface AppState {
   version: number
 }
 
-export const PRESET_VENUES = [
-  'CHI',
-  'CSCW',
-  'UIST',
-  'IUI',
-  'DIS',
-  'JMIR',
-  'JAMIA',
-  'TOCHI',
-  'IJHCS',
-] as const
-
 /**
  * Per-project accent palette. Ordered so that CONSECUTIVE entries are far apart
  * on the hue wheel — projects are auto-assigned colours by position, so this
@@ -256,19 +220,3 @@ export const LEGACY_PROJECT_COLOR_PRESETS: readonly string[] = [
   'oklch(0.69 0.16 328)',
   'oklch(0.68 0.15 300)',
 ]
-
-/** Common color presets for the stage color picker. */
-export const STAGE_COLOR_PRESETS = [
-  'oklch(0.78 0.10 250)',
-  'oklch(0.78 0.10 200)',
-  'oklch(0.80 0.10 100)',
-  'oklch(0.78 0.10 150)',
-  'oklch(0.78 0.10 50)',
-  'oklch(0.78 0.10 320)',
-  'oklch(0.78 0.10 0)',
-  'oklch(0.78 0.10 30)',
-  'oklch(0.70 0.05 250)',
-  'oklch(0.72 0.13 280)',
-  'oklch(0.75 0.13 130)',
-  'oklch(0.70 0.05 30)',
-] as const

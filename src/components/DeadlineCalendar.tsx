@@ -10,7 +10,7 @@ import {
   startOfWeek,
 } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Flag, MessageSquareReply } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { fmtMD, parse, today } from '@/lib/date'
@@ -26,17 +26,10 @@ const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'] as const
 /** Sunday-start week — local to this calendar view; 回顾页的周统计仍按周一起算。 */
 const weekStartSun = (d: Date) => startOfWeek(d, { weekStartsOn: 0 })
 
-type EventItem =
-  | { kind: 'deadline'; project: Project; label: string }
-  | { kind: 'rebuttal'; project: Project; label: string }
-  | { kind: 'todo'; project: Project; todoId: string; title: string; done: boolean }
-
-const ORDER: Record<EventItem['kind'], number> = { deadline: 0, rebuttal: 1, todo: 2 }
+type EventItem = { project: Project; todoId: string; title: string; done: boolean }
 
 /** What's mid-drag: enough to write the new date back on drop. */
-type DragPayload =
-  | { kind: 'deadline' | 'rebuttal'; projectId: string; fromKey: string }
-  | { kind: 'todo'; projectId: string; todoId: string; title: string; fromKey: string }
+type DragPayload = { projectId: string; todoId: string; title: string; fromKey: string }
 
 interface Props {
   onEdit: (p: Project) => void
@@ -45,14 +38,13 @@ interface Props {
 /**
  * Apple-Calendar-style month view that fills the viewport: a weekday header row,
  * then week rows stretching evenly to the bottom. Every day cell lists what's due
- * that day (▲ 投稿截止 / ◆ Rebuttal on top, then todos by stage colour). Past
+ * that day (todos, dotted by project colour). Past
  * days are dimmed; today's number gets the filled circle. The month label opens
  * a react-day-picker popover to jump anywhere.
  */
 export function DeadlineCalendar({ onEdit }: Props) {
   const projects = useStore((s) => s.projects).filter((p) => !p.archived)
   const updateTodo = useStore((s) => s.updateTodo)
-  const updateProject = useStore((s) => s.updateProject)
   const [anchor, setAnchor] = useState<Date>(() => new Date())
   const [pickerOpen, setPickerOpen] = useState(false)
   const todayIso = today()
@@ -66,23 +58,8 @@ export function DeadlineCalendar({ onEdit }: Props) {
     dragRef.current = null
     setDragOverKey(null)
     if (!d || d.fromKey === key) return
-    if (d.kind === 'todo') {
-      updateTodo(d.projectId, d.todoId, { endDate: key })
-      toast({ message: `「${d.title}」已改到 ${fmtMD(key)}` })
-      return
-    }
-    // Venue dates live on the project; rebuild the venue with the dropped day.
-    const p = useStore.getState().projects.find((x) => x.id === d.projectId)
-    if (!p?.venue) return
-    updateProject(d.projectId, {
-      venue:
-        d.kind === 'deadline'
-          ? { ...p.venue, deadline: key }
-          : { ...p.venue, rebuttalAt: key },
-    })
-    toast({
-      message: `${p.venue.name || '投稿'} ${d.kind === 'deadline' ? '投稿截止' : 'Rebuttal'} 已改到 ${fmtMD(key)}`,
-    })
+    updateTodo(d.projectId, d.todoId, { endDate: key })
+    toast({ message: `「${d.title}」已改到 ${fmtMD(key)}` })
   }
 
   const byDay = useMemo(() => {
@@ -96,15 +73,8 @@ export function DeadlineCalendar({ onEdit }: Props) {
       else map.set(key, [e])
     }
     for (const p of projects) {
-      if (p.venue?.deadline) {
-        push(p.venue.deadline, { kind: 'deadline', project: p, label: p.venue.name || '投稿截止' })
-      }
-      if (p.venue?.rebuttalAt) {
-        push(p.venue.rebuttalAt, { kind: 'rebuttal', project: p, label: p.venue.name || 'Rebuttal' })
-      }
       for (const t of p.todos) {
         push(t.endDate, {
-          kind: 'todo',
           project: p,
           todoId: t.id,
           title: t.title || '未命名',
@@ -112,21 +82,17 @@ export function DeadlineCalendar({ onEdit }: Props) {
         })
       }
     }
-    for (const arr of map.values()) arr.sort((a, b) => ORDER[a.kind] - ORDER[b.kind])
     return map
   }, [projects])
 
   // Days that carry a marker dot in the jump-to mini calendar.
-  const { deadlineDates, todoDates } = useMemo(() => {
-    const deadline: Date[] = []
-    const todo: Date[] = []
-    for (const [key, evs] of byDay) {
+  const todoDates = useMemo(() => {
+    const dates: Date[] = []
+    for (const key of byDay.keys()) {
       const d = parse(key)
-      if (!d) continue
-      if (evs.some((e) => e.kind !== 'todo')) deadline.push(d)
-      else todo.push(d)
+      if (d) dates.push(d)
     }
-    return { deadlineDates: deadline, todoDates: todo }
+    return dates
   }, [byDay])
 
   // Month grid: whole weeks (Sunday-start) covering the anchored month.
@@ -143,31 +109,17 @@ export function DeadlineCalendar({ onEdit }: Props) {
   )
 
   // This month's totals for the header line.
-  const { ddlCount, todoCount } = useMemo(() => {
-    let ddl = 0
-    let todo = 0
+  const todoCount = useMemo(() => {
+    let n = 0
     for (const d of days) {
       if (!isSameMonth(d, anchor)) continue
-      const evs = byDay.get(format(d, 'yyyy-MM-dd')) ?? []
-      for (const e of evs) {
-        if (e.kind === 'todo') {
-          if (!e.done) todo += 1
-        } else ddl += 1
-      }
+      for (const e of byDay.get(format(d, 'yyyy-MM-dd')) ?? []) if (!e.done) n += 1
     }
-    return { ddlCount: ddl, todoCount: todo }
+    return n
   }, [days, anchor, byDay])
 
   const isCurMonth = isSameMonth(anchor, new Date())
-  const subtitle =
-    ddlCount === 0 && todoCount === 0
-      ? '本月无到期事项'
-      : [
-          ddlCount > 0 ? `${ddlCount} 个投稿 / Rebuttal 截止` : null,
-          todoCount > 0 ? `${todoCount} 个待办到期` : null,
-        ]
-          .filter(Boolean)
-          .join(' · ')
+  const subtitle = todoCount === 0 ? '本月没有到期的待办' : `本月 ${todoCount} 个待办到期`
 
   return (
     <section aria-label="截止月历" className="flex min-w-0 flex-1 flex-col">
@@ -214,7 +166,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
                 defaultMonth={anchor}
                 weekStartsOn={0}
                 locale={zhCN}
-                modifiers={{ hasDeadline: deadlineDates, hasTodo: todoDates }}
+                modifiers={{ hasTodo: todoDates }}
                 components={{ DayButton: DayWithDot }}
                 className="[--cell-size:2.25rem]"
               />
@@ -327,16 +279,12 @@ export function DeadlineCalendar({ onEdit }: Props) {
                         e={e}
                         onClick={() => onEdit(e.project)}
                         onDragStart={() => {
-                          dragRef.current =
-                            e.kind === 'todo'
-                              ? {
-                                  kind: 'todo',
-                                  projectId: e.project.id,
-                                  todoId: e.todoId,
-                                  title: e.title,
-                                  fromKey: key,
-                                }
-                              : { kind: e.kind, projectId: e.project.id, fromKey: key }
+                          dragRef.current = {
+                            projectId: e.project.id,
+                            todoId: e.todoId,
+                            title: e.title,
+                            fromKey: key,
+                          }
                         }}
                         onDragEnd={() => {
                           dragRef.current = null
@@ -355,21 +303,16 @@ export function DeadlineCalendar({ onEdit }: Props) {
   )
 }
 
-/** Mini month-picker day cell + a dot when the day carries deadlines / todos. */
+/** Mini month-picker day cell + a dot when the day carries todos. */
 function DayWithDot(props: ComponentProps<typeof CalendarDayButton>) {
   const m = props.modifiers as Record<string, boolean | undefined>
-  const hasDeadline = !!m.hasDeadline
-  const hasTodo = !!m.hasTodo
   return (
     <span className="relative flex h-full w-full items-center justify-center">
       <CalendarDayButton {...props} />
-      {hasDeadline || hasTodo ? (
+      {m.hasTodo ? (
         <span
           aria-hidden
-          className={cn(
-            'pointer-events-none absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full',
-            hasDeadline ? 'bg-destructive' : 'bg-faint',
-          )}
+          className="pointer-events-none absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-faint"
         />
       ) : null}
     </span>
@@ -399,34 +342,6 @@ function EventChip({
     onDragEnd,
   }
 
-  if (e.kind === 'deadline') {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        title={`${e.label} · 投稿截止 · 拖到别的日期可改期`}
-        {...dragProps}
-        className="flex w-full cursor-grab items-center gap-1 rounded-[4px] bg-destructive/15 px-1.5 py-0.5 text-left text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
-      >
-        <Flag size={10} strokeWidth={2.6} aria-hidden className="shrink-0" />
-        <span className="min-w-0 truncate">{e.label}</span>
-      </button>
-    )
-  }
-  if (e.kind === 'rebuttal') {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        title={`${e.label} · Rebuttal · 拖到别的日期可改期`}
-        {...dragProps}
-        className="flex w-full cursor-grab items-center gap-1 rounded-[4px] bg-warn/15 px-1.5 py-0.5 text-left text-[11px] font-medium text-warn transition-colors hover:bg-warn/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
-      >
-        <MessageSquareReply size={10} strokeWidth={2.6} aria-hidden className="shrink-0" />
-        <span className="min-w-0 truncate">{e.label}</span>
-      </button>
-    )
-  }
   return (
     <button
       type="button"

@@ -1,4 +1,4 @@
-import { addDays, differenceInCalendarDays, format } from 'date-fns'
+import { addDays, format } from 'date-fns'
 import { parse, weekStart } from './date'
 import type { FocusSession, Project } from './types'
 
@@ -89,52 +89,6 @@ export function projectShare(resolved: ResolvedSession[]): ProjectShare[] {
   return [...map.values()].sort((a, b) => b.minutes - a.minutes)
 }
 
-export interface TaskShare {
-  key: string
-  /** The task, else the project, else 自由专注. */
-  label: string
-  projectTitle: string
-  color?: string
-  minutes: number
-}
-
-/**
- * Minutes per TASK over `resolved`, biggest first. Repeated sittings on the
- * same todo merge into one row — three 30-minute blocks on one task read as
- * 1.5 hours, which is the number worth seeing.
- */
-export function taskShare(resolved: ResolvedSession[]): TaskShare[] {
-  const map = new Map<string, TaskShare>()
-  for (const r of resolved) {
-    const key =
-      r.session.todoId ?? (r.session.projectId ? `project:${r.session.projectId}` : '__free')
-    const hit = map.get(key)
-    if (hit) hit.minutes += r.minutes
-    else {
-      map.set(key, {
-        key,
-        label: r.label,
-        projectTitle: r.projectTitle,
-        color: r.color,
-        minutes: r.minutes,
-      })
-    }
-  }
-  return [...map.values()].sort((a, b) => b.minutes - a.minutes)
-}
-
-/**
- * Days the 日均 figure divides by: for a period still running (the current week
- * or month) only the elapsed days count — 周一 through today — so Monday morning
- * doesn't report a seventh of the week's work. A finished period divides by its
- * full span.
- */
-export function elapsedDays(start: Date, end: Date, now: Date): number {
-  const span = differenceInCalendarDays(end, start)
-  if (now < start) return 0
-  if (now >= end) return span
-  return Math.min(span, differenceInCalendarDays(now, start) + 1)
-}
 
 /**
  * Consecutive days (over ALL history) with at least one session. `current` runs
@@ -230,9 +184,6 @@ export interface PeriodStats {
   count: number
   /** Same metric over the preceding period of equal shape — powers the 环比. */
   prevMinutes: number
-  avgMinutes: number
-  /** How many days `avgMinutes` divided by (see `elapsedDays`). */
-  avgDays: number
   best: DayTotal | null
   share: ProjectShare[]
 }
@@ -248,9 +199,8 @@ export function buildPeriodStats(args: {
   end: Date
   prevStart: Date
   prevEnd: Date
-  now: Date
 }): PeriodStats {
-  const { sessions, projectById, start, end, prevStart, prevEnd, now } = args
+  const { sessions, projectById, start, end, prevStart, prevEnd } = args
   const startMs = start.getTime()
   const endMs = end.getTime()
 
@@ -270,7 +220,6 @@ export function buildPeriodStats(args: {
   }
 
   const days = dayTotals(resolved, start, end)
-  const avgDays = elapsedDays(start, end, now)
   const best = days.reduce<DayTotal | null>(
     (a, b) => (b.minutes > 0 && (!a || b.minutes > a.minutes) ? b : a),
     null,
@@ -282,8 +231,6 @@ export function buildPeriodStats(args: {
     minutes,
     count: resolved.length,
     prevMinutes,
-    avgMinutes: avgDays > 0 ? Math.round(minutes / avgDays) : 0,
-    avgDays,
     best,
     share: projectShare(resolved),
   }

@@ -1,9 +1,8 @@
 import { memo, useRef, useState } from 'react'
 import { ChevronRight, Plus } from 'lucide-react'
 import type { Project } from '@/lib/types'
-import { findStage } from '@/lib/types'
-import { nextDeadline, stageProgress, upcomingTodos, useStore } from '@/lib/store'
-import { countdownLabel, daysUntil, fmtMD, today } from '@/lib/date'
+import { upcomingTodos, useStore } from '@/lib/store'
+import { today } from '@/lib/date'
 import { isSubmitEnter } from '@/lib/keyboard'
 import { cn } from '@/lib/cn'
 import { Checkbox } from './Checkbox'
@@ -21,7 +20,7 @@ interface Props {
 }
 
 /**
- * 项目列表的一行：进度饼、标题、当前阶段、最近截止；展开后列出未完成待办，
+ * 项目列表的一行：进度饼、标题、未完成数；展开后列出未完成待办，
  * 可勾选、改日期、快速添加，也可拖到上方任务列表。
  */
 export const ProjectRow = memo(function ProjectRow({
@@ -83,12 +82,6 @@ export const ProjectRow = memo(function ProjectRow({
   }
 
   const t = today()
-  const nd = nextDeadline(project)
-  const days = nd ? daysUntil(nd.date) : null
-  const cd = days == null ? null : countdownLabel(days)
-  const waiting = project.collaborators.filter((c) => c.waitingFor.trim())
-  const sp = stageProgress(project)
-  const stage = findStage(project.stages, project.stage)
   const total = project.todos.length
   const done = project.todos.filter((x) => x.done).length
   const remaining = total - done
@@ -97,14 +90,14 @@ export const ProjectRow = memo(function ProjectRow({
 
   return (
     <li className={cn(dimmed && 'opacity-70')}>
-      <div className="group flex items-start gap-1 rounded-lg py-1.5 pl-1 pr-2 transition-colors hover:bg-hover">
+      <div className="group flex items-center gap-1 rounded-lg py-1 pl-1 pr-2 transition-colors hover:bg-hover">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-label={open ? `收起「${title}」的待办` : `展开「${title}」的待办`}
           disabled={dimmed}
-          className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-md text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:invisible"
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:invisible"
         >
           <ChevronRight
             size={14}
@@ -115,56 +108,20 @@ export const ProjectRow = memo(function ProjectRow({
         <button
           type="button"
           onClick={() => onEdit(project)}
-          className="flex min-w-0 flex-1 cursor-default flex-col rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-w-0 flex-1 cursor-default items-center gap-2.5 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <ProgressPie color={project.color} value={total ? done / total : 0} />
-            <span className="truncate text-[14px] font-medium leading-6 text-foreground">
-              {title}
-            </span>
-          </span>
-          <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 pl-[24px] text-xs leading-5 text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <span
-                aria-hidden
-                className="size-1.5 rounded-full"
-                style={{ background: stage.color }}
-              />
-              {stage.name}
-              <span className="tabular-nums text-faint">
-                {sp.current}/{sp.total}
-              </span>
-            </span>
-            {project.venue?.name ? <span>{project.venue.name}</span> : null}
-            {nd && cd ? (
-              <span
-                className={cn(
-                  'inline-flex min-w-0 items-center gap-1 tabular-nums',
-                  cd.tone === 'past' && 'text-destructive',
-                  cd.tone === 'urgent' && 'text-today',
-                )}
-                title={`${nd.label} · ${fmtMD(nd.date)}`}
-              >
-                {cd.text}
-                <span className="truncate text-faint">· {nd.label}</span>
-              </span>
-            ) : null}
-            {waiting.map((c) => (
-              <span key={c.id} className="min-w-0 truncate text-warn">
-                等 {c.name}：{c.waitingFor}
-              </span>
-            ))}
-          </span>
+          <ProgressPie color={project.color} value={total ? done / total : 0} />
+          <span className="truncate text-[14px] leading-6 text-foreground">{title}</span>
         </button>
         {remaining > 0 ? (
-          <span className="mt-1 shrink-0 text-xs tabular-nums text-faint" title="未完成待办">
+          <span className="shrink-0 text-xs tabular-nums text-faint" title="未完成待办">
             {remaining}
           </span>
         ) : null}
       </div>
 
       {open ? (
-        <div className="pb-3 pl-[34px] pr-2">
+        <div className="pb-3 pl-[30px] pr-2">
           {todos.length ? (
             <ul>
               {todos.map((todo) => {

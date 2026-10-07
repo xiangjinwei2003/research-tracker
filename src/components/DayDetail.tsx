@@ -2,11 +2,9 @@ import { format } from 'date-fns'
 import { Trash2 } from 'lucide-react'
 import { fmtHM, fmtMinutes } from '@/lib/date'
 import { cn } from '@/lib/cn'
-import { taskShare, type ResolvedSession } from '@/lib/focus'
+import type { ResolvedSession } from '@/lib/focus'
 
 const WEEKDAY_CN = ['一', '二', '三', '四', '五', '六', '日'] as const
-/** Earliest hour the day track shows before it stretches for an early session. */
-const BASE_FROM_H = 6
 
 interface Props {
   date: Date
@@ -17,27 +15,10 @@ interface Props {
   onRemove: (r: ResolvedSession) => void
 }
 
-/**
- * The selected day, in full: total on the right of the date, a proportional
- * 24-hour track showing WHEN the day was spent, then the records themselves.
- */
+/** 选中那天：日期、当日合计，下面是逐条专注记录（时间、时长、任务）。 */
 export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
   const isToday = iso === todayIso
   const minutes = rows.reduce((acc, r) => acc + r.minutes, 0)
-  const shares = taskShare(rows)
-
-  // Window: 06:00–24:00 by default, stretched to cover an earlier session so a
-  // 2am block never falls off the track.
-  const fromH = rows.reduce(
-    (lo, r) => Math.min(lo, new Date(r.session.startedAt).getHours()),
-    BASE_FROM_H,
-  )
-  const span = 24 - fromH
-  const ticks: number[] = []
-  for (let h = Math.ceil(fromH / 3) * 3; h < 24; h += 3) ticks.push(h)
-
-  const now = new Date()
-  const nowPct = ((now.getHours() + now.getMinutes() / 60 - fromH) / span) * 100
 
   return (
     <section aria-label="当日详情" className="mt-10">
@@ -68,97 +49,6 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
 
       {rows.length > 0 ? (
         <>
-          {/* How the day split across tasks — the track below answers "when",
-              this answers "on what". Repeat sittings on a task are merged.
-              Kept narrow so it reads as a legend, not a second timeline. */}
-          <div className="mt-3 max-w-2xl">
-            <div className="flex h-2 gap-0.5" role="img" aria-label="当日任务占比">
-              {shares.map((s) => (
-                <div
-                  key={s.key}
-                  // Proportional via flex-grow so the gaps don't overflow 100%.
-                  style={{ flexGrow: s.minutes, background: s.color || 'var(--color-neutral-400)' }}
-                  className="basis-0 rounded-full"
-                  title={`${s.label} · ${fmtMinutes(s.minutes)} · ${Math.round((s.minutes / minutes) * 100)}%`}
-                />
-              ))}
-            </div>
-            <ul className="mt-2.5 space-y-1.5">
-              {shares.map((s) => (
-                <li key={s.key} className="flex items-center gap-2 text-xs">
-                  <span
-                    aria-hidden
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ background: s.color || 'var(--color-neutral-400)' }}
-                  />
-                  <span className="min-w-0 flex-1 truncate text-secondary-foreground">
-                    {s.label}
-                    {s.label !== s.projectTitle ? (
-                      <span className="text-faint"> · {s.projectTitle}</span>
-                    ) : null}
-                  </span>
-                  <span className="shrink-0 mono text-muted-foreground">
-                    {fmtMinutes(s.minutes)}
-                  </span>
-                  <span className="w-9 shrink-0 text-right mono text-faint">
-                    {Math.round((s.minutes / minutes) * 100)}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Proportional day track: where the blocks sit IS when they happened. */}
-          <div className="mt-5">
-            <div className="relative h-8 overflow-hidden rounded-md bg-muted/60">
-              {ticks.map((h) => (
-                <span
-                  key={h}
-                  aria-hidden
-                  className="absolute inset-y-0 w-px bg-border"
-                  style={{ left: `${((h - fromH) / span) * 100}%` }}
-                />
-              ))}
-              {rows.map((r) => {
-                const s = new Date(r.session.startedAt)
-                const startH = s.getHours() + s.getMinutes() / 60
-                const left = ((startH - fromH) / span) * 100
-                const width = (r.minutes / 60 / span) * 100
-                const accent = r.color || 'var(--color-neutral-400)'
-                return (
-                  <span
-                    key={r.session.id}
-                    title={`${fmtHM(r.session.startedAt)}–${fmtHM(r.session.endedAt)} · ${r.label} · ${fmtMinutes(r.minutes)}`}
-                    className="absolute inset-y-1 rounded-md"
-                    style={{
-                      left: `${Math.max(0, left)}%`,
-                      width: `${Math.max(0.8, Math.min(width, 100 - left))}%`,
-                      background: accent,
-                    }}
-                  />
-                )
-              })}
-              {isToday && nowPct >= 0 && nowPct <= 100 ? (
-                <span
-                  aria-hidden
-                  className="absolute inset-y-0 w-px bg-today"
-                  style={{ left: `${nowPct}%` }}
-                />
-              ) : null}
-            </div>
-            <div className="relative mt-1 h-3">
-              {ticks.map((h) => (
-                <span
-                  key={h}
-                  className="absolute -translate-x-1/2 text-[10px] leading-none tabular-nums text-faint"
-                  style={{ left: `${((h - fromH) / span) * 100}%` }}
-                >
-                  {String(h).padStart(2, '0')}:00
-                </span>
-              ))}
-            </div>
-          </div>
-
           <ul className="mt-3 space-y-1">
             {rows.map((r) => (
               // Narrow screens wrap the title onto its own line rather than
@@ -178,7 +68,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove }: Props) {
                   <span
                     aria-hidden
                     className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full align-middle"
-                    style={{ background: r.color || 'var(--color-neutral-400)' }}
+                    style={{ background: r.color || 'var(--faint)' }}
                   />
                   {r.label}
                   {r.session.todoTitle && r.projectTitle !== '自由专注' ? (

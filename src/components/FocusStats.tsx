@@ -7,35 +7,17 @@ const WEEKDAY_CN = ['一', '二', '三', '四', '五', '六', '日'] as const
 
 interface Props {
   stats: PeriodStats
-  /** 本周专注 / 7月专注 — matches the period the page is showing. */
-  totalLabel: string
-  /** 较上周 / 较上月. */
-  deltaLabel: string
   /** Centre caption of the donut, e.g. 本周. */
   centerLabel: string
-  streak: { current: number; longest: number }
   heat: HeatWeek[]
   allTime: { minutes: number; count: number; days: number }
 }
 
-/** Big-number split for KPI tiles: 45 → (45, 分钟); 96 → (1.6, 小时). */
+/** Big-number split for the donut centre: 45 → (45, 分钟); 96 → (1.6, 小时). */
 function bigDuration(min: number): { value: string; unit: string } {
   if (min < 60) return { value: `${min}`, unit: '分钟' }
   const h = Math.round((min / 60) * 10) / 10
   return { value: Number.isInteger(h) ? h.toFixed(0) : `${h}`, unit: '小时' }
-}
-
-function Tile({ label, value, unit, sub }: { label: string; value: string; unit: string; sub: React.ReactNode }) {
-  return (
-    <div className="min-w-0">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 flex items-baseline gap-1">
-        <span className="mono text-2xl font-semibold leading-none tracking-[-0.01em] text-foreground">{value}</span>
-        <span className="text-xs text-muted-foreground">{unit}</span>
-      </div>
-      <div className="mt-1.5 truncate text-xs text-faint">{sub}</div>
-    </div>
-  )
 }
 
 function SectionHead({ children }: { children: React.ReactNode }) {
@@ -46,33 +28,14 @@ function SectionHead({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** Period-over-period change, in the reference dashboards' ±% chip style. */
-function Delta({ cur, prev, label }: { cur: number; prev: number; label: string }) {
-  if (prev === 0) return <>{cur > 0 ? `${label} · 上期无记录` : '—'}</>
-  const pct = Math.round(((cur - prev) / prev) * 100)
-  return (
-    <span
-      className={cn(pct > 0 && 'text-success', pct < 0 && 'text-warn')}
-    >
-      {label} {pct > 0 ? '+' : ''}
-      {pct}%
-    </span>
-  )
-}
-
-/** KPI tiles, per-project donut and the long-run heatmap for one period. */
+/** 项目占比环图与近 16 周热力图。 */
 export function FocusStats({
   stats,
-  totalLabel,
-  deltaLabel,
   centerLabel,
-  streak,
   heat,
   allTime,
 }: Props) {
   const total = bigDuration(stats.minutes)
-  const avg = bigDuration(stats.avgMinutes)
-  const best = bigDuration(stats.best?.minutes ?? 0)
 
   /* Donut geometry: each slice carries its fraction + accumulated offset. */
   const R = 52
@@ -88,40 +51,7 @@ export function FocusStats({
 
   return (
     <section aria-label="专注统计" className="mt-12">
-      <SectionHead>统计</SectionHead>
-
-      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-4">
-        <Tile
-          label={totalLabel}
-          value={total.value}
-          unit={total.unit}
-          sub={<Delta cur={stats.minutes} prev={stats.prevMinutes} label={deltaLabel} />}
-        />
-        <Tile
-          label="日均专注"
-          value={avg.value}
-          unit={avg.unit}
-          sub={`按已过 ${stats.avgDays} 天计`}
-        />
-        <Tile
-          label="单日最高"
-          value={best.value}
-          unit={best.unit}
-          sub={
-            stats.best
-              ? `${format(stats.best.date, 'M月d日')} 周${WEEKDAY_CN[(stats.best.date.getDay() + 6) % 7]}`
-              : '—'
-          }
-        />
-        <Tile
-          label="连续专注"
-          value={`${streak.current}`}
-          unit="天"
-          sub={`最长 ${streak.longest} 天`}
-        />
-      </div>
-
-      <div className="review-split mt-12">
+      <div className="review-split">
         <div>
           <SectionHead>项目占比</SectionHead>
           {stats.minutes > 0 ? (

@@ -66,12 +66,11 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
         end,
         prevStart,
         prevEnd: start,
-        now,
       }),
-    // The ms bounds pin `start`/`end`/`prevStart`, and `todayIso` pins `now` —
-    // those Date objects are new every render and would defeat the memo.
+    // The ms bounds pin `start`/`end`/`prevStart`; those Date objects are new
+    // every render and would defeat the memo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sessions, projectById, startMs, endMs, prevStartMs, todayIso],
+    [sessions, projectById, startMs, endMs, prevStartMs],
   )
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,6 +95,10 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
     setSelectedIso(defaultIso())
   }
 
+  const pct =
+    stats.prevMinutes > 0
+      ? Math.round(((stats.minutes - stats.prevMinutes) / stats.prevMinutes) * 100)
+      : 0
   const selectedDay = stats.days.find((d) => d.iso === selectedIso)
   const selectedDate = selectedDay?.date ?? parse(selectedIso) ?? now
   const selectedRows: ResolvedSession[] = stats.resolved.filter(
@@ -125,7 +128,15 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
           </h1>
           <p className="mt-1.5 pl-[36px] text-[13px] text-muted-foreground">
             {stats.count > 0
-              ? `${periodWord}专注 ${fmtMinutes(stats.minutes)} · ${stats.count} 次`
+              ? [
+                  `${periodWord}专注 ${fmtMinutes(stats.minutes)} · ${stats.count} 次`,
+                  stats.prevMinutes > 0
+                    ? `${isWeek ? '较上周' : '较上月'} ${pct > 0 ? '+' : ''}${pct}%`
+                    : null,
+                  streak.current > 0 ? `连续 ${streak.current} 天` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
               : `${periodWord}还没有专注记录`}
           </p>
         </div>
@@ -216,10 +227,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
 
           <FocusStats
             stats={stats}
-            totalLabel={`${periodWord}专注`}
-            deltaLabel={isWeek ? '较上周' : '较上月'}
             centerLabel={periodWord}
-            streak={streak}
             heat={heat}
             allTime={allTime}
           />

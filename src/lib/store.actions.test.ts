@@ -29,7 +29,7 @@ const localStorageMock = {
 unlockPersistWrites()
 mem.clear()
 
-const { useStore, weekItems, nextDeadline } = await import(`./store.ts?actions=${Date.now()}`)
+const { useStore } = await import(`./store.ts?actions=${Date.now()}`)
 
 function add(title: string) {
   return useStore.getState().addProject({
@@ -166,70 +166,4 @@ test('completeTimer discards spans under 60s and records a 5 minute early stop',
   } finally {
     Date.now = orig
   }
-})
-
-test('weekItems skips archived projects and done todos', () => {
-  const stages = defaultStages()
-  const items = weekItems(
-    [
-      {
-        id: 'arch',
-        title: 'archived',
-        description: '',
-        color: 'oklch(0.72 0.15 264)',
-        stage: 'literature',
-        stages,
-        startDate: '2026-01-01',
-        collaborators: [],
-        todos: [{ id: 't0', title: 'hidden', endDate: '2026-01-02', done: false, stage: 'literature' }],
-        notes: '',
-        archived: true,
-        createdAt: '',
-        updatedAt: '',
-      },
-      {
-        id: 'live',
-        title: 'live',
-        description: '',
-        color: 'oklch(0.72 0.15 264)',
-        stage: 'literature',
-        stages,
-        startDate: '2026-01-01',
-        collaborators: [],
-        todos: [
-          { id: 't1', title: 'due', endDate: '2026-01-02', done: false, stage: 'literature' },
-          { id: 't2', title: 'done', endDate: '2026-01-02', done: true, stage: 'literature' },
-        ],
-        notes: '',
-        archived: false,
-        createdAt: '',
-        updatedAt: '',
-      },
-    ],
-    '2026-01-10',
-  )
-  assert.equal(items.length, 1)
-  assert.equal(items[0].todo.id, 't1')
-})
-
-test('nextDeadline prefers the next date on or after today', () => {
-  const stages = defaultStages()
-  const p = {
-    id: 'p',
-    title: 'p',
-    description: '',
-    color: 'oklch(0.72 0.15 264)',
-    stage: 'literature',
-    stages,
-    startDate: '2026-01-01',
-    venue: { name: 'CHI', deadline: '2099-01-01' },
-    collaborators: [],
-    todos: [{ id: 't', title: 'old', endDate: '2000-01-01', done: false, stage: 'literature' }],
-    notes: '',
-    archived: false,
-    createdAt: '',
-    updatedAt: '',
-  }
-  const d = nextDeadline(p)
-  assert.equal(d?.date, '2099-01-01')
 })
