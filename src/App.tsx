@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStore } from "@/lib/store";
 import { toast } from "@/lib/toast";
+import { startCalendarSync } from "@/lib/calendarSync";
 import type { Project } from "@/lib/types";
 
 export default function App() {
@@ -21,6 +22,10 @@ export default function App() {
     editingId ? (s.projects.find((p) => p.id === editingId) ?? null) : null,
   );
   const undo = useStore((s) => s.undo);
+
+  useEffect(() => {
+    startCalendarSync();
+  }, []);
 
   // Global Cmd/Ctrl+Z to undo last destructive action.
   useEffect(() => {

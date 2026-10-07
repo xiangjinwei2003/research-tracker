@@ -10,7 +10,7 @@ import {
   startOfWeek,
 } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, CalendarPlus, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { fmtMD, parse, today } from '@/lib/date'
@@ -19,6 +19,7 @@ import { Calendar, CalendarDayButton } from './ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Button } from './ui/Button'
 import { cn } from '@/lib/cn'
+import { CalendarSubscribeDialog } from './CalendarSubscribeDialog'
 
 /** 美式排法：周日是一周的第一列（与 Apple Calendar 默认一致）。 */
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'] as const
@@ -47,6 +48,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
   const updateTodo = useStore((s) => s.updateTodo)
   const [anchor, setAnchor] = useState<Date>(() => new Date())
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [subscribeOpen, setSubscribeOpen] = useState(false)
   const todayIso = today()
 
   // Drag-to-reschedule: chip being dragged + the day cell currently hovered.
@@ -123,6 +125,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
 
   return (
     <section aria-label="截止月历" className="flex min-w-0 flex-1 flex-col">
+      <CalendarSubscribeDialog open={subscribeOpen} onOpenChange={setSubscribeOpen} />
       <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
@@ -133,6 +136,11 @@ export function DeadlineCalendar({ onEdit }: Props) {
         </div>
 
         <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="sm" className="mr-2" onClick={() => setSubscribeOpen(true)}>
+            <CalendarPlus />
+            订阅到苹果日历
+          </Button>
+
           <button
             type="button"
             onClick={() => setAnchor((a) => addMonths(a, -1))}
