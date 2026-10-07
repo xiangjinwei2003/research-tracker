@@ -1,19 +1,15 @@
 import {
   Archive,
-  CalendarClock,
   CalendarDays,
-  Database,
+  CircleCheck,
   Download,
-  FolderOpen,
-  LayoutGrid,
-  Moon,
+  Ellipsis,
   Plus,
-  StickyNote,
-  Sun,
+  Timer,
   Trash2,
   Upload,
 } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { exportJSON, importJSON, useStore } from "@/lib/store";
 import {
   getPersistHealth,
@@ -24,8 +20,7 @@ import { toast } from "@/lib/toast";
 import type { Project } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import { FocusTimer } from "./FocusTimer";
-import { Button } from "./ui/Button";
-import { Input } from "./ui/Input";
+import { ProgressPie } from "./ProgressPie";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,14 +38,14 @@ interface Props {
   onEdit: (project: Project) => void;
   children: ReactNode;
 }
+// 导航图标各有固定颜色，用于区分分区；其余界面保持灰阶。
 const TABS = [
-  { id: "dashboard", label: "任务看板", icon: LayoutGrid },
-  { id: "timeline", label: "日历", icon: CalendarDays },
-  { id: "review", label: "专注回顾", icon: CalendarClock },
-  { id: "archived", label: "归档", icon: Archive },
-] satisfies { id: Tab; label: string; icon: typeof LayoutGrid }[];
+  { id: "dashboard", label: "任务", icon: CircleCheck, tint: "text-ring" },
+  { id: "timeline", label: "日历", icon: CalendarDays, tint: "text-destructive" },
+  { id: "review", label: "专注回顾", icon: Timer, tint: "text-success" },
+  { id: "archived", label: "归档", icon: Archive, tint: "text-faint" },
+] satisfies { id: Tab; label: string; icon: typeof Archive; tint: string }[];
 const MEMO_KEY = "research-tracker.memo";
-const THEME_KEY = "research-tracker.theme";
 const readMemo = () => {
   try {
     return localStorage.getItem(MEMO_KEY) ?? "";
@@ -77,13 +72,6 @@ export function Header({ tab, onTabChange, onNew, onEdit, children }: Props) {
   const undo = useStore((s) => s.undo);
   const fileRef = useRef<HTMLInputElement>(null);
   const [memo, setMemo] = useState(readMemo);
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    try {
-      return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
-    } catch {
-      return "dark";
-    }
-  });
   const active = projects.filter((p) => !p.archived);
   useEffect(() => {
     const tell = (health: ReturnType<typeof getPersistHealth>) => {
@@ -98,14 +86,6 @@ export function Header({ tab, onTabChange, onNew, onEdit, children }: Props) {
     tell(getPersistHealth());
     return subscribePersistHealth(tell);
   }, []);
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch {
-      /* Theme still applies for this session. */
-    }
-  }, [theme]);
   const onExport = () => {
     const unreadable = getPersistHealth() === "unreadable";
     const raw = unreadable ? readRawPersistItem() : null;
@@ -167,22 +147,36 @@ export function Header({ tab, onTabChange, onNew, onEdit, children }: Props) {
     }
   };
 
+  const dataMenu = (
+    <DropdownMenuContent align="start">
+      <DropdownMenuLabel>数据只保存在此浏览器</DropdownMenuLabel>
+      <DropdownMenuItem onSelect={onExport}>
+        <Download />
+        导出 JSON 备份
+      </DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => fileRef.current?.click()}>
+        <Upload />
+        从文件导入
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem destructive onSelect={onClear}>
+        <Trash2 />
+        清空全部数据
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  );
+
   return (
     <div className="app-shell">
-      <aside className="app-sidebar z-40 border-r bg-[var(--sidebar)]">
-        <div className="flex h-16 items-center gap-2.5 border-b px-4">
-          <img src="/logo-mark.svg" alt="" className="size-8 rounded-lg" />
-          <div className="hidden min-w-0 min-[68.75rem]:block">
-            <div className="truncate text-sm font-semibold">
-              Research Tracker
-            </div>
-            <div className="text-[10px] text-muted-foreground">
-              本地研究工作台
-            </div>
-          </div>
+      <aside className="app-sidebar z-40 bg-sidebar">
+        <div className="flex h-14 shrink-0 items-center gap-2.5 px-5 max-[68.74rem]:justify-center max-[68.74rem]:px-0">
+          <img src="/logo-mark.svg" alt="" className="size-6 rounded-md" />
+          <span className="hidden truncate text-[13px] font-semibold text-secondary-foreground min-[68.75rem]:block">
+            Research Tracker
+          </span>
         </div>
-        <nav className="space-y-1 p-2" aria-label="主导航">
-          {TABS.map(({ id, label, icon: Icon }) => (
+        <nav className="space-y-px px-3 pt-2" aria-label="主导航">
+          {TABS.map(({ id, label, icon: Icon, tint }) => (
             <button
               key={id}
               type="button"
@@ -191,198 +185,151 @@ export function Header({ tab, onTabChange, onNew, onEdit, children }: Props) {
               aria-label={label}
               title={label}
               className={cn(
-                "flex h-10 w-full items-center justify-center gap-3 rounded-lg px-3 text-sm font-medium transition min-[68.75rem]:justify-start",
+                "flex h-8 w-full items-center justify-center gap-2.5 rounded-md px-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[68.75rem]:justify-start",
                 tab === id
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  ? "bg-white/[.08] font-medium text-foreground"
+                  : "text-secondary-foreground hover:bg-hover",
               )}
             >
-              <Icon size={18} />
+              <Icon size={17} strokeWidth={2.1} className={tint} />
               <span className="hidden min-[68.75rem]:inline">{label}</span>
             </button>
           ))}
         </nav>
-        <div className="mx-3 mt-4 hidden border-t pt-4 min-[68.75rem]:block">
-          <div className="mb-2 flex items-center justify-between px-1 text-[11px] font-semibold text-muted-foreground">
-            <span>进行中项目</span>
-            <span>{active.length}</span>
-          </div>
-          <div className="space-y-0.5">
-            {active.slice(0, 6).map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => onEdit(p)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted"
-                style={{ "--proj": p.color } as CSSProperties}
-              >
-                <span className="proj-name min-w-0">
-                  {p.title || "未命名项目"}
-                </span>
-                <span className="ml-auto shrink-0 tabular-nums text-faint">
-                  {p.todos.filter((todo) => !todo.done).length}
-                </span>
-              </button>
-            ))}
-          </div>
+        <div className="mt-6 hidden min-h-0 flex-1 overflow-y-auto px-3 min-[68.75rem]:block">
+          {active.length ? (
+            <ul className="space-y-px" aria-label="进行中项目">
+              {active.map((p) => {
+                const total = p.todos.length;
+                const done = p.todos.filter((todo) => todo.done).length;
+                return (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => onEdit(p)}
+                      title={p.title || "未命名项目"}
+                      className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-secondary-foreground transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <ProgressPie
+                        color={p.color}
+                        value={total ? done / total : 0}
+                      />
+                      <span className="min-w-0 flex-1 truncate">
+                        {p.title || "未命名项目"}
+                      </span>
+                      {total - done > 0 ? (
+                        <span className="shrink-0 text-xs tabular-nums text-faint">
+                          {total - done}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
         </div>
-        <div className="mt-auto space-y-2 border-t p-3">
-          <button
-            type="button"
-            onClick={() =>
-              setTheme((value) => (value === "dark" ? "light" : "dark"))
-            }
-            className="flex h-9 w-full items-center justify-center gap-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground min-[68.75rem]:justify-start min-[68.75rem]:px-2"
-            aria-label={theme === "dark" ? "切换到浅色主题" : "切换到深色主题"}
-          >
-            {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-            <span className="hidden text-xs min-[68.75rem]:inline">
-              {theme === "dark" ? "浅色主题" : "深色主题"}
-            </span>
-          </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="flex h-9 w-full items-center justify-center gap-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground min-[68.75rem]:justify-start min-[68.75rem]:px-2"
-              aria-label="数据管理"
+        <div className="mt-auto shrink-0 px-3 pb-3 pt-2">
+          <textarea
+            value={memo}
+            onChange={(e) => {
+              setMemo(e.target.value);
+              writeMemo(e.target.value);
+            }}
+            placeholder="便签"
+            aria-label="便签"
+            rows={2}
+            className="mb-2 hidden w-full resize-none rounded-md bg-transparent px-2.5 py-1.5 text-xs leading-5 text-muted-foreground outline-none transition-colors placeholder:text-faint hover:bg-hover focus:bg-hover focus:text-foreground min-[68.75rem]:block"
+          />
+          <div className="flex items-center gap-1 max-[68.74rem]:flex-col">
+            <button
+              type="button"
+              onClick={onNew}
+              aria-label="新建项目"
+              title="新建项目"
+              className="flex h-8 min-w-0 flex-1 items-center justify-center gap-2 rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[68.75rem]:justify-start"
             >
-              <Database size={17} />
-              <span className="hidden text-xs min-[68.75rem]:inline">
-                数据管理
-              </span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>本地数据</DropdownMenuLabel>
-              <DropdownMenuItem onSelect={onExport}>
-                <Download />
-                导出 JSON 备份
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => fileRef.current?.click()}>
-                <Upload />
-                从文件导入
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem destructive onSelect={onClear}>
-                <Trash2 />
-                清空全部数据
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <div className="hidden min-[68.75rem]:block">
-            <div className="mb-1 flex items-center gap-1 text-[10px] text-muted-foreground">
-              <StickyNote size={11} />
-              便签
-            </div>
-            <Input
-              value={memo}
-              onChange={(e) => {
-                setMemo(e.target.value);
-                writeMemo(e.target.value);
-              }}
-              placeholder="随手记…"
-              aria-label="便签"
-              className="h-8 text-xs"
-            />
+              <Plus size={16} />
+              <span className="hidden min-[68.75rem]:inline">新建项目</span>
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover"
+                aria-label="数据管理"
+                title="数据管理"
+              >
+                <Ellipsis size={16} />
+              </DropdownMenuTrigger>
+              {dataMenu}
+            </DropdownMenu>
           </div>
-          <p className="hidden px-1 text-[10px] leading-4 text-faint min-[68.75rem]:block">
-            数据只保存在此浏览器
-          </p>
         </div>
       </aside>
       <div className="app-main" data-app-main>
-      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
-        <div className="flex min-h-16 min-w-0 max-w-full flex-wrap items-center gap-2 px-4 py-2 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 md:hidden">
-            <img src="/logo-mark.svg" alt="" className="size-7 rounded-md" />
-            <span className="text-sm font-bold max-[420px]:hidden">
-              Research Tracker
-            </span>
-          </div>
-          <div className="hidden min-w-0 items-center gap-2 text-[13px] text-muted-foreground md:flex">
-            <FolderOpen size={15} aria-hidden="true" />
-            <span className="truncate">
-              工作区 / {TABS.find((x) => x.id === tab)?.label}
-            </span>
-          </div>
-          <nav className="order-3 flex w-full justify-between rounded-lg bg-muted p-1 md:hidden">
-            {TABS.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onTabChange(id)}
-                aria-label={label}
-                className={cn(
-                  "flex h-8 flex-1 items-center justify-center rounded-md",
-                  tab === id
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground",
-                )}
-              >
-                <Icon size={16} />
-              </button>
-            ))}
-          </nav>
-          <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5">
-            <FocusTimer />
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onNew}
-              aria-label="新建项目"
-            >
-              <Plus />
-              <span className="hidden sm:inline">新建项目</span>
-            </Button>
-            <button
-              type="button"
-              onClick={() =>
-                setTheme((value) => (value === "dark" ? "light" : "dark"))
-              }
-              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
-              aria-label={
-                theme === "dark" ? "切换到浅色主题" : "切换到深色主题"
-              }
-            >
-              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-            <div className="md:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground"
-                  aria-label="数据管理"
-                >
-                  <Database size={17} />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onSelect={onExport}>
-                    <Download />
-                    导出备份
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => fileRef.current?.click()}>
-                    <Upload />
-                    导入
-                  </DropdownMenuItem>
-                  <DropdownMenuItem destructive onSelect={onClear}>
-                    <Trash2 />
-                    清空全部数据
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+        <header className="sticky top-0 z-30 bg-background/85 backdrop-blur-md">
+          <div className="flex min-h-14 min-w-0 max-w-full flex-wrap items-center gap-2 px-4 py-2 sm:px-6 lg:px-10">
+            <div className="flex items-center gap-2 md:hidden">
+              <img src="/logo-mark.svg" alt="" className="size-6 rounded-md" />
             </div>
+            <nav
+              className="order-3 flex w-full gap-1 md:hidden"
+              aria-label="主导航"
+            >
+              {TABS.map(({ id, label, icon: Icon, tint }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onTabChange(id)}
+                  aria-label={label}
+                  aria-current={tab === id ? "page" : undefined}
+                  className={cn(
+                    "flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md text-xs",
+                    tab === id
+                      ? "bg-white/[.08] font-medium text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <Icon size={15} className={tint} />
+                  <span className="max-[380px]:hidden">{label}</span>
+                </button>
+              ))}
+            </nav>
+            <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-1">
+              <FocusTimer />
+              <button
+                type="button"
+                onClick={onNew}
+                className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground md:hidden"
+                aria-label="新建项目"
+              >
+                <Plus size={17} />
+              </button>
+              <div className="md:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-hover"
+                    aria-label="数据管理"
+                  >
+                    <Ellipsis size={17} />
+                  </DropdownMenuTrigger>
+                  {dataMenu}
+                </DropdownMenu>
+              </div>
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void onImport(file);
+                e.target.value = "";
+              }}
+            />
           </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void onImport(file);
-              e.target.value = "";
-            }}
-          />
-        </div>
-      </header>
-      {children}
+        </header>
+        {children}
       </div>
     </div>
   );

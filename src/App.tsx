@@ -66,11 +66,7 @@ export default function App() {
           onEdit={openEdit}
         >
           {tab === "dashboard" ? (
-            <Board
-              onNew={openNew}
-              onEdit={openEdit}
-              onGoReview={() => setTab("review")}
-            />
+            <Board onNew={openNew} onEdit={openEdit} />
           ) : tab === "timeline" ? (
             <Timeline onEdit={openEdit} />
           ) : tab === "review" ? (

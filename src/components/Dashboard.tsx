@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Plus, ChevronDown } from 'lucide-react'
+import { Archive, ChevronRight } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/cn'
 import type { Project } from '@/lib/types'
-import { ProjectCard } from './ProjectCard'
-import { Button } from './ui/Button'
-import { Container } from './ui/Container'
+import { ProjectRow } from './ProjectRow'
 
 const COLLAPSE_KEY = 'rt-overview-collapsed'
 
@@ -24,15 +22,17 @@ interface Props {
   showArchived: boolean
   onNew: () => void
   onEdit: (p: Project) => void
-  /** Forwarded to each card so its todos can be dragged into 本周重点. */
+  /** Forwarded to each row so its todos can be dragged into the task list. */
   draggableTodos?: boolean
-  /** Show a fold/unfold toggle for the project grid (home overview only). */
+  /** Show a fold/unfold toggle for the project list (home only). */
   collapsible?: boolean
 }
 
+/**
+ * 项目列表。首页任务列表下方是进行中项目（可折叠）；归档页是整页的已归档项目。
+ */
 export function Dashboard({
   showArchived,
-  onNew,
   onEdit,
   draggableTodos = false,
   collapsible = false,
@@ -51,81 +51,76 @@ export function Dashboard({
   }
 
   const visible = useMemo(
-    // Keep the store's array order (newest created first): cards hold a fixed
+    // Keep the store's array order (newest created first): rows hold a fixed
     // position instead of reshuffling as deadlines shift or todos change.
     () => projects.filter((p) => p.archived === showArchived),
     [projects, showArchived],
   )
 
-  return (
-    <Container className="py-5">
-      <div className="mb-5 flex items-end justify-between gap-3">
-        <div>
-          <h2 className="text-[15px] font-semibold text-foreground">
-            {showArchived ? '已归档项目' : '项目'}
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {showArchived
-              ? `${visible.length} 个已归档`
-              : `${visible.length} 个进行中`}
+  if (showArchived) {
+    return (
+      <main className="mx-auto w-full max-w-[52rem] px-4 pb-24 pt-6 sm:px-8 lg:pt-10">
+        <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
+          <Archive size={26} strokeWidth={2.2} className="text-faint" aria-hidden />
+          归档
+        </h1>
+        <p className="mt-1.5 pl-[36px] text-[13px] text-muted-foreground">
+          {visible.length ? `${visible.length} 个项目` : '已完成或搁置的项目会放在这里'}
+        </p>
+        {visible.length ? (
+          <ul className="mt-8 border-t border-border pt-2">
+            {visible.map((p) => (
+              <ProjectRow key={p.id} project={p} onEdit={onEdit} dimmed />
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-8 max-w-sm pl-[36px] text-[13px] leading-6 text-faint">
+            在项目详情里选择归档，项目就会从任务列表移到这里，数据保留。
           </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {!showArchived && !collapsible && visible.length > 0 ? (
-            <Button variant="primary" onClick={onNew}>
-              <Plus size={16} /> 新建项目
-            </Button>
-          ) : null}
-          {collapsible && visible.length > 0 ? (
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-expanded={!collapsed}
-              aria-controls="overview-grid"
-              aria-label={collapsed ? '展开项目' : '折叠项目'}
-              title={collapsed ? '展开项目' : '折叠项目'}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
-            >
-              <ChevronDown
-                size={18}
-                className={cn('transition-transform', collapsed && '-rotate-90')}
-              />
-            </button>
-          ) : null}
-        </div>
+        )}
+      </main>
+    )
+  }
+
+  return (
+    <section aria-label="项目">
+      <div className="flex h-9 items-center gap-2 border-b border-border">
+        {collapsible ? (
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-expanded={!collapsed}
+            aria-controls="overview-list"
+            className="-ml-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-[13px] font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ChevronRight
+              size={14}
+              strokeWidth={2.4}
+              className={cn(
+                'text-faint transition-transform duration-200',
+                !collapsed && 'rotate-90',
+              )}
+            />
+            项目
+          </button>
+        ) : (
+          <h2 className="text-[13px] font-semibold">项目</h2>
+        )}
+        <span className="text-xs tabular-nums text-faint">{visible.length}</span>
       </div>
 
-      {collapsed ? null : visible.length === 0 ? (
-        showArchived ? (
-          <div className="rounded-xl border border-dashed border-border bg-panel px-6 py-10 text-center">
-            <p className="text-sm text-muted-foreground">还没有归档的项目。</p>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-border bg-panel px-6 py-10 text-center">
-            <p className="text-sm text-muted-foreground">还没有项目。</p>
-            <div className="mt-4 flex justify-center">
-              <Button variant="primary" onClick={onNew}>
-                <Plus size={16} /> 新建项目
-              </Button>
-            </div>
-          </div>
-        )
-      ) : (
-        <div
-          id="overview-grid"
-          className="pane-grid cols-2 cols-3 gap-3"
-        >
+      {collapsed ? null : (
+        <ul id="overview-list" className="mt-1">
           {visible.map((p) => (
-            <ProjectCard
+            <ProjectRow
               key={p.id}
               project={p}
               onEdit={onEdit}
               draggableTodos={draggableTodos}
-              dimmed={showArchived}
             />
           ))}
-        </div>
+        </ul>
       )}
-    </Container>
+    </section>
   )
 }

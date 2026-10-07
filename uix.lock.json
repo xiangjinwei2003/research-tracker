@@ -1,31 +1,118 @@
 {
   "version": 1,
   "stack": "react-tailwind-shadcn",
-  "preset": "electric-violet-dark-only",
-  "presetNote": "暗夜工作台：深色专属令牌层（#0b0c10 底 + 电紫蓝 brand ramp，#6b7cff 主色），已移除主题切换。布局=上下卷轴（本周重点 hero + 项目任务池）。",
-  "spacingScale": [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 56, 64, 72, 80, 96],
+  "preset": "things-dark",
+  "presetNote": "2026年10月7日重做：深色单主题，中性色 oklch 色相 265 带极少彩度，强调色蓝 oklch(0.57 0.17 258)；今天黄、逾期红、完成绿。布局为 Things 3 式单列任务列表，任务是一行勾选框加文字，几乎不用边框和卡片。",
+  "spacingScale": [
+    0,
+    2,
+    4,
+    6,
+    8,
+    10,
+    12,
+    14,
+    16,
+    18,
+    20,
+    24,
+    28,
+    32,
+    36,
+    40,
+    44,
+    48,
+    56,
+    64,
+    72,
+    80,
+    96
+  ],
   "radius": "0.5rem",
-  "fonts": { "display": "system-ui sans", "body": "system-ui sans", "mono": "ui-monospace" },
-  "tokenFiles": ["src/index.css", "src/lib/types.ts"],
+  "fonts": {
+    "display": "system-ui sans",
+    "body": "system-ui sans",
+    "mono": "ui-monospace"
+  },
+  "tokenFiles": [
+    "src/index.css",
+    "src/lib/types.ts"
+  ],
   "tokenFilesNote": "types.ts 列入 tokenFiles 是因其存放项目/阶段的数据配色常量（identity 色相，用户可在取色器改），属数据色非 chrome 色，故豁免。",
-  "registries": ["@shadcn"],
+  "registries": [
+    "@shadcn"
+  ],
   "registryNote": "shadcn CLI 4.14.1。新组件用 CLI add（unified radix-ui 包）；已有 PascalCase 基元因大小写不敏感文件系统会与小写 registry 文件名冲突，改为把 registry 实现内联进原文件（改/adapt），保留调用点 API。",
   "components": [
-    { "name": "button", "mode": "adapt", "note": "shadcn CVA 内核；保留 primary/secondary/ghost/danger·sm/md API" },
-    { "name": "input", "mode": "adapt", "note": "shadcn field 样式 + focus ring；含 Textarea/Label + 备用原生 Select" },
-    { "name": "select", "mode": "install", "note": "@shadcn/select（Radix）替换 3 处原生 <select>" },
-    { "name": "dialog", "mode": "adapt", "note": "shadcn 结构/动画（data-state），保留 wrapper API + 头尾/滚动区" },
-    { "name": "dropdown-menu", "mode": "adapt", "note": "shadcn 皮肤 + data-state 动画；保留简化 API" },
-    { "name": "context-menu", "mode": "adapt", "note": "与 dropdown 同皮肤" },
-    { "name": "card", "mode": "adapt", "note": "bg-card/border/token" },
-    { "name": "collapsible", "mode": "custom", "note": "summary-when-collapsed 模式 registry 无对应，手写于 token" },
-    { "name": "tabs", "mode": "install", "note": "@shadcn/tabs 作顶栏视图切换（受控 segmented control），真 ARIA tablist" },
-    { "name": "popover", "mode": "install", "note": "@shadcn/popover 替换两处手搓取色浮层（focus/dismiss 更规范）" },
-    { "name": "tooltip", "mode": "install", "note": "@shadcn/tooltip + TooltipProvider（App）；数据管理/提醒开关等悬浮提示" },
-    { "name": "switch", "mode": "install", "note": "@shadcn/switch 作专注结束提醒开关" },
-    { "name": "sonner", "mode": "install", "note": "@shadcn/sonner 替换自建 zustand toast；接入 App 主题（去 next-themes）" },
-    { "name": "badge", "mode": "custom", "note": "stage 数据色经 --stage + color-mix，主题无关，保留自建" },
-    { "name": "calendar", "mode": "install", "note": "@shadcn/calendar（react-day-picker）；用于月份标题的跳转 popover；修 Button 导入大小写" },
-    { "name": "deadline-month-view", "mode": "custom", "note": "整屏 Apple 式月视图（registry 无月历事件网格），事件 chips 全走 token；过去日子置灰" }
+    {
+      "name": "button",
+      "mode": "adapt",
+      "note": "shadcn CVA 内核；保留 primary/secondary/ghost/danger·sm/md API"
+    },
+    {
+      "name": "input",
+      "mode": "adapt",
+      "note": "shadcn field 样式 + focus ring；含 Textarea/Label + 备用原生 Select"
+    },
+    {
+      "name": "select",
+      "mode": "install",
+      "note": "@shadcn/select（Radix）替换 3 处原生 <select>"
+    },
+    {
+      "name": "dialog",
+      "mode": "adapt",
+      "note": "shadcn 结构/动画（data-state），保留 wrapper API + 头尾/滚动区"
+    },
+    {
+      "name": "dropdown-menu",
+      "mode": "adapt",
+      "note": "shadcn 皮肤 + data-state 动画；保留简化 API"
+    },
+    {
+      "name": "collapsible",
+      "mode": "custom",
+      "note": "summary-when-collapsed 模式 registry 无对应，手写于 token"
+    },
+    {
+      "name": "popover",
+      "mode": "install",
+      "note": "@shadcn/popover 替换两处手搓取色浮层（focus/dismiss 更规范）"
+    },
+    {
+      "name": "tooltip",
+      "mode": "install",
+      "note": "@shadcn/tooltip + TooltipProvider（App）；数据管理/提醒开关等悬浮提示"
+    },
+    {
+      "name": "sonner",
+      "mode": "install",
+      "note": "@shadcn/sonner 替换自建 zustand toast；接入 App 主题（去 next-themes）"
+    },
+    {
+      "name": "calendar",
+      "mode": "install",
+      "note": "@shadcn/calendar（react-day-picker）；用于月份标题的跳转 popover；修 Button 导入大小写"
+    },
+    {
+      "name": "deadline-month-view",
+      "mode": "custom",
+      "note": "整屏 Apple 式月视图（registry 无月历事件网格），事件 chips 全走 token；过去日子置灰"
+    },
+    {
+      "name": "checkbox",
+      "mode": "custom",
+      "note": "任务勾选框（圆角方框，勾选后填充强调色），任务行、项目行、项目对话框共用"
+    },
+    {
+      "name": "progress-pie",
+      "mode": "custom",
+      "note": "Things 式项目进度饼，项目色细环加扇形"
+    },
+    {
+      "name": "task-row",
+      "mode": "custom",
+      "note": "首页任务行：勾选框、标题、项目与日期一行次要信息，悬停出现专注和菜单"
+    }
   ]
 }

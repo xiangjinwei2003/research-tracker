@@ -95,8 +95,8 @@ export const PRIORITY_META: Record<Priority, PriorityMeta> = {
     label: '低优先级',
     short: '低',
     rank: 2,
-    chip: 'border-success/30 bg-success/10 text-success',
-    text: 'text-success',
+    chip: 'border-[var(--priority-low)]/30 bg-[var(--priority-low)]/10 text-[var(--priority-low)]',
+    text: 'text-[var(--priority-low)]',
     dot: 'bg-[var(--priority-low)]',
   },
 }

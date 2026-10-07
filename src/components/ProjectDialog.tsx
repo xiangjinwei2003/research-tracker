@@ -10,8 +10,6 @@ import {
 import {
   Plus,
   Trash2,
-  Check,
-  Square,
   Archive,
   ArchiveRestore,
   ChevronRight,
@@ -58,6 +56,8 @@ import {
   DropdownMenuItem,
 } from './ui/DropdownMenu'
 import { PriorityButton } from './PriorityButton'
+import { Checkbox } from './Checkbox'
+import { DateButton } from './DateButton'
 import { cn } from '@/lib/cn'
 
 interface Props {
@@ -414,7 +414,7 @@ function EditDialog({
               <div className="ml-auto">
                 <DropdownMenu>
                   <DropdownMenuTrigger
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label="待办批量操作"
                     title="待办批量操作"
                   >
@@ -1080,7 +1080,7 @@ function TodoList({
             type="button"
             onClick={() => setDoneOpen((v) => !v)}
             aria-expanded={doneOpen}
-            className="group flex items-center gap-1 rounded-md px-1 py-1 text-xs text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="group flex items-center gap-1 rounded-md px-1 py-1 text-xs text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ChevronRight
               size={13}
@@ -1131,8 +1131,8 @@ const TodoRow = memo(function TodoRow({
       onDrop={(e) => onDrop(e, id)}
       onDragEnd={onDragEnd}
       className={cn(
-        'flex flex-col gap-1.5 rounded-md border border-transparent p-1 transition sm:flex-row sm:items-center',
-        isDropTarget && 'border-brand-500/60 bg-brand-500/[0.06]',
+        'group flex flex-col gap-1 rounded-md px-1 py-0.5 transition-colors hover:bg-hover sm:flex-row sm:items-center',
+        isDropTarget && 'bg-accent/50 shadow-[inset_0_0_0_1px_var(--ring)]',
         value.done && 'opacity-55',
       )}
     >
@@ -1141,27 +1141,23 @@ const TodoRow = memo(function TodoRow({
           type="button"
           draggable
           onDragStart={(e) => onDragStart(e, id)}
-          className="inline-flex size-6 shrink-0 cursor-grab items-center justify-center text-muted-foreground hover:text-foreground/90 active:cursor-grabbing"
+          className="inline-flex size-6 shrink-0 cursor-grab items-center justify-center text-faint opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
           aria-label="拖拽以重排"
           title="拖拽以重排"
         >
           <GripVertical size={16} />
         </button>
-        <button
-          type="button"
-          onClick={() => onChange(id, { done: !value.done })}
-          className={cn(
-            'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
-            value.done
-              ? 'border-success bg-success text-[#0b0c10]'
-              : 'border-input text-muted-foreground hover:border-ring',
-          )}
-          aria-label={value.done ? '标记为未完成' : '标记为已完成'}
-        >
-          {value.done ? <Check size={14} /> : <Square size={14} />}
-        </button>
+        <Checkbox
+          checked={value.done}
+          onChange={() => onChange(id, { done: !value.done })}
+          label={value.done ? '标记为未完成' : '标记为已完成'}
+          className="mx-1"
+        />
         <Input
-          className={cn('min-w-0 flex-1', value.done && 'line-through')}
+          className={cn(
+            'min-w-0 flex-1 bg-transparent hover:bg-transparent focus-visible:bg-muted',
+            value.done && 'text-muted-foreground line-through',
+          )}
           placeholder="待办内容"
           value={value.title}
           onChange={(e) => onChange(id, { title: e.target.value })}
@@ -1169,9 +1165,10 @@ const TodoRow = memo(function TodoRow({
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         <label
-          className="relative inline-flex h-8 max-w-full min-w-0 cursor-pointer items-center rounded border border-border bg-panel px-2 text-xs font-medium text-muted-foreground hover:bg-secondary"
+          className="relative inline-flex h-7 max-w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-hover hover:text-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
           title="所属研究阶段"
         >
+          <span aria-hidden className="size-1.5 shrink-0 rounded-full" style={{ background: stage.color }} />
           <span className="max-w-28 truncate">{stage.shortLabel || stage.name}</span>
           <select
             className="absolute inset-0 cursor-pointer opacity-0"
@@ -1190,13 +1187,12 @@ const TodoRow = memo(function TodoRow({
           priority={todoPriority(value)}
           onChange={(p: Priority) => onChange(id, { priority: p })}
         />
-        <Input
-          className="w-full min-w-0 sm:w-[8.5rem]"
-          type="date"
+        <DateButton
           value={value.endDate}
-          onChange={(e) => onChange(id, { endDate: e.target.value })}
-          aria-label="结束日期"
-          title="结束日期"
+          todayIso={today()}
+          allowClear
+          onChange={(d) => onChange(id, { endDate: d })}
+          className="sm:w-[5.5rem] sm:justify-end"
         />
         <Button
           type="button"
@@ -1204,6 +1200,7 @@ const TodoRow = memo(function TodoRow({
           size="sm"
           aria-label="移除待办"
           onClick={() => onRemove(id)}
+          className="opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
         >
           <Trash2 size={14} />
         </Button>

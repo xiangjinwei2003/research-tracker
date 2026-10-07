@@ -3,15 +3,15 @@ import { cn } from '@/lib/cn'
 
 /** shadcn/ui field styling (tokens + focus ring), shared by input-like controls. */
 const fieldCls =
-  'flex w-full min-w-0 rounded-md border border-input bg-panel px-3 py-1 text-sm outline-none transition-[color,box-shadow] ' +
+  'flex w-full min-w-0 rounded-md border border-transparent bg-muted px-2.5 py-1 text-sm outline-none transition-[background-color,box-shadow] hover:bg-input/60 ' +
   'placeholder:text-faint selection:bg-primary selection:text-primary-foreground ' +
-  'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 ' +
+  'focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring ' +
   'disabled:cursor-not-allowed disabled:opacity-50 ' +
   'aria-invalid:border-destructive aria-invalid:ring-destructive/20'
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...rest }, ref) {
-    return <input ref={ref} data-slot="input" className={cn(fieldCls, 'h-9', className)} {...rest} />
+    return <input ref={ref} data-slot="input" className={cn(fieldCls, 'h-8', className)} {...rest} />
   },
 )
 
@@ -36,7 +36,7 @@ export const Textarea = forwardRef<
 export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   function Select({ className, children, ...rest }, ref) {
     return (
-      <select ref={ref} data-slot="native-select" className={cn(fieldCls, 'h-9 pr-8', className)} {...rest}>
+      <select ref={ref} data-slot="native-select" className={cn(fieldCls, 'h-8 pr-8', className)} {...rest}>
         {children}
       </select>
     )
@@ -51,7 +51,7 @@ export function Label({
     <label
       data-slot="label"
       className={cn(
-        'mb-1 flex items-center gap-2 text-[11px] font-medium text-muted-foreground select-none',
+        'mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground select-none',
         className,
       )}
       {...rest}

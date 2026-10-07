@@ -10,11 +10,11 @@ import {
   startOfWeek,
 } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Flag, MessageSquareReply } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { fmtMD, parse, today } from '@/lib/date'
-import { findStage, type Project } from '@/lib/types'
+import type { Project } from '@/lib/types'
 import { Calendar, CalendarDayButton } from './ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Button } from './ui/Button'
@@ -29,7 +29,7 @@ const weekStartSun = (d: Date) => startOfWeek(d, { weekStartsOn: 0 })
 type EventItem =
   | { kind: 'deadline'; project: Project; label: string }
   | { kind: 'rebuttal'; project: Project; label: string }
-  | { kind: 'todo'; project: Project; todoId: string; title: string; stageColor: string; done: boolean }
+  | { kind: 'todo'; project: Project; todoId: string; title: string; done: boolean }
 
 const ORDER: Record<EventItem['kind'], number> = { deadline: 0, rebuttal: 1, todo: 2 }
 
@@ -108,7 +108,6 @@ export function DeadlineCalendar({ onEdit }: Props) {
           project: p,
           todoId: t.id,
           title: t.title || '未命名',
-          stageColor: findStage(p.stages, t.stage).color,
           done: t.done,
         })
       }
@@ -172,15 +171,21 @@ export function DeadlineCalendar({ onEdit }: Props) {
 
   return (
     <section aria-label="截止月历" className="flex min-w-0 flex-1 flex-col">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
+            <CalendarDays size={26} strokeWidth={2.2} className="text-destructive" aria-hidden />
+            日历
+          </h1>
+          <p className="mt-1.5 pl-[36px] text-[13px] text-muted-foreground">{subtitle}</p>
+        </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             type="button"
             onClick={() => setAnchor((a) => addMonths(a, -1))}
             aria-label="上个月"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ChevronLeft size={16} />
           </button>
@@ -190,7 +195,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
               <button
                 type="button"
                 title="点击跳到任意日期"
-                className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-[15px] font-semibold tabular-nums text-foreground transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+                className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-[15px] font-semibold tabular-nums text-foreground transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {format(anchor, 'yyyy年M月')}
                 <ChevronDown size={14} className="text-muted-foreground" />
@@ -220,7 +225,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
             type="button"
             onClick={() => setAnchor((a) => addMonths(a, 1))}
             aria-label="下个月"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ChevronRight size={16} />
           </button>
@@ -233,15 +238,15 @@ export function DeadlineCalendar({ onEdit }: Props) {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col rounded-lg border border-border bg-panel">
+      <div className="flex flex-1 flex-col">
         {/* Weekday header — right-aligned over the date numbers, Apple style. */}
-        <div className="cal-grid shrink-0 border-b">
+        <div className="cal-grid shrink-0">
           {WEEKDAY_CN.map((w, i) => (
             <div
               key={w}
               className={cn(
-                'px-2 py-1.5 text-right text-[11px] font-medium text-faint',
-                i < 6 && 'border-r',
+                'px-2 pb-2 text-right text-xs text-faint',
+                (i === 0 || i === 6) && 'text-faint/70',
               )}
             >
               周{w}
@@ -281,27 +286,27 @@ export function DeadlineCalendar({ onEdit }: Props) {
                   handleDrop(key)
                 }}
                 className={cn(
-                  'flex min-h-0 flex-col gap-1 p-1.5 transition-colors',
-                  !lastCol && 'border-r',
-                  !lastRow && 'border-b',
-                  isToday && 'bg-brand-500/[0.06]',
-                  dragOverKey === key && 'bg-brand-500/[0.09] ring-1 ring-inset ring-brand-400/60',
+                  'flex min-h-0 flex-col gap-0.5 border-t px-1 pb-1 pt-1 transition-colors',
+                  !lastCol && 'border-r border-r-border/50',
+                  lastRow && 'border-b',
+                  !inMonth && 'bg-sidebar/50',
+                  dragOverKey === key && 'bg-accent/50 ring-1 ring-inset ring-ring',
                 )}
               >
                 <div className="flex shrink-0 items-center justify-end">
                   {isToday ? (
-                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-500 px-1.5 text-sm font-semibold tabular-nums text-white">
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-[13px] font-semibold tabular-nums text-primary-foreground">
                       {d.getDate()}
                     </span>
                   ) : (
                     <span
                       className={cn(
-                        'px-0.5 text-sm tabular-nums',
+                        'inline-flex h-6 items-center px-1.5 text-[13px] tabular-nums',
                         !inMonth
-                          ? 'text-muted-foreground/40'
+                          ? 'text-faint/60'
                           : isPast
-                            ? 'text-muted-foreground/55'
-                            : 'text-foreground',
+                            ? 'text-faint'
+                            : 'text-secondary-foreground',
                       )}
                     >
                       {d.getDate() === 1 ? format(d, 'M月d日') : d.getDate()}
@@ -401,9 +406,9 @@ function EventChip({
         onClick={onClick}
         title={`${e.label} · 投稿截止 · 拖到别的日期可改期`}
         {...dragProps}
-        className="flex w-full cursor-grab items-center gap-1 rounded-[4px] border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-left text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+        className="flex w-full cursor-grab items-center gap-1 rounded-[4px] bg-destructive/15 px-1.5 py-0.5 text-left text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
       >
-        <span aria-hidden className="shrink-0 leading-none">▲</span>
+        <Flag size={10} strokeWidth={2.6} aria-hidden className="shrink-0" />
         <span className="min-w-0 truncate">{e.label}</span>
       </button>
     )
@@ -415,9 +420,9 @@ function EventChip({
         onClick={onClick}
         title={`${e.label} · Rebuttal · 拖到别的日期可改期`}
         {...dragProps}
-        className="flex w-full cursor-grab items-center gap-1 rounded-[4px] border border-warn/30 bg-warn/10 px-1.5 py-0.5 text-left text-[11px] font-medium text-warn transition-colors hover:bg-warn/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+        className="flex w-full cursor-grab items-center gap-1 rounded-[4px] bg-warn/15 px-1.5 py-0.5 text-left text-[11px] font-medium text-warn transition-colors hover:bg-warn/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
       >
-        <span aria-hidden className="shrink-0 leading-none">◆</span>
+        <MessageSquareReply size={10} strokeWidth={2.6} aria-hidden className="shrink-0" />
         <span className="min-w-0 truncate">{e.label}</span>
       </button>
     )
@@ -429,16 +434,16 @@ function EventChip({
       title={`${e.title} · ${e.project.title || '未命名项目'} · 拖到别的日期可改期`}
       {...dragProps}
       className={cn(
-        'flex w-full cursor-grab items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11px] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing',
+        'flex w-full cursor-grab items-center gap-1.5 rounded-[4px] px-1.5 py-0.5 text-left text-[11px] transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing',
         e.done && 'opacity-50',
       )}
     >
       <span
         aria-hidden
-        className="h-2 w-2 shrink-0 rounded-full"
-        style={{ background: e.stageColor }}
+        className="size-1.5 shrink-0 rounded-full"
+        style={{ background: e.project.color }}
       />
-      <span className={cn('min-w-0 flex-1 truncate text-foreground/90', e.done && 'line-through')}>
+      <span className={cn('min-w-0 flex-1 truncate text-secondary-foreground', e.done && 'line-through')}>
         {e.title}
       </span>
     </button>

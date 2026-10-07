@@ -27,14 +27,22 @@ function bigDuration(min: number): { value: string; unit: string } {
 
 function Tile({ label, value, unit, sub }: { label: string; value: string; unit: string; sub: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-border bg-panel p-3.5">
-      <div className="text-[11px] text-faint">{label}</div>
-      <div className="mt-1.5 flex items-baseline gap-1">
-        <span className="mono text-[22px] font-semibold leading-none text-foreground">{value}</span>
-        <span className="text-xs text-faint">{unit}</span>
+    <div className="min-w-0">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className="mono text-2xl font-semibold leading-none tracking-[-0.01em] text-foreground">{value}</span>
+        <span className="text-xs text-muted-foreground">{unit}</span>
       </div>
-      <div className="mt-1.5 truncate text-[11px] text-faint">{sub}</div>
+      <div className="mt-1.5 truncate text-xs text-faint">{sub}</div>
     </div>
+  )
+}
+
+function SectionHead({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="border-b border-border pb-2 text-[13px] font-semibold text-foreground">
+      {children}
+    </h2>
   )
 }
 
@@ -79,10 +87,10 @@ export function FocusStats({
   }
 
   return (
-    <section aria-label="专注统计" className="mt-8">
-      <h3 className="kicker">专注统计</h3>
+    <section aria-label="专注统计" className="mt-12">
+      <SectionHead>统计</SectionHead>
 
-      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-4">
         <Tile
           label={totalLabel}
           value={total.value}
@@ -113,11 +121,11 @@ export function FocusStats({
         />
       </div>
 
-      <div className="review-split mt-6">
+      <div className="review-split mt-12">
         <div>
-          <h4 className="kicker">项目占比</h4>
+          <SectionHead>项目占比</SectionHead>
           {stats.minutes > 0 ? (
-            <div className="mt-3 flex items-center gap-5">
+            <div className="mt-4 flex items-center gap-5">
               <div className="relative shrink-0">
                 <svg width={128} height={128} viewBox="0 0 128 128" className="-rotate-90">
                   {segments.map((s) => (
@@ -127,7 +135,7 @@ export function FocusStats({
                       cy={64}
                       r={R}
                       fill="none"
-                      stroke={s.color || 'var(--color-neutral-400)'}
+                      stroke={s.color || 'var(--faint)'}
                       strokeWidth={11}
                       strokeDasharray={`${Math.max(0, C * s.frac - gap)} ${C}`}
                       strokeDashoffset={-C * s.offset}
@@ -150,9 +158,9 @@ export function FocusStats({
                     <span
                       aria-hidden
                       className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: s.color || 'var(--color-neutral-400)' }}
+                      style={{ background: s.color || 'var(--faint)' }}
                     />
-                    <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                    <span className="min-w-0 flex-1 truncate text-secondary-foreground">
                       {s.name}
                     </span>
                     <span className="shrink-0 mono text-muted-foreground">
@@ -171,8 +179,8 @@ export function FocusStats({
         </div>
 
         <div>
-          <h4 className="kicker">专注热力图</h4>
-          <div className="mt-3 max-w-full overflow-x-auto">
+          <SectionHead>近 16 周</SectionHead>
+          <div className="mt-4 max-w-full overflow-x-auto">
             <div className="inline-flex gap-1">
               <div className="mr-1 flex flex-col gap-1 pt-4.5">
                 {WEEKDAY_CN.map((w, i) => (
@@ -204,11 +212,11 @@ export function FocusStats({
                           : d.minutes === 0
                             ? 'bg-muted'
                             : d.minutes < 30
-                              ? 'bg-brand-950'
+                              ? 'bg-brand-900'
                               : d.minutes < 60
-                                ? 'bg-brand-800'
+                                ? 'bg-brand-700'
                                 : d.minutes < 120
-                                  ? 'bg-brand-600'
+                                  ? 'bg-brand-500'
                                   : 'bg-brand-400',
                       )}
                     />

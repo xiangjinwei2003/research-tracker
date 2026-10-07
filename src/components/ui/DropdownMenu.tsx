@@ -29,7 +29,7 @@ export function DropdownMenuContent({
         sideOffset={6}
         data-slot="dropdown-menu-content"
         className={cn(
-          'z-50 min-w-[12rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-xl',
+          'z-50 min-w-[12rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-lg border border-white/[.06] bg-popover p-1 text-popover-foreground shadow-[0_12px_32px_-8px_rgba(0,0,0,.55)]',
           'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2',
           className,
         )}
@@ -57,11 +57,11 @@ export function DropdownMenuItem({
       onSelect={onSelect}
       data-slot="dropdown-menu-item"
       className={cn(
-        "relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-[13px] outline-hidden transition-colors [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex cursor-default select-none items-center gap-2 rounded-[5px] px-2 py-1.5 text-[13px] outline-hidden transition-colors [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         destructive
-          ? 'text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive [&_svg:not([class*=text-])]:text-destructive'
-          : 'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground',
+          ? 'text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-white [&_svg:not([class*=text-])]:text-current'
+          : 'data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground [&_svg:not([class*=text-])]:text-muted-foreground data-[highlighted]:[&_svg]:text-current',
       )}
     >
       {children}

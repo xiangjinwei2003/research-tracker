@@ -1,6 +1,6 @@
 import { useStore } from '@/lib/store'
 import type { Project } from '@/lib/types'
-import { Container } from './ui/Container'
+import { CalendarDays } from 'lucide-react'
 import { DeadlineCalendar } from './DeadlineCalendar'
 
 interface Props {
@@ -14,20 +14,22 @@ export function Timeline({ onEdit }: Props) {
   const hasArchived = projects.some((p) => p.archived)
 
   return (
-    <Container className="flex flex-1 flex-col py-6">
-      <div className="mb-5">
-        <h2 className="text-lg font-bold tracking-tight text-foreground">日历</h2>
-      </div>
-
+    <main className="flex flex-1 flex-col px-4 pb-8 pt-6 sm:px-6 lg:px-10 lg:pt-10">
       {hasActive ? (
         <DeadlineCalendar onEdit={onEdit} />
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-panel p-12 text-center text-sm text-muted-foreground">
-          {hasArchived
-            ? '进行中的项目都已归档。截止日期在归档页的项目里。'
-            : '还没有项目。用右上角的新建项目开始。'}
-        </div>
+        <>
+          <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
+            <CalendarDays size={26} strokeWidth={2.2} className="text-destructive" aria-hidden />
+            日历
+          </h1>
+          <p className="mt-1.5 max-w-sm pl-[36px] text-[13px] leading-6 text-muted-foreground">
+            {hasArchived
+              ? '进行中的项目都已归档。截止日期在归档页的项目里。'
+              : '还没有项目。投稿截止、Rebuttal 和待办到期日会排在这里。'}
+          </p>
+        </>
       )}
-    </Container>
+    </main>
   )
 }

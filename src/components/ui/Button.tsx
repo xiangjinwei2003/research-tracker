@@ -7,21 +7,21 @@ import { cn } from '@/lib/cn'
  * (primary / secondary / ghost / danger · sm / md) so no call site changes.
  */
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium outline-none transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-primary-foreground hover:bg-primary/90 btn-glow',
+        primary: 'bg-primary text-primary-foreground hover:bg-brand-400/90 active:bg-brand-600',
         secondary:
-          'border border-border bg-panel shadow-xs hover:bg-secondary hover:text-secondary-foreground',
-        ghost: 'hover:bg-accent/60 hover:text-accent-foreground',
+          'bg-secondary text-secondary-foreground hover:bg-input/70',
+        ghost: 'text-muted-foreground hover:bg-hover hover:text-foreground',
         danger:
-          'border border-destructive/30 text-destructive hover:bg-destructive/10',
+          'text-destructive hover:bg-destructive/12',
       },
       size: {
-        sm: 'h-8 gap-1.5 px-2.5 has-[>svg]:px-2',
-        md: 'h-9 px-3.5 has-[>svg]:px-3',
-        icon: 'size-9',
+        sm: 'h-7 gap-1.5 px-2.5 text-[13px] has-[>svg]:pl-2',
+        md: 'h-8 px-3 has-[>svg]:pl-2.5',
+        icon: 'size-8',
       },
     },
     defaultVariants: { variant: 'secondary', size: 'md' },

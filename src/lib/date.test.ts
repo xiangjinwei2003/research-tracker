@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parse, fmtMinutes, daysBetween, weekdayLabel } from './date.ts'
+import { parse, fmtMinutes, daysBetween, weekdayLabel, dueLabel } from './date.ts'
 
 test('parse maps a date only ISO string onto the local calendar', () => {
   const d = parse('2026-03-10')
@@ -32,4 +32,13 @@ test('weekdayLabel names this week, next week, and the week after', () => {
 test('daysBetween returns 0 when either side cannot be parsed', () => {
   assert.equal(daysBetween('2026-09-07', 'nope'), 0)
   assert.equal(daysBetween('2026-09-07', '2026-09-10'), 3)
+})
+
+test('dueLabel: overdue, today, tomorrow, near weekday, far date, empty', () => {
+  assert.deepEqual(dueLabel('2026-10-04', '2026-10-07'), { text: '逾期 3 天', tone: 'overdue' })
+  assert.deepEqual(dueLabel('2026-10-07', '2026-10-07'), { text: '今天', tone: 'today' })
+  assert.deepEqual(dueLabel('2026-10-08', '2026-10-07'), { text: '明天', tone: 'soon' })
+  assert.deepEqual(dueLabel('2026-10-12', '2026-10-07'), { text: '下周一', tone: 'soon' })
+  assert.deepEqual(dueLabel('2026-11-02', '2026-10-07'), { text: '11月2日', tone: 'later' })
+  assert.equal(dueLabel('', '2026-10-07'), null)
 })

@@ -4,26 +4,27 @@
 /* 文档（plan/spec 里的类名词典）不得作为工具类候选来源 */
 @source not "../docs";
 
-/* Graphite-first research workbench with a complete light theme. */
+/* 深色单主题。中性色向强调色色相（265）带极少彩度；强调色为蓝（258）。
+   今天用黄、逾期用红、完成用绿，其余皆为灰阶。 */
 
 @theme {
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", sans-serif;
+    ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "Segoe UI",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #dfe6ff;
-  --color-brand-200: #c3d0ff;
-  --color-brand-300: #9eb2ff;
-  --color-brand-400: #6f8cff;
-  --color-brand-500: #355df4;
-  --color-brand-600: #2949d3;
-  --color-brand-700: #243cac;
-  --color-brand-800: #21358b;
-  --color-brand-900: #1f306e;
-  --color-brand-950: #151d43;
+  /* 强调色色阶（色相 258），brand-500 = primary */
+  --color-brand-50: oklch(0.97 0.015 255);
+  --color-brand-100: oklch(0.93 0.035 255);
+  --color-brand-200: oklch(0.88 0.065 254);
+  --color-brand-300: oklch(0.82 0.1 252);
+  --color-brand-400: oklch(0.7 0.145 255);
+  --color-brand-500: oklch(0.57 0.17 258);
+  --color-brand-600: oklch(0.5 0.16 259);
+  --color-brand-700: oklch(0.43 0.13 260);
+  --color-brand-800: oklch(0.36 0.1 260);
+  --color-brand-900: oklch(0.3 0.07 260);
+  --color-brand-950: oklch(0.26 0.045 260);
 }
 
 /* shadcn/ui 语义令牌 → Tailwind 工具类 */
@@ -51,75 +52,49 @@
   --color-warn: var(--warn);
   --color-success: var(--success);
   --color-panel: var(--panel);
+  --color-sidebar: var(--sidebar);
+  --color-today: var(--today);
+  --color-hover: var(--hover);
 }
 
 :root {
   color-scheme: dark;
-  --background: #151517;
-  --foreground: #f2f2f4;
-  --card: #222225;
-  --card-foreground: #f2f2f4;
-  --popover: #29292e;
-  --popover-foreground: #f2f2f4;
-  --panel: #1c1c1f;
-  --primary: #f2f2f4;
-  --primary-foreground: #18181b;
-  --secondary: #29292e;
-  --secondary-foreground: #e5e5e8;
-  --muted: #29292e;
-  --muted-foreground: #aaaab3;
-  --faint: #89898d;
-  --accent: #302d42;
-  --accent-foreground: #c8befd;
-  --destructive: #ef8396;
-  --destructive-foreground: #1a1013;
-  --warn: #efa768;
-  --success: #78c7b1;
-  --border: #323236;
-  --input: #3a3a40;
-  --ring: #a99af7;
+  /* 表面：侧栏 < 画布 < 行悬停 < 浮层 */
+  --sidebar: oklch(0.215 0.006 265);
+  --background: oklch(0.235 0.006 265);
+  --panel: oklch(0.255 0.007 265);
+  --card: oklch(0.262 0.007 265);
+  --popover: oklch(0.28 0.008 265);
+  --muted: oklch(0.29 0.008 265);
+  --secondary: oklch(0.29 0.008 265);
+  --hover: oklch(1 0 0 / 0.045);
+  --border: oklch(0.315 0.008 265);
+  --input: oklch(0.37 0.009 265);
+  /* 文字 */
+  --foreground: oklch(0.95 0.004 265);
+  --card-foreground: var(--foreground);
+  --popover-foreground: var(--foreground);
+  --secondary-foreground: oklch(0.88 0.006 265);
+  --muted-foreground: oklch(0.76 0.01 265);
+  --faint: oklch(0.66 0.012 265);
+  /* 强调 */
+  --primary: oklch(0.57 0.17 258);
+  --primary-foreground: oklch(1 0 0);
+  --accent: oklch(0.33 0.06 258);
+  --accent-foreground: oklch(0.85 0.09 252);
+  --ring: oklch(0.7 0.145 255);
+  /* 状态 */
+  --destructive: oklch(0.69 0.18 22);
+  --destructive-foreground: oklch(1 0 0);
+  --today: oklch(0.85 0.15 88);
+  --warn: oklch(0.8 0.14 70);
+  --success: oklch(0.77 0.14 158);
+  --priority-high: var(--destructive);
+  --priority-normal: var(--ring);
+  --priority-low: oklch(0.66 0.012 265);
+  --chart-grid: var(--border);
+  --column: transparent;
   --radius: 0.5rem;
-  --priority-high: #ef8396;
-  --priority-normal: #a99af7;
-  --priority-low: #78c7b1;
-  --chart-grid: #38383d;
-  --sidebar: #1c1c1f;
-  --column: #1b1b1e;
-  --today: #efa768;
-}
-
-:root[data-theme="light"] {
-  color-scheme: light;
-  --background: #fafafb;
-  --foreground: #202126;
-  --card: #ffffff;
-  --card-foreground: #202126;
-  --popover: #ffffff;
-  --popover-foreground: #202126;
-  --panel: #f5f5f7;
-  --primary: #355df4;
-  --primary-foreground: #ffffff;
-  --secondary: #f1f1f4;
-  --secondary-foreground: #34343a;
-  --muted: #f1f1f4;
-  --muted-foreground: #707079;
-  --faint: #737379;
-  --accent: #f0effb;
-  --accent-foreground: #6353c7;
-  --destructive: #cf546b;
-  --destructive-foreground: #ffffff;
-  --warn: #b76a25;
-  --success: #3a8f79;
-  --border: #e7e7ec;
-  --input: #d7d7de;
-  --ring: #7565dc;
-  --priority-high: #df667c;
-  --priority-normal: #7867de;
-  --priority-low: #4e9c86;
-  --chart-grid: #ececf0;
-  --sidebar: #f5f5f7;
-  --column: #f4f4f6;
-  --today: #d98235;
 }
 
 @layer base {
@@ -141,9 +116,15 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
 }
 
 input[type="number"]::-webkit-outer-spin-button,
@@ -159,51 +140,12 @@ input[type="radio"] {
 
 input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0.65;
-}
-
-/* 微标签（section kicker）：全大写 + 拉开字距 */
-.kicker {
-  font-size: 10.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--faint);
+  filter: invert(1);
 }
 
 /* 等宽数字（日期/倒计时/统计） */
 .mono {
-  font-family: var(--font-mono);
-  font-size: 0.92em;
   font-variant-numeric: tabular-nums;
-}
-
-.btn-glow {
-  box-shadow: 0 1px 2px color-mix(in oklab, var(--primary) 18%, transparent);
-}
-
-/* 阶段徽标：色相来自 --stage（数据色，主题无关） */
-.stage-badge {
-  background: color-mix(in oklab, var(--stage) 14%, var(--card));
-  border-color: color-mix(in oklab, var(--stage) 35%, var(--border));
-  color: color-mix(in oklab, var(--stage) 55%, var(--foreground));
-}
-
-.proj-card {
-  background-color: var(--card);
-}
-
-.proj-name {
-  display: inline-block;
-  max-width: 100%;
-  overflow: hidden;
-  padding: 2px 8px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--proj);
-  color: #16161a;
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: bottom;
 }
 
 * {
@@ -231,7 +173,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 @media (min-width: 1100px) {
   .app-shell {
-    --sidebar-w: 224px;
+    --sidebar-w: 232px;
   }
 }
 
@@ -272,175 +214,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   flex: 1 1 auto;
   flex-direction: column;
   min-width: 0;
-}
-
-.pane-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  min-width: 0;
-}
-
-.pane-grid > * {
-  min-width: 0;
-}
-
-@container pane (min-width: 640px) {
-  .pane-grid.cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@container pane (min-width: 1040px) {
-  .pane-grid.cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-/* 任务看板顶部：空闲是轨道本身，已用部分从底部盖上去。不设最大高度。 */
-.outlook-band {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: stretch;
-  gap: 8px;
-  margin-top: 12px;
-  min-width: 0;
-}
-
-@media (min-width: 1100px) {
-  .outlook-band {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-.outlook-panel {
-  display: flex;
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  margin: 0;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--card);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-}
-
-button.outlook-panel {
-  cursor: pointer;
-  appearance: none;
-}
-
-button.outlook-panel:hover {
-  background: color-mix(in oklab, var(--muted) 40%, var(--card));
-}
-
-.outlook-plot {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: stretch;
-  gap: 3px;
-  width: 100%;
-  min-height: 36px;
-}
-
-.outlook-col {
-  position: relative;
-  flex: 1 1 0;
-  align-self: stretch;
-  min-width: 0;
-  border-radius: 2px;
-  background: color-mix(in oklab, var(--foreground) 10%, var(--muted));
-}
-
-.outlook-col.is-future {
-  background: color-mix(in oklab, var(--foreground) 5%, transparent);
-}
-
-.outlook-col.is-today {
-  box-shadow: inset 0 0 0 1px var(--ring);
-}
-
-.outlook-stack {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  flex-direction: column-reverse;
-  overflow: hidden;
-  border-radius: 2px;
-}
-
-.outlook-share {
-  display: flex;
-  flex: 1 1 auto;
-  width: 100%;
-  min-height: 36px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: color-mix(in oklab, var(--foreground) 10%, var(--muted));
-}
-
-.outlook-share button {
-  flex-grow: 1;
-  flex-basis: 0;
-  min-width: 2px;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  cursor: pointer;
-}
-
-.outlook-cal {
-  display: grid;
-  flex: 1 1 auto;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 3px;
-  width: 100%;
-  min-height: 36px;
-}
-
-.outlook-day {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  box-sizing: border-box;
-  min-width: 0;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
-  border-radius: 2px;
-  background: color-mix(in oklab, var(--foreground) 10%, var(--muted));
-  cursor: pointer;
-}
-
-.outlook-day:hover {
-  background: color-mix(in oklab, var(--muted) 70%, transparent);
-}
-
-.outlook-day.is-today {
-  box-shadow: inset 0 0 0 1px var(--ring);
-}
-
-.outlook-day.is-past {
-  opacity: 0.4;
-}
-
-.outlook-tick {
-  display: block;
-  flex: none;
-  width: 100%;
-  height: 45%;
-}
-
-.outlook-tick.is-deadline {
-  height: 100%;
 }
 
 .cal-grid {

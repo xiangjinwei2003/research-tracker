@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns'
-import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Timer } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { weekStart, fmtMinutes, parse, today } from '@/lib/date'
 import {
@@ -14,7 +14,6 @@ import {
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
 import type { Project } from '@/lib/types'
-import { Container } from './ui/Container'
 import { Button } from './ui/Button'
 import { FocusBars } from './FocusBars'
 import { DayDetail } from './DayDetail'
@@ -117,11 +116,14 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
   }
 
   return (
-    <Container className="py-6">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold tracking-tight text-foreground">专注回顾</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+    <main className="mx-auto w-full max-w-[60rem] px-4 pb-24 pt-6 sm:px-8 lg:pt-10">
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
+            <Timer size={26} strokeWidth={2.2} className="text-success" aria-hidden />
+            专注回顾
+          </h1>
+          <p className="mt-1.5 pl-[36px] text-[13px] text-muted-foreground">
             {stats.count > 0
               ? `${periodWord}专注 ${fmtMinutes(stats.minutes)} · ${stats.count} 次`
               : `${periodWord}还没有专注记录`}
@@ -130,7 +132,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <div
-            className="flex items-center gap-1 rounded-lg border border-border bg-panel p-1"
+            className="inline-flex h-8 rounded-md bg-muted p-0.5"
             role="tablist"
             aria-label="统计范围"
           >
@@ -141,9 +143,9 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
                 aria-selected={scope === s}
                 onClick={() => setScope(s)}
                 className={cn(
-                  'rounded-md px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+                  'rounded-[5px] px-3 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   scope === s
-                    ? 'bg-accent text-accent-foreground shadow-none'
+                    ? 'bg-input font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,.3)]'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
@@ -158,11 +160,11 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
               onClick={() => setAnchor((a) => (isWeek ? addWeeks(a, -1) : addMonths(a, -1)))}
               aria-label={isWeek ? '上一周' : '上个月'}
               title={isWeek ? '上一周' : '上个月'}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="min-w-[9.5rem] text-center mono text-xs text-muted-foreground">
+            <span className="min-w-[9.5rem] text-center mono text-[13px] text-secondary-foreground">
               {periodLabel}
             </span>
             <button
@@ -170,7 +172,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
               onClick={() => setAnchor((a) => (isWeek ? addWeeks(a, 1) : addMonths(a, 1)))}
               aria-label={isWeek ? '下一周' : '下个月'}
               title={isWeek ? '下一周' : '下个月'}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <ChevronRight size={16} />
             </button>
@@ -184,14 +186,14 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
       </div>
 
       {sessions.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-panel px-6 py-16 text-center">
-          <CalendarClock size={28} className="mx-auto mb-3 text-faint" />
-          <p className="text-sm text-muted-foreground">还没有专注记录</p>
-          <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-muted-foreground">
-            在任务看板上点任务的「专注」。
+        <div className="mt-12 flex flex-col items-center py-6 text-center">
+          <Timer size={40} strokeWidth={1.5} className="text-input" aria-hidden />
+          <p className="mt-4 text-[15px] font-medium">还没有专注记录</p>
+          <p className="mt-1 max-w-sm text-[13px] leading-6 text-muted-foreground">
+            把鼠标移到任务上，点计时图标开始一段专注；也可以从右上角开始不挂任务的专注。
           </p>
-          <Button variant="secondary" size="sm" className="mt-5" onClick={onGoBoard}>
-            去任务看板
+          <Button className="mt-5" onClick={onGoBoard}>
+            去任务列表
           </Button>
         </div>
       ) : (
@@ -223,6 +225,6 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
           />
         </>
       )}
-    </Container>
+    </main>
   )
 }

@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useMemo, useRef, useState, type DragEvent } from "react";
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import {
-  AlertCircle,
-  CalendarDays,
+  Check,
+  CircleCheck,
+  ListFilter,
   Plus,
   Search,
   X,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { dateFromToday, today } from "@/lib/date";
+import { dateFromToday, fmtMD, parse, today } from "@/lib/date";
 import { buildBoard, parseTodoDragPayload, type BoardRange } from "@/lib/board";
-import { buildBoardInsights, taskFocusKey } from "@/lib/boardInsights";
 import {
   PRIORITY_META,
   PRIORITY_ORDER,
@@ -19,30 +21,26 @@ import {
 } from "@/lib/types";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/cn";
-import { BoardTaskCard } from "./BoardTaskCard";
+import { TaskRow } from "./TaskRow";
 import { BoardTaskDialog } from "./BoardTaskDialog";
-import { HomeOutlook } from "./HomeOutlook";
 import { Dashboard } from "./Dashboard";
 import { Button } from "./ui/Button";
-import { Container } from "./ui/Container";
-import { Input } from "./ui/Input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/DropdownMenu";
 
 interface Props {
   onNew: () => void;
   onEdit: (project: Project) => void;
-  onGoReview: () => void;
 }
 
-export function Board({ onNew, onEdit, onGoReview }: Props) {
+export function Board({ onNew, onEdit }: Props) {
   const projects = useStore((s) => s.projects);
-  const sessions = useStore((s) => s.sessions);
   const updateTodo = useStore((s) => s.updateTodo);
   const [query, setQuery] = useState("");
   const [projectId, setProjectId] = useState("all");
@@ -52,9 +50,9 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
   const [undatedOnly, setUndatedOnly] = useState(false);
   const [dialogPriority, setDialogPriority] = useState<Priority>("normal");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [insightsNow, setInsightsNow] = useState(() => Date.now());
   const [overCol, setOverCol] = useState<Priority | null>(null);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const dragRef = useRef<{
     projectId: string;
     todoId: string;
@@ -94,59 +92,66 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
       undatedOnly,
     ],
   );
-  const insights = useMemo(
-    () => buildBoardInsights(projects, sessions, now, insightsNow, 7),
-    [projects, sessions, now, insightsNow],
+  // 标题下的摘要按全部未完成任务统计，不受下方筛选影响。
+  const totals = useMemo(
+    () =>
+      buildBoard(projects, {
+        today: now,
+        end,
+        query: "",
+        projectId: "all",
+        range: "all",
+        overdueOnly: false,
+        dueDate: null,
+        undatedOnly: false,
+      }).stats,
+    [projects, now, end],
   );
   const filtered =
     !!query.trim() ||
     effectiveProjectId !== "all" ||
-    range !== "recent" ||
     overdueOnly ||
     !!dueDate ||
     undatedOnly;
-  const columns = PRIORITY_ORDER.map((priority) => ({
+  const filterCount =
+    (effectiveProjectId !== "all" ? 1 : 0) +
+    (overdueOnly ? 1 : 0) +
+    (undatedOnly ? 1 : 0);
+  const sections = PRIORITY_ORDER.map((priority) => ({
     priority,
     items: result.items.filter((x) => todoPriority(x.todo) === priority),
   }));
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setInsightsNow(Date.now()), 60_000);
-    const unsubscribe = useStore.subscribe((state, previous) => {
-      if (state.sessions !== previous.sessions) setInsightsNow(Date.now());
-    });
-    return () => {
-      window.clearInterval(timer);
-      unsubscribe();
-    };
-  }, []);
+  const projectName =
+    activeProjects.find((p) => p.id === effectiveProjectId)?.title ||
+    "未命名项目";
 
   const clearFilters = () => {
     setQuery("");
     setProjectId("all");
-    setRange("recent");
     setOverdueOnly(false);
     setDueDate(null);
     setUndatedOnly(false);
   };
-  const showAll = () => {
-    setQuery("");
-    setProjectId("all");
+  const showOnly = (next: { overdue?: boolean; date?: string }) => {
+    clearFilters();
     setRange("all");
-    setOverdueOnly(false);
-    setDueDate(null);
-    setUndatedOnly(false);
+    setOverdueOnly(!!next.overdue);
+    setDueDate(next.date ?? null);
   };
   const openTaskDialog = (priority: Priority = "normal") => {
     setDialogPriority(priority);
     setDialogOpen(true);
   };
+  const endDrag = () => {
+    dragRef.current = null;
+    setDraggingKey(null);
+    setOverCol(null);
+    setDragActive(false);
+  };
   const handleDrop = (priority: Priority, e: DragEvent<HTMLElement>) => {
     e.preventDefault();
-    setOverCol(null);
-    setDraggingKey(null);
     const own = dragRef.current;
-    dragRef.current = null;
+    endDrag();
     if (own) {
       if (own.from !== priority)
         updateTodo(own.projectId, own.todoId, { priority });
@@ -166,42 +171,64 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
     toast({ message: `已加入近期重点 · ${PRIORITY_META[priority].label}` });
   };
 
+  const todayDate = parse(now) ?? new Date();
+
   return (
-    <main>
-      <Container className="py-7">
-        <h1 className="text-[26px] font-semibold tracking-[-.025em]">
-          任务看板
-        </h1>
-        <HomeOutlook
-          projects={projects}
-          sessions={sessions}
-          todayIso={now}
-          nowMs={insightsNow}
-          onOpenDay={(iso) => {
-            showAll();
-            setDueDate(iso);
-          }}
-          onShowOverdue={() => {
-            showAll();
-            setOverdueOnly(true);
-          }}
-          onOpenProject={(id) => {
-            showAll();
-            setProjectId(id);
-          }}
-          onReview={onGoReview}
-        />
+    <main
+      className="pb-24"
+      onDragEnter={(e) => {
+        if (e.dataTransfer.types.includes("application/x-rt-todo"))
+          setDragActive(true);
+      }}
+      onDrop={() => setDragActive(false)}
+    >
+      <div className="mx-auto w-full max-w-[52rem] px-4 pt-6 sm:px-8 lg:pt-10">
+        <header className="flex flex-wrap items-end gap-x-6 gap-y-3">
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
+              <CircleCheck
+                size={26}
+                strokeWidth={2.4}
+                className="text-ring"
+                aria-hidden
+              />
+              任务
+            </h1>
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 pl-[36px] text-[13px] text-muted-foreground">
+              <span>{format(todayDate, "M月d日 EEEE", { locale: zhCN })}</span>
+              {totals.overdue ? (
+                <button
+                  type="button"
+                  onClick={() => showOnly({ overdue: true })}
+                  className="rounded-sm text-destructive hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {totals.overdue} 项逾期
+                </button>
+              ) : null}
+              {totals.dueToday ? (
+                <button
+                  type="button"
+                  onClick={() => showOnly({ date: now })}
+                  className="rounded-sm text-today hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {totals.dueToday} 项今天到期
+                </button>
+              ) : null}
+            </p>
+          </div>
+        </header>
 
         {activeProjects.length ? (
           <>
             <div
               id="task-board"
-              className="mt-5 scroll-mt-24 flex min-w-0 max-w-full flex-wrap items-center gap-2 border-b pb-3"
+              className="mt-8 flex min-w-0 flex-wrap items-center gap-2"
             >
-              <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
-                {result.stats.total}
-              </span>
-              <div className="inline-flex h-8 rounded-md bg-muted p-0.5">
+              <div
+                className="inline-flex h-8 rounded-md bg-muted p-0.5"
+                role="group"
+                aria-label="显示范围"
+              >
                 {(["recent", "all"] as const).map((value) => (
                   <button
                     key={value}
@@ -209,9 +236,9 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
                     aria-pressed={range === value}
                     onClick={() => setRange(value)}
                     className={cn(
-                      "rounded px-2.5 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "rounded-[5px] px-3 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       range === value
-                        ? "bg-card text-foreground shadow-sm"
+                        ? "bg-input font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,.3)]"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >
@@ -219,195 +246,235 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
                   </button>
                 ))}
               </div>
-              <div className="relative w-full min-w-0 sm:ml-auto sm:w-auto sm:min-w-[180px] sm:max-w-[260px] sm:flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="搜索任务或项目"
-                  aria-label="搜索任务或项目"
-                  className="pl-9"
-                />
-              </div>
-              <Select value={effectiveProjectId} onValueChange={setProjectId}>
-                <SelectTrigger
-                  className="w-full min-w-0 max-w-full sm:w-[180px]"
-                  aria-label="筛选项目"
+              <div className="ml-auto flex min-w-0 items-center gap-1">
+                <label className="group relative flex h-8 min-w-0 items-center">
+                  <Search
+                    size={15}
+                    className="pointer-events-none absolute left-2.5 text-faint"
+                    aria-hidden
+                  />
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="搜索"
+                    aria-label="搜索任务或项目"
+                    className="h-8 w-28 min-w-0 max-sm:w-20 rounded-md bg-transparent pl-8 pr-2 text-[13px] outline-none transition-[width,background-color] duration-200 placeholder:text-faint hover:bg-hover focus:w-48 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring max-sm:focus:w-36"
+                  />
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover",
+                      filterCount
+                        ? "text-accent-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    aria-label="筛选"
+                  >
+                    <ListFilter size={15} />
+                    <span className="max-sm:sr-only">筛选</span>
+                    {filterCount ? (
+                      <span className="tabular-nums">· {filterCount}</span>
+                    ) : null}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="max-h-[70vh] w-60 overflow-y-auto">
+                    <DropdownMenuItem
+                      onSelect={() => setOverdueOnly((v) => !v)}
+                    >
+                      <Check className={overdueOnly ? "" : "opacity-0"} />
+                      仅看逾期
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setUndatedOnly((v) => !v);
+                        setDueDate(null);
+                      }}
+                    >
+                      <Check className={undatedOnly ? "" : "opacity-0"} />
+                      仅看未排期
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>项目</DropdownMenuLabel>
+                    <DropdownMenuItem onSelect={() => setProjectId("all")}>
+                      <Check
+                        className={
+                          effectiveProjectId === "all" ? "" : "opacity-0"
+                        }
+                      />
+                      全部项目
+                    </DropdownMenuItem>
+                    {activeProjects.map((p) => (
+                      <DropdownMenuItem
+                        key={p.id}
+                        onSelect={() => setProjectId(p.id)}
+                      >
+                        <Check
+                          className={
+                            effectiveProjectId === p.id ? "" : "opacity-0"
+                          }
+                        />
+                        <span
+                          aria-hidden
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ background: p.color }}
+                        />
+                        <span className="truncate">
+                          {p.title || "未命名项目"}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => openTaskDialog()}
+                  className="ml-1 max-sm:w-8 max-sm:px-0"
+                  aria-label="新建任务"
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部项目</SelectItem>
-                  {activeProjects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.title || "未命名项目"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <button
-                type="button"
-                aria-pressed={overdueOnly}
-                onClick={() => setOverdueOnly((v) => !v)}
-                className={cn(
-                  "inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  overdueOnly
-                    ? "border-destructive/35 bg-destructive/[.07] text-destructive"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
-              >
-                <AlertCircle size={14} />
-                仅逾期
-              </button>
-              <button
-                type="button"
-                aria-pressed={undatedOnly}
-                onClick={() => {
-                  setUndatedOnly((value) => !value);
-                  if (!undatedOnly) setDueDate(null);
-                }}
-                className={cn(
-                  "inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  undatedOnly
-                    ? "border-ring/40 bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
-              >
-                未排期
-              </button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => openTaskDialog()}
-              >
-                <Plus />
-                新建任务
-              </Button>
-              {filtered ? (
+                  <Plus />
+                  <span className="max-sm:hidden">新建任务</span>
+                </Button>
+              </div>
+            </div>
+
+            {filtered ? (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
+                {query.trim() ? (
+                  <FilterChip
+                    label={`搜索「${query.trim()}」`}
+                    onClear={() => setQuery("")}
+                  />
+                ) : null}
+                {effectiveProjectId !== "all" ? (
+                  <FilterChip
+                    label={projectName}
+                    onClear={() => setProjectId("all")}
+                  />
+                ) : null}
+                {overdueOnly ? (
+                  <FilterChip
+                    label="仅逾期"
+                    onClear={() => setOverdueOnly(false)}
+                  />
+                ) : null}
+                {undatedOnly ? (
+                  <FilterChip
+                    label="未排期"
+                    onClear={() => setUndatedOnly(false)}
+                  />
+                ) : null}
+                {dueDate ? (
+                  <FilterChip
+                    label={`${fmtMD(dueDate)}到期`}
+                    onClear={() => setDueDate(null)}
+                  />
+                ) : null}
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:text-foreground"
+                  className="ml-1 rounded-sm px-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <X size={14} />
-                  清除
-                </button>
-              ) : null}
-            </div>
-            {dueDate || undatedOnly ? (
-              <div className="mt-2 flex items-center gap-2 text-xs">
-                <span className="rounded-full border border-ring/30 bg-accent px-2.5 py-1 text-accent-foreground">
-                  {undatedOnly
-                    ? "未排期"
-                    : `${Number(dueDate?.slice(5, 7))}月${Number(dueDate?.slice(8, 10))}日到期`}
-                </span>
-                <button
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setDueDate(null);
-                    setUndatedOnly(false);
-                  }}
-                >
-                  清除日期条件
+                  全部清除
                 </button>
               </div>
             ) : null}
 
-            {result.items.length ? (
-              <div className="pane-grid cols-2 cols-3 mt-4 gap-4">
-                {columns.map(({ priority, items }) => (
-                  <section
-                    key={priority}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = "move";
-                      setOverCol(priority);
-                    }}
-                    onDragLeave={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget as Node))
-                        setOverCol(null);
-                    }}
-                    onDrop={(e) => handleDrop(priority, e)}
-                    className={cn(
-                      "rounded-xl border border-transparent bg-[var(--column)] p-3 transition",
-                      overCol === priority &&
-                        "border-dashed border-ring bg-accent/40",
-                    )}
-                    aria-label={`${PRIORITY_META[priority].label}（${items.length} 项）`}
-                  >
-                    <div className="mb-2 flex items-center gap-2 px-1">
-                      <span
-                        className={cn(
-                          "size-2.5 rounded-full",
-                          PRIORITY_META[priority].dot,
-                        )}
-                      />
-                      <h2 className="text-sm font-semibold">
-                        {PRIORITY_META[priority].label}
-                      </h2>
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
-                        {items.length}
-                      </span>
-                      <button
-                        className="ml-auto flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-card hover:text-foreground"
-                        onClick={() => openTaskDialog(priority)}
-                        aria-label={`新建${PRIORITY_META[priority].label}任务`}
-                      >
-                        <Plus size={15} />
-                      </button>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      {items.map((item) => {
-                        const key = taskFocusKey(item.project.id, item.todo.id);
-                        return (
-                          <BoardTaskCard
-                            key={key}
-                            project={item.project}
-                            todo={item.todo}
-                            today={now}
-                            pinnedExtra={item.pinnedExtra}
-                            focusMinutes={
-                              insights.taskFocusMinutes.get(key) ?? 0
-                            }
-                            dragging={draggingKey === key}
-                            onOpen={() => onEdit(item.project)}
-                            onDragStart={(from, e) => {
-                              dragRef.current = {
-                                projectId: item.project.id,
-                                todoId: item.todo.id,
-                                from,
-                              };
-                              setDraggingKey(key);
-                              const payload = JSON.stringify({
-                                projectId: item.project.id,
-                                todoId: item.todo.id,
-                              });
-                              e.dataTransfer.setData(
-                                "application/x-rt-todo",
-                                payload,
-                              );
-                              e.dataTransfer.setData("text/plain", payload);
-                            }}
-                            onDragEnd={() => {
-                              dragRef.current = null;
-                              setDraggingKey(null);
-                              setOverCol(null);
-                            }}
-                          />
-                        );
-                      })}
-                      {items.length === 0 ? (
-                        <p className="px-2 py-3 text-center text-xs text-faint">
-                          暂无此优先级任务
+            {result.items.length || dragActive ? (
+              <div className="mt-6 space-y-8">
+                {sections.map(({ priority, items }) => {
+                  if (!items.length && !dragActive) return null;
+                  const meta = PRIORITY_META[priority];
+                  return (
+                    <section
+                      key={priority}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        setOverCol(priority);
+                      }}
+                      onDragLeave={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node))
+                          setOverCol(null);
+                      }}
+                      onDrop={(e) => handleDrop(priority, e)}
+                      className={cn(
+                        "rounded-xl transition-[background-color,box-shadow] duration-150",
+                        overCol === priority &&
+                          "bg-accent/40 shadow-[0_0_0_1px_var(--ring)]",
+                      )}
+                      aria-label={`${meta.label}（${items.length} 项）`}
+                    >
+                      <div className="group/head flex h-9 items-center gap-2 border-b border-border px-2">
+                        <span
+                          aria-hidden
+                          className={cn("size-2 rounded-full", meta.dot)}
+                        />
+                        <h2 className={cn("text-[13px] font-semibold", meta.text)}>
+                          {meta.label}
+                        </h2>
+                        <span className="text-xs tabular-nums text-faint">
+                          {items.length}
+                        </span>
+                        <button
+                          className="ml-auto flex size-7 items-center justify-center rounded-md text-faint opacity-0 transition-opacity hover:bg-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/head:opacity-100 [@media(hover:none)]:opacity-100"
+                          onClick={() => openTaskDialog(priority)}
+                          aria-label={`新建${meta.label}任务`}
+                          title={`新建${meta.label}任务`}
+                        >
+                          <Plus size={15} />
+                        </button>
+                      </div>
+                      {items.length ? (
+                        <ul className="mt-1">
+                          {items.map((item) => {
+                            const key = `${item.project.id}:${item.todo.id}`;
+                            return (
+                              <TaskRow
+                                key={key}
+                                project={item.project}
+                                todo={item.todo}
+                                today={now}
+                                pinnedExtra={item.pinnedExtra}
+                                dragging={draggingKey === key}
+                                onOpen={() => onEdit(item.project)}
+                                onDragStart={(from, e) => {
+                                  dragRef.current = {
+                                    projectId: item.project.id,
+                                    todoId: item.todo.id,
+                                    from,
+                                  };
+                                  setDraggingKey(key);
+                                  setDragActive(true);
+                                  const payload = JSON.stringify({
+                                    projectId: item.project.id,
+                                    todoId: item.todo.id,
+                                  });
+                                  e.dataTransfer.effectAllowed = "move";
+                                  e.dataTransfer.setData(
+                                    "application/x-rt-todo",
+                                    payload,
+                                  );
+                                  e.dataTransfer.setData("text/plain", payload);
+                                }}
+                                onDragEnd={endDrag}
+                              />
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="px-2 py-3 text-xs text-faint">
+                          拖到这里设为{meta.label}
                         </p>
-                      ) : null}
-                    </div>
-                  </section>
-                ))}
+                      )}
+                    </section>
+                  );
+                })}
               </div>
             ) : (
               <Empty
                 filtered={filtered}
+                recent={range === "recent"}
                 onClear={clearFilters}
                 onAll={() => setRange("all")}
                 onNew={() => openTaskDialog()}
@@ -415,20 +482,29 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
             )}
           </>
         ) : (
-          <p className="mt-6 text-sm text-muted-foreground">
-            还没有进行中的项目。用右上角的新建项目开始。
-          </p>
+          <div className="mt-16 max-w-sm">
+            <p className="text-[15px] font-medium">还没有进行中的项目</p>
+            <p className="mt-1.5 text-[13px] leading-6 text-muted-foreground">
+              任务挂在项目下。先建一个项目，填上阶段和投稿目标，再回来添加任务。
+            </p>
+            <Button variant="primary" className="mt-5" onClick={onNew}>
+              <Plus />
+              新建项目
+            </Button>
+          </div>
         )}
-      </Container>
-      <div className="border-t bg-panel/35">
-        <Dashboard
-          showArchived={false}
-          onNew={onNew}
-          onEdit={onEdit}
-          draggableTodos
-          collapsible
-        />
       </div>
+      {activeProjects.length ? (
+        <div className="mx-auto mt-16 w-full max-w-[52rem] px-4 sm:px-8">
+          <Dashboard
+            showArchived={false}
+            onNew={onNew}
+            onEdit={onEdit}
+            draggableTodos
+            collapsible
+          />
+        </div>
+      ) : null}
       {dialogOpen ? (
         <BoardTaskDialog
           open
@@ -452,33 +528,60 @@ export function Board({ onNew, onEdit, onGoReview }: Props) {
   );
 }
 
+function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex h-6 max-w-[16rem] items-center gap-1 rounded-full bg-accent pl-2.5 pr-1 text-accent-foreground">
+      <span className="truncate">{label}</span>
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label={`移除筛选：${label}`}
+        className="inline-flex size-4 shrink-0 items-center justify-center rounded-full hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <X size={11} strokeWidth={2.5} />
+      </button>
+    </span>
+  );
+}
+
 function Empty({
   filtered,
+  recent,
   onClear,
   onAll,
   onNew,
 }: {
   filtered: boolean;
+  recent: boolean;
   onClear: () => void;
   onAll: () => void;
   onNew: () => void;
 }) {
   return (
-    <div className="mt-5 rounded-xl border border-dashed bg-card px-6 py-10 text-center">
-      <CalendarDays className="mx-auto size-7 text-faint" />
-      <h2 className="mt-3 text-sm font-semibold">
-        {filtered ? "没有符合筛选的任务" : "近期没有待处理任务"}
-      </h2>
-      <p className="mt-1 text-xs text-muted-foreground">
+    <div className="mt-12 flex flex-col items-center py-6 text-center">
+      <CircleCheck size={40} strokeWidth={1.5} className="text-input" aria-hidden />
+      <p className="mt-4 text-[15px] font-medium">
         {filtered
-          ? "调整条件或清除筛选，查看其他任务。"
-          : "可以查看全部待办，或创建一个新任务。"}
+          ? "没有符合筛选的任务"
+          : recent
+            ? "近 7 天没有待办"
+            : "所有任务都完成了"}
       </p>
-      <div className="mt-4 flex justify-center gap-2">
-        <Button onClick={filtered ? onClear : onAll}>
-          {filtered ? "清除筛选" : "查看全部待办"}
-        </Button>
+      <p className="mt-1 text-[13px] text-muted-foreground">
+        {filtered
+          ? "调整条件，或清除筛选。"
+          : recent
+            ? "近期重点显示逾期、7 天内到期和手动加入的任务。"
+            : "新建一项任务，或在项目里添加。"}
+      </p>
+      <div className="mt-5 flex justify-center gap-2">
+        {filtered ? (
+          <Button onClick={onClear}>清除筛选</Button>
+        ) : recent ? (
+          <Button onClick={onAll}>查看全部待办</Button>
+        ) : null}
         <Button variant="primary" onClick={onNew}>
+          <Plus />
           新建任务
         </Button>
       </div>

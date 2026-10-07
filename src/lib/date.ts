@@ -46,6 +46,25 @@ export function weekdayLabel(iso: string, todayIso: string): string {
   return `${fmtMD(iso)}${wd}`
 }
 
+/**
+ * 任务行上的截止日期文字：逾期写天数，今天、明天直接写，两周内写相对星期，
+ * 更远写月日。没有日期返回 null。
+ */
+export function dueLabel(
+  iso: string,
+  todayIso: string,
+): { text: string; tone: 'overdue' | 'today' | 'soon' | 'later' } | null {
+  const d = parse(iso)
+  const base = parse(todayIso)
+  if (!d || !base) return null
+  const days = differenceInCalendarDays(d, base)
+  if (days < 0) return { text: `逾期 ${-days} 天`, tone: 'overdue' }
+  if (days === 0) return { text: '今天', tone: 'today' }
+  if (days === 1) return { text: '明天', tone: 'soon' }
+  if (days < 14) return { text: weekdayLabel(iso, todayIso), tone: 'soon' }
+  return { text: fmtMD(iso), tone: 'later' }
+}
+
 export function parse(iso: string): Date | null {
   if (!iso) return null
   const d = parseISO(iso)

@@ -11,8 +11,6 @@ import {
   requestNotifyPermission,
   setReminderEnabled,
 } from '@/lib/reminder'
-import { Switch } from './ui/switch'
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 /** Ring geometry — a single instance app-wide, so fixed size/viewBox are safe
     (pure strokeDashoffset animation, no cross-element references). */
@@ -25,6 +23,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from './ui/DropdownMenu'
 
 function fmtCountdown(ms: number): string {
@@ -128,59 +127,50 @@ export function FocusTimer() {
     document.title = `${fmtCountdown(clamped)} · 专注中`
   }, [activeTimer, end, now])
 
-  const bell = (
-    <span className="inline-flex shrink-0 items-center gap-1.5">
-      {remindOn ? (
-        <Bell size={14} className="text-faint" />
-      ) : (
-        <BellOff size={14} className="text-faint/50" />
-      )}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Switch
-            size="sm"
-            checked={remindOn}
-            onCheckedChange={() => void toggleRemind()}
-            aria-label={remindOn ? '关闭结束提醒' : '开启结束提醒'}
-          />
-        </TooltipTrigger>
-        <TooltipContent>
-          {remindOn ? '结束提醒：响铃 + 系统通知' : '结束提醒已关闭'}
-        </TooltipContent>
-      </Tooltip>
-    </span>
+  const bellButton = (
+    <button
+      type="button"
+      onClick={() => void toggleRemind()}
+      aria-pressed={remindOn}
+      aria-label={remindOn ? '关闭结束提醒' : '开启结束提醒'}
+      title={remindOn ? '结束提醒：响铃与系统通知' : '结束提醒已关闭'}
+      className="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {remindOn ? <Bell size={14} /> : <BellOff size={14} className="text-faint" />}
+    </button>
   )
 
   if (!activeTimer) {
     return (
-      <div className="flex shrink-0 items-center gap-0.5">
-        {bell}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
-            aria-label="开始专注倒计时"
-            title="开始自由专注"
-          >
-            <Timer size={15} /> 专注
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuLabel>自由专注</DropdownMenuLabel>
-            <DropdownMenuItem onSelect={() => begin(30)}>
-              <Timer size={15} /> 倒计时 30 分钟
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => begin(60)}>
-              <Timer size={15} /> 倒计时 1 小时
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover data-[state=open]:text-foreground"
+          aria-label="开始专注倒计时"
+        >
+          <Timer size={15} /> 专注
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuLabel>自由专注</DropdownMenuLabel>
+          <DropdownMenuItem onSelect={() => begin(30)}>
+            <Timer /> 30 分钟
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => begin(60)}>
+            <Timer /> 1 小时
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => void toggleRemind()}>
+            {remindOn ? <Bell /> : <BellOff />}
+            {remindOn ? '结束时提醒：开' : '结束时提醒：关'}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     )
   }
 
   const durationMs = end - activeTimer.startedAt
   const remaining = Math.min(durationMs, Math.max(0, end - now))
   const remainingPct = Math.min(100, Math.max(0, (remaining / durationMs) * 100))
-  const accent = activeTimer.color || 'var(--color-brand-500)'
+  const accent = activeTimer.color || 'var(--ring)'
   const label =
     activeTimer.todoTitle?.trim() ||
     activeTimer.projectTitle?.trim() ||
@@ -208,19 +198,17 @@ export function FocusTimer() {
     .join(' · ')
 
   return (
-    // Compact capsule in the hero header: a small 28px progress ring, the mono
-    // countdown + task label, then a quiet icon-button column. The planned
-    // duration / project context lives in the capsule's title tooltip.
+    // 顶栏胶囊：进度环、倒计时与任务名、提醒/完成/取消三个图标按钮。
+    // 计划时长与项目名放在 title 提示里。
     <div
       className={cn(
-        'flex max-w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 shadow-sm',
-        remaining <= 60_000 && 'animate-pulse',
+        'flex h-9 max-w-full min-w-0 items-center gap-2 rounded-full bg-muted pl-1.5 pr-1',
       )}
       role="timer"
       aria-label="专注倒计时"
       title={`${sub} · ${fmtCountdown(remaining)}`}
     >
-      <div className="relative h-7 w-7 shrink-0" aria-hidden>
+      <div className="relative size-7 shrink-0" aria-hidden>
         <svg
           width={RING_SIZE}
           height={RING_SIZE}
@@ -233,7 +221,7 @@ export function FocusTimer() {
             r={RING_R}
             fill="none"
             strokeWidth={3}
-            className="stroke-muted"
+            className="stroke-input"
           />
           {/* The arc IS the time left: full at start, unwinding toward 12
               o'clock as it burns. Offset animates so ticks glide, not jump. */}
@@ -251,22 +239,27 @@ export function FocusTimer() {
           />
         </svg>
       </div>
-      <div className="min-w-0">
-        <div className="mono text-[15px] font-semibold leading-none text-primary">
+      <div className="flex min-w-0 items-baseline gap-2">
+        <span
+          className={cn(
+            'mono text-[14px] font-semibold leading-none text-foreground',
+            remaining <= 60_000 && 'text-today',
+          )}
+        >
           {fmtCountdown(remaining)}
-        </div>
-        <div className="mt-0.5 hidden max-w-[9rem] truncate text-[10.5px] leading-tight text-muted-foreground sm:block">
+        </span>
+        <span className="hidden max-w-[11rem] truncate text-xs leading-none text-muted-foreground sm:block">
           {label}
-        </div>
+        </span>
       </div>
-      <div className="flex items-center gap-0.5">
-        {bell}
+      <div className="flex items-center">
+        {bellButton}
         <button
           type="button"
           onClick={onFinishEarly}
           title="提前结束并记录本次专注"
           aria-label="提前结束并记录本次专注"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+          className="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-hover hover:text-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Check size={14} />
         </button>
@@ -275,7 +268,7 @@ export function FocusTimer() {
           onClick={onCancel}
           title="取消（不记录）"
           aria-label="取消（不记录）"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-accent/60 hover:text-destructive focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+          className="inline-flex size-7 items-center justify-center rounded-full text-faint transition-colors hover:bg-hover hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X size={14} />
         </button>

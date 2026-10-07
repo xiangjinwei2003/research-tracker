@@ -68,8 +68,8 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
             onClick={() => onSelect(d.iso)}
             className={cn(
               'group flex min-w-0 flex-1 flex-col items-center justify-end gap-1.5 rounded-lg px-0.5 pb-1.5 pt-1 transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
-              selected ? 'bg-muted' : 'hover:bg-muted/60',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              selected ? 'bg-white/[.035]' : 'hover:bg-white/[.025]',
             )}
           >
             <span
@@ -88,7 +88,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
                   className={cn(
                     'w-full transition-colors',
                     isWeek ? 'max-w-14 rounded-md' : 'max-w-[9px] rounded-sm',
-                    selected ? 'bg-brand-400' : 'bg-brand-500/40 group-hover:bg-brand-400/60',
+                    selected ? 'bg-brand-400' : 'bg-brand-500/55 group-hover:bg-brand-400/75',
                   )}
                 />
               ) : (
@@ -96,7 +96,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
                   className={cn(
                     'h-1 w-full rounded-sm',
                     isWeek ? 'max-w-14' : 'max-w-[9px]',
-                    selected ? 'bg-brand-700' : 'bg-muted',
+                    selected ? 'bg-brand-800' : 'bg-muted',
                   )}
                 />
               )}
@@ -105,7 +105,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
               className={cn(
                 'flex h-4 items-center gap-1 text-[10px] leading-none transition-colors',
                 selected
-                  ? 'text-brand-300 font-semibold'
+                  ? 'text-accent-foreground font-semibold'
                   : isToday
                     ? 'text-muted-foreground'
                     : 'text-faint',
@@ -113,7 +113,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
             >
               {label}
               {isToday ? (
-                <span aria-hidden className="h-1 w-1 rounded-full bg-brand-400" />
+                <span aria-hidden className="h-1 w-1 rounded-full bg-today" />
               ) : null}
             </span>
           </button>
