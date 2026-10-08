@@ -153,3 +153,23 @@ test("drag payload accepts both supported payload shapes and rejects malformed d
   assert.equal(parseTodoDragPayload('{"projectId":"","todoId":"t"}'), null);
   assert.equal(parseTodoDragPayload("not-json"), null);
 });
+
+test("pending todos show in 近期重点 regardless of due date", () => {
+  const result = buildBoard(
+    [project("p", "P", [todo("far", "Far pending", "2026-12-01", { pending: true })])],
+    {
+      today: "2026-09-16",
+      end: "2026-09-23",
+      query: "",
+      projectId: "all",
+      range: "recent",
+      overdueOnly: false,
+      dueDate: null,
+      undatedOnly: false,
+    },
+  );
+  assert.deepEqual(
+    result.items.map((x) => x.todo.id),
+    ["far"],
+  );
+});

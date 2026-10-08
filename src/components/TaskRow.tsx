@@ -5,7 +5,6 @@ import {
   PRIORITY_META,
   PRIORITY_ORDER,
   todoPriority,
-  type Priority,
   type Project,
   type Todo,
 } from "@/lib/types";
@@ -34,7 +33,7 @@ interface Props {
   pinnedExtra: boolean;
   dragging: boolean;
   onOpen: () => void;
-  onDragStart: (priority: Priority, event: DragEvent<HTMLElement>) => void;
+  onDragStart: (event: DragEvent<HTMLElement>) => void;
   onDragEnd: () => void;
 }
 
@@ -106,7 +105,7 @@ export function TaskRow({
       draggable
       data-project-id={project.id}
       data-todo-id={todo.id}
-      onDragStart={(e) => onDragStart(todoPriority(todo), e)}
+      onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       className={cn(
         "group relative flex items-start gap-3 rounded-lg px-2 py-2 transition-[background-color,opacity] duration-150 hover:bg-hover has-[[data-state=open]]:bg-hover",
@@ -118,7 +117,7 @@ export function TaskRow({
         checked={checking}
         onChange={complete}
         label={`完成「${title}」`}
-        className="mt-[3px]"
+        className="mt-[4px]"
       />
       <button
         type="button"
@@ -127,14 +126,14 @@ export function TaskRow({
       >
         <span
           className={cn(
-            "block break-words text-[14px] leading-[22px] text-foreground transition-colors",
+            "block break-words text-[15px] leading-6 text-foreground transition-colors",
             checking && "text-muted-foreground line-through decoration-faint",
             !todo.title && "italic text-faint",
           )}
         >
           {title}
         </span>
-        <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-xs leading-5 text-muted-foreground">
+        <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] leading-5 text-muted-foreground">
           <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
             <span
               aria-hidden
@@ -214,7 +213,7 @@ export function TaskRow({
               <DropdownMenuItem
                 key={p}
                 onSelect={() => updateTodo(project.id, todo.id, { priority: p })}
-                disabled={todoPriority(todo) === p}
+                disabled={!todo.pending && todoPriority(todo) === p}
               >
                 <span
                   className={cn("size-2 rounded-full", PRIORITY_META[p].dot)}

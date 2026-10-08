@@ -267,7 +267,7 @@ export function Header({ tab, onTabChange, onNew, onEdit, children }: Props) {
       </aside>
       <div className="app-main" data-app-main>
         <header className="sticky top-0 z-30 bg-background/85 backdrop-blur-md">
-          <div className="flex min-h-14 min-w-0 max-w-full flex-wrap items-center gap-2 px-4 py-2 sm:px-6 lg:px-10">
+          <div className="flex min-h-12 min-w-0 max-w-full flex-wrap items-center gap-2 px-4 py-1.5 sm:px-6">
             <div className="flex items-center gap-2 md:hidden">
               <img src="/logo-mark.svg" alt="" className="size-6 rounded-md" />
             </div>

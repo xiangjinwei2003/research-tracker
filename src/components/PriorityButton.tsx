@@ -1,4 +1,4 @@
-import { Flame, Minus, ChevronDown } from 'lucide-react'
+import { Circle, Flame, Minus, ChevronDown } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { PRIORITY_META, PRIORITY_ORDER, type Priority } from '@/lib/types'
 import { cn } from '@/lib/cn'
@@ -11,16 +11,22 @@ const ICON: Record<Priority, ComponentType<{ size?: number }>> = {
 
 interface Props {
   priority: Priority
+  /** 待分配：显示「待分配」，点击后设为第一档优先级。 */
+  pending?: boolean
   onChange: (p: Priority) => void
   className?: string
 }
 
 /** A compact chip that cycles 主攻 → 一般 → 次要 on click. */
-export function PriorityButton({ priority, onChange, className }: Props) {
+export function PriorityButton({ priority, pending, onChange, className }: Props) {
   // Fall back defensively so an unexpected value never crashes the chip.
-  const meta = PRIORITY_META[priority] ?? PRIORITY_META.normal
-  const Icon = ICON[priority] ?? Minus
-  const next = PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(priority) + 1) % PRIORITY_ORDER.length]
+  const meta = pending
+    ? { label: '待分配', short: '待分配', text: 'text-muted-foreground' }
+    : (PRIORITY_META[priority] ?? PRIORITY_META.normal)
+  const Icon = pending ? Circle : (ICON[priority] ?? Minus)
+  const next = pending
+    ? PRIORITY_ORDER[0]
+    : PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(priority) + 1) % PRIORITY_ORDER.length]
 
   return (
     <button

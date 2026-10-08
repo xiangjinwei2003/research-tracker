@@ -74,7 +74,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
           >
             <span
               className={cn(
-                'h-3 text-[10px] leading-none tabular-nums transition-colors',
+                'h-3 whitespace-nowrap text-[10px] leading-none tabular-nums transition-colors max-sm:invisible',
                 isWeek && d.minutes > 0 ? '' : 'opacity-0',
                 selected ? 'font-medium text-foreground/90' : 'text-faint',
               )}
@@ -87,8 +87,8 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
                   style={{ height: `${pct}%` }}
                   className={cn(
                     'w-full transition-colors',
-                    isWeek ? 'max-w-14 rounded-md' : 'max-w-[9px] rounded-sm',
-                    selected ? 'bg-brand-400' : 'bg-brand-500/55 group-hover:bg-brand-400/75',
+                    isWeek ? 'max-w-12 rounded-[10px]' : 'max-w-[9px] rounded-full',
+                    selected ? 'bg-brand-400' : 'bg-brand-500/80 group-hover:bg-brand-400/85',
                   )}
                 />
               ) : (

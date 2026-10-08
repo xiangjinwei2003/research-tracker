@@ -97,6 +97,11 @@ export interface Todo {
   /** Importance / priority (drives the 本周 view ordering); absent = 'normal'. */
   priority?: Priority
   /**
+   * 待分配：新建后还没定优先级。首页把它放在单独的「待分配」组，直到用户
+   * 指定优先级（updateTodo 里设置 priority 会清掉此标记）。Absent = 已分配。
+   */
+  pending?: boolean
+  /**
    * Manually pinned into 本周重点 from the project overview, so it shows there
    * even when its due date is outside the rolling window. Absent = not pinned.
    */

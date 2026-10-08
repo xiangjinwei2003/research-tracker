@@ -1,4 +1,10 @@
-import { PRIORITY_META, todoPriority, type Project, type Todo } from "./types";
+import {
+  PRIORITY_META,
+  todoPriority,
+  type Priority,
+  type Project,
+  type Todo,
+} from "./types";
 
 export type BoardRange = "recent" | "all";
 
@@ -22,6 +28,15 @@ export interface BoardFilters {
 export interface BoardResult {
   items: BoardItem[];
   stats: { total: number; overdue: number; dueToday: number };
+}
+
+/** 首页任务分组：先是待分配，再按优先级。 */
+export type BoardGroup = "pending" | Priority;
+
+export const BOARD_GROUPS: BoardGroup[] = ["pending", "high", "normal", "low"];
+
+export function boardGroup(todo: Todo): BoardGroup {
+  return todo.pending ? "pending" : todoPriority(todo);
 }
 
 function sortItems(a: BoardItem, b: BoardItem): number {
@@ -55,7 +70,14 @@ export function buildBoard(
     for (const todo of project.todos) {
       if (todo.done) continue;
       const inWindow = !!todo.endDate && todo.endDate <= filters.end;
-      if (filters.range === "recent" && !inWindow && !todo.inWeek) continue;
+      // 待分配的待办在两种范围下都显示，等用户定优先级。
+      if (
+        filters.range === "recent" &&
+        !inWindow &&
+        !todo.inWeek &&
+        !todo.pending
+      )
+        continue;
       if (
         filters.overdueOnly &&
         (!todo.endDate || todo.endDate >= filters.today)

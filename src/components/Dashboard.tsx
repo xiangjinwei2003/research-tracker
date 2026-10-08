@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
-import { Archive, ChevronRight } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { Archive, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/cn'
-import type { Project } from '@/lib/types'
+import { PROJECT_COLOR_PRESETS, type Project } from '@/lib/types'
+import { emptyProjectDraft } from '@/lib/project'
+import { isSubmitEnter } from '@/lib/keyboard'
 import { ProjectRow } from './ProjectRow'
 
 const COLLAPSE_KEY = 'rt-overview-collapsed'
@@ -38,6 +40,11 @@ export function Dashboard({
   collapsible = false,
 }: Props) {
   const projects = useStore((s) => s.projects)
+  const addProject = useStore((s) => s.addProject)
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState('')
+  // 回车提交后输入框卸载会触发 blur，这个标记防止同一标题被提交两次。
+  const committedRef = useRef(false)
 
   const [collapsed, setCollapsed] = useState(() => collapsible && readCollapsed())
   const toggleCollapsed = () => {
@@ -50,6 +57,23 @@ export function Dashboard({
     }
   }
 
+  const openAdd = () => {
+    committedRef.current = false
+    setDraft('')
+    setAdding(true)
+    if (collapsed) toggleCollapsed()
+  }
+  const commitProject = () => {
+    if (committedRef.current) return
+    committedRef.current = true
+    const title = draft.trim()
+    setDraft('')
+    setAdding(false)
+    if (!title) return
+    const color = PROJECT_COLOR_PRESETS[projects.length % PROJECT_COLOR_PRESETS.length]
+    addProject(emptyProjectDraft(color, title))
+  }
+
   const visible = useMemo(
     // Keep the store's array order (newest created first): rows hold a fixed
     // position instead of reshuffling as deadlines shift or todos change.
@@ -59,7 +83,7 @@ export function Dashboard({
 
   if (showArchived) {
     return (
-      <main className="mx-auto w-full max-w-[52rem] px-4 pb-24 pt-6 sm:px-8 lg:pt-10">
+      <main className="mx-auto w-full max-w-[66rem] px-4 pb-24 pt-2 sm:px-6 lg:pt-4">
         <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
           <Archive size={26} strokeWidth={2.2} className="text-faint" aria-hidden />
           归档
@@ -84,14 +108,14 @@ export function Dashboard({
 
   return (
     <section aria-label="项目">
-      <div className="flex h-9 items-center gap-2 border-b border-border">
+      <div className="flex h-10 items-center gap-2 border-b border-border">
         {collapsible ? (
           <button
             type="button"
             onClick={toggleCollapsed}
             aria-expanded={!collapsed}
             aria-controls="overview-list"
-            className="-ml-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-[13px] font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="-ml-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-[15px] font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ChevronRight
               size={14}
@@ -104,10 +128,48 @@ export function Dashboard({
             项目
           </button>
         ) : (
-          <h2 className="text-[13px] font-semibold">项目</h2>
+          <h2 className="text-[15px] font-semibold">项目</h2>
         )}
-        <span className="text-xs tabular-nums text-faint">{visible.length}</span>
+        <span className="text-[13px] tabular-nums text-faint">{visible.length}</span>
+        <button
+          type="button"
+          onClick={openAdd}
+          aria-label="新建项目"
+          title="新建项目"
+          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Plus size={15} />
+          新建项目
+        </button>
       </div>
+
+      {adding ? (
+        <div className="mt-2 flex items-center gap-2.5 px-1.5">
+          <span
+            aria-hidden
+            className="size-3.5 shrink-0 rounded-full border-2"
+            style={{
+              borderColor: PROJECT_COLOR_PRESETS[projects.length % PROJECT_COLOR_PRESETS.length],
+            }}
+          />
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (isSubmitEnter(e)) commitProject()
+              else if (e.key === 'Escape') {
+                committedRef.current = true
+                setAdding(false)
+              }
+            }}
+            onBlur={commitProject}
+            placeholder="项目名称，回车创建，Esc 取消"
+            aria-label="新项目名称"
+            className="h-9 min-w-0 flex-1 rounded-md bg-muted px-2.5 text-[15px] outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+      ) : null}
 
       {collapsed ? null : (
         <ul id="overview-list" className="mt-1">

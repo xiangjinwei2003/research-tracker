@@ -55,6 +55,7 @@
   --color-sidebar: var(--sidebar);
   --color-today: var(--today);
   --color-hover: var(--hover);
+  --color-widget: var(--widget);
 }
 
 :root {
@@ -64,6 +65,8 @@
   --background: oklch(0.235 0.006 265);
   --panel: oklch(0.255 0.007 265);
   --card: oklch(0.262 0.007 265);
+  /* 回顾页小组件卡片 */
+  --widget: oklch(0.275 0.008 265);
   --popover: oklch(0.28 0.008 265);
   --muted: oklch(0.29 0.008 265);
   --secondary: oklch(0.29 0.008 265);
@@ -115,7 +118,7 @@ body,
 body {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -141,6 +144,12 @@ input[type="radio"] {
 input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0.65;
   filter: invert(1);
+}
+
+/* 小组件里的大号数字：系统圆体（Apple 平台为 SF Pro Rounded） */
+.num-rounded {
+  font-family: ui-rounded, "SF Pro Rounded", var(--font-sans);
+  font-variant-numeric: tabular-nums;
 }
 
 /* 等宽数字（日期/倒计时/统计） */

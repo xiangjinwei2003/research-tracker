@@ -286,6 +286,8 @@ export const useStore = create<Store>()(
                       done: false,
                       stage: p.stage,
                       priority: 'normal',
+                      // 调用方没指定优先级的新待办先进待分配组。
+                      ...(t?.priority ? {} : { pending: true }),
                       ...t,
                     },
                   ],
@@ -303,7 +305,13 @@ export const useStore = create<Store>()(
               ? p
               : {
                   ...p,
-                  todos: p.todos.map((t) => (t.id === todoId ? { ...t, ...patch } : t)),
+                  todos: p.todos.map((t) => {
+                    if (t.id !== todoId) return t
+                    const next = { ...t, ...patch }
+                    // 指定优先级即离开待分配组。
+                    if (patch.priority && patch.pending === undefined) delete next.pending
+                    return next
+                  }),
                   updatedAt: stamp(),
                 },
           ),

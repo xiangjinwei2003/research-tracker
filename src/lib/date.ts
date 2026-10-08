@@ -98,3 +98,10 @@ export function fmtMinutes(min: number): string {
   const rounded = Math.round(h * 10) / 10
   return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded} 小时`
 }
+
+/** 大号数字的拆分：45 → (45, 分钟)；96 → (1.6, 小时)。 */
+export function splitMinutes(min: number): { value: string; unit: string } {
+  if (min < 60) return { value: `${min}`, unit: '分钟' }
+  const h = Math.round((min / 60) * 10) / 10
+  return { value: Number.isInteger(h) ? h.toFixed(0) : `${h}`, unit: '小时' }
+}

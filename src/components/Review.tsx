@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns'
-import { ChevronLeft, ChevronRight, Timer } from 'lucide-react'
+import { BarChart3, ChevronLeft, ChevronRight, Flame, Target, Timer, Trophy } from 'lucide-react'
 import { useStore } from '@/lib/store'
-import { weekStart, fmtMinutes, parse, today } from '@/lib/date'
+import { weekStart, parse, splitMinutes, today } from '@/lib/date'
 import {
   allTimeSummary,
   buildPeriodStats,
@@ -17,7 +17,8 @@ import type { Project } from '@/lib/types'
 import { Button } from './ui/Button'
 import { FocusBars } from './FocusBars'
 import { DayDetail } from './DayDetail'
-import { FocusStats } from './FocusStats'
+import { HeatmapCard, ProjectShareCard } from './FocusStats'
+import { Widget, WidgetNumber } from './Widget'
 
 /** Trailing window of the contribution heatmap, in weeks (~4 months). */
 const HEATMAP_WEEKS = 16
@@ -99,6 +100,10 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
     stats.prevMinutes > 0
       ? Math.round(((stats.minutes - stats.prevMinutes) / stats.prevMinutes) * 100)
       : 0
+  const completedCount = stats.resolved.filter((r) => r.session.completed).length
+  const total = splitMinutes(stats.minutes)
+  const best = stats.best ? splitMinutes(stats.best.minutes) : null
+  const prevWord = isWeek ? '较上周' : '较上月'
   const selectedDay = stats.days.find((d) => d.iso === selectedIso)
   const selectedDate = selectedDay?.date ?? parse(selectedIso) ?? now
   const selectedRows: ResolvedSession[] = stats.resolved.filter(
@@ -119,26 +124,13 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[60rem] px-4 pb-24 pt-6 sm:px-8 lg:pt-10">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+    <main className="mx-auto w-full max-w-[66rem] px-4 pb-24 pt-2 sm:px-6 lg:pt-4">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
+          <h1 className="flex items-center gap-2.5 text-[30px] font-bold leading-tight tracking-[-0.01em]">
             <Timer size={26} strokeWidth={2.2} className="text-success" aria-hidden />
             专注回顾
           </h1>
-          <p className="mt-1.5 pl-[36px] text-[13px] text-muted-foreground">
-            {stats.count > 0
-              ? [
-                  `${periodWord}专注 ${fmtMinutes(stats.minutes)} · ${stats.count} 次`,
-                  stats.prevMinutes > 0
-                    ? `${isWeek ? '较上周' : '较上月'} ${pct > 0 ? '+' : ''}${pct}%`
-                    : null,
-                  streak.current > 0 ? `连续 ${streak.current} 天` : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
-              : `${periodWord}还没有专注记录`}
-          </p>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -208,16 +200,56 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
           </Button>
         </div>
       ) : (
-        <>
-          <FocusBars
-            days={stats.days}
-            selectedIso={selectedIso}
-            onSelect={setSelectedIso}
-            todayIso={todayIso}
-            scope={scope}
-          />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <Widget title="专注时长" icon={Timer} tint="text-success">
+            <WidgetNumber className="mt-5" value={total.value} unit={total.unit} />
+            <p className="mt-2 text-[13px] text-muted-foreground">
+              {stats.prevMinutes > 0
+                ? `${prevWord} ${pct > 0 ? '+' : ''}${pct}%`
+                : `${periodWord}累计`}
+            </p>
+          </Widget>
+          <Widget title="专注次数" icon={Target} tint="text-ring">
+            <WidgetNumber className="mt-5" value={stats.count} unit="次" />
+            <p className="mt-2 text-[13px] text-muted-foreground">
+              完整 {completedCount} 次
+              {stats.count > completedCount ? ` · 提前 ${stats.count - completedCount} 次` : ''}
+            </p>
+          </Widget>
+          <Widget title="连续专注" icon={Flame} tint="text-warn">
+            <WidgetNumber className="mt-5" value={streak.current} unit="天" />
+            <p className="mt-2 text-[13px] text-muted-foreground">最长 {streak.longest} 天</p>
+          </Widget>
+          <Widget title="最佳一天" icon={Trophy} tint="text-today">
+            <WidgetNumber
+              className="mt-5"
+              value={best ? best.value : '0'}
+              unit={best ? best.unit : '分钟'}
+            />
+            <p className="mt-2 text-[13px] text-muted-foreground">
+              {stats.best ? format(stats.best.date, 'M月d日') : `${periodWord}暂无`}
+            </p>
+          </Widget>
+
+          <Widget
+            title="每日专注"
+            icon={BarChart3}
+            tint="text-accent-foreground"
+            className="col-span-2 lg:col-span-4"
+          >
+            <div className="mt-3">
+              <FocusBars
+                days={stats.days}
+                selectedIso={selectedIso}
+                onSelect={setSelectedIso}
+                todayIso={todayIso}
+                scope={scope}
+              />
+            </div>
+          </Widget>
 
           <DayDetail
+            className="col-span-2 lg:col-span-4"
             date={selectedDate}
             iso={selectedIso}
             todayIso={todayIso}
@@ -225,13 +257,9 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
             onRemove={onRemove}
           />
 
-          <FocusStats
-            stats={stats}
-            centerLabel={periodWord}
-            heat={heat}
-            allTime={allTime}
-          />
-        </>
+          <ProjectShareCard className="col-span-2" stats={stats} centerLabel={periodWord} />
+          <HeatmapCard className="col-span-2" heat={heat} allTime={allTime} />
+        </div>
       )}
     </main>
   )

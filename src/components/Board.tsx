@@ -11,14 +11,15 @@ import {
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { dateFromToday, fmtMD, parse, today } from "@/lib/date";
-import { buildBoard, parseTodoDragPayload, type BoardRange } from "@/lib/board";
 import {
-  PRIORITY_META,
-  PRIORITY_ORDER,
-  todoPriority,
-  type Priority,
-  type Project,
-} from "@/lib/types";
+  BOARD_GROUPS,
+  boardGroup,
+  buildBoard,
+  parseTodoDragPayload,
+  type BoardGroup,
+  type BoardRange,
+} from "@/lib/board";
+import { PRIORITY_META, type Project, type Todo } from "@/lib/types";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/cn";
 import { TaskRow } from "./TaskRow";
@@ -48,15 +49,15 @@ export function Board({ onNew, onEdit }: Props) {
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [undatedOnly, setUndatedOnly] = useState(false);
-  const [dialogPriority, setDialogPriority] = useState<Priority>("normal");
+  const [dialogGroup, setDialogGroup] = useState<BoardGroup>("pending");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [overCol, setOverCol] = useState<Priority | null>(null);
+  const [overCol, setOverCol] = useState<BoardGroup | null>(null);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const dragRef = useRef<{
     projectId: string;
     todoId: string;
-    from: Priority;
+    from: BoardGroup;
   } | null>(null);
   const activeProjects = useMemo(
     () => projects.filter((p) => !p.archived),
@@ -117,9 +118,9 @@ export function Board({ onNew, onEdit }: Props) {
     (effectiveProjectId !== "all" ? 1 : 0) +
     (overdueOnly ? 1 : 0) +
     (undatedOnly ? 1 : 0);
-  const sections = PRIORITY_ORDER.map((priority) => ({
-    priority,
-    items: result.items.filter((x) => todoPriority(x.todo) === priority),
+  const sections = BOARD_GROUPS.map((group) => ({
+    group,
+    items: result.items.filter((x) => boardGroup(x.todo) === group),
   }));
   const projectName =
     activeProjects.find((p) => p.id === effectiveProjectId)?.title ||
@@ -138,8 +139,8 @@ export function Board({ onNew, onEdit }: Props) {
     setOverdueOnly(!!next.overdue);
     setDueDate(next.date ?? null);
   };
-  const openTaskDialog = (priority: Priority = "normal") => {
-    setDialogPriority(priority);
+  const openTaskDialog = (group: BoardGroup = "pending") => {
+    setDialogGroup(group);
     setDialogOpen(true);
   };
   const endDrag = () => {
@@ -148,13 +149,13 @@ export function Board({ onNew, onEdit }: Props) {
     setOverCol(null);
     setDragActive(false);
   };
-  const handleDrop = (priority: Priority, e: DragEvent<HTMLElement>) => {
+  const handleDrop = (group: BoardGroup, e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     const own = dragRef.current;
     endDrag();
     if (own) {
-      if (own.from !== priority)
-        updateTodo(own.projectId, own.todoId, { priority });
+      if (own.from !== group)
+        updateTodo(own.projectId, own.todoId, groupPatch(group));
       return;
     }
     const parsed = parseTodoDragPayload(
@@ -167,8 +168,8 @@ export function Board({ onNew, onEdit }: Props) {
     );
     const todo = project?.todos.find((t) => t.id === parsed.todoId && !t.done);
     if (!project || !todo) return;
-    updateTodo(project.id, todo.id, { inWeek: true, priority });
-    toast({ message: `已加入近期重点 · ${PRIORITY_META[priority].label}` });
+    updateTodo(project.id, todo.id, { inWeek: true, ...groupPatch(group) });
+    toast({ message: `已加入近期重点 · ${groupMeta(group).label}` });
   };
 
   const todayDate = parse(now) ?? new Date();
@@ -182,10 +183,10 @@ export function Board({ onNew, onEdit }: Props) {
       }}
       onDrop={() => setDragActive(false)}
     >
-      <div className="mx-auto w-full max-w-[52rem] px-4 pt-6 sm:px-8 lg:pt-10">
+      <div className="mx-auto w-full max-w-[66rem] px-4 pt-2 sm:px-6 lg:pt-4">
         <header className="flex flex-wrap items-end gap-x-6 gap-y-3">
           <div className="min-w-0">
-            <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
+            <h1 className="flex items-center gap-2.5 text-[30px] font-bold leading-tight tracking-[-0.01em]">
               <CircleCheck
                 size={26}
                 strokeWidth={2.4}
@@ -194,7 +195,7 @@ export function Board({ onNew, onEdit }: Props) {
               />
               任务
             </h1>
-            <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 pl-[36px] text-[13px] text-muted-foreground">
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 pl-[36px] text-[14px] text-muted-foreground">
               <span>{format(todayDate, "M月d日 EEEE", { locale: zhCN })}</span>
               {totals.overdue ? (
                 <button
@@ -222,7 +223,7 @@ export function Board({ onNew, onEdit }: Props) {
           <>
             <div
               id="task-board"
-              className="mt-8 flex min-w-0 flex-wrap items-center gap-2"
+              className="mt-6 flex min-w-0 flex-wrap items-center gap-2"
             >
               <div
                 className="inline-flex h-8 rounded-md bg-muted p-0.5"
@@ -381,44 +382,44 @@ export function Board({ onNew, onEdit }: Props) {
             ) : null}
 
             {result.items.length || dragActive ? (
-              <div className="mt-6 space-y-8">
-                {sections.map(({ priority, items }) => {
+              <div className="mt-5 space-y-6">
+                {sections.map(({ group, items }) => {
                   if (!items.length && !dragActive) return null;
-                  const meta = PRIORITY_META[priority];
+                  const meta = groupMeta(group);
                   return (
                     <section
-                      key={priority}
+                      key={group}
                       onDragOver={(e) => {
                         e.preventDefault();
                         e.dataTransfer.dropEffect = "move";
-                        setOverCol(priority);
+                        setOverCol(group);
                       }}
                       onDragLeave={(e) => {
                         if (!e.currentTarget.contains(e.relatedTarget as Node))
                           setOverCol(null);
                       }}
-                      onDrop={(e) => handleDrop(priority, e)}
+                      onDrop={(e) => handleDrop(group, e)}
                       className={cn(
                         "rounded-xl transition-[background-color,box-shadow] duration-150",
-                        overCol === priority &&
+                        overCol === group &&
                           "bg-accent/40 shadow-[0_0_0_1px_var(--ring)]",
                       )}
                       aria-label={`${meta.label}（${items.length} 项）`}
                     >
-                      <div className="group/head flex h-9 items-center gap-2 border-b border-border px-2">
+                      <div className="group/head flex h-10 items-center gap-2 border-b border-border px-2">
                         <span
                           aria-hidden
-                          className={cn("size-2 rounded-full", meta.dot)}
+                          className={cn("size-2.5 rounded-full", meta.dot)}
                         />
-                        <h2 className={cn("text-[13px] font-semibold", meta.text)}>
+                        <h2 className={cn("text-[15px] font-semibold", meta.text)}>
                           {meta.label}
                         </h2>
-                        <span className="text-xs tabular-nums text-faint">
+                        <span className="text-[13px] tabular-nums text-faint">
                           {items.length}
                         </span>
                         <button
                           className="ml-auto flex size-7 items-center justify-center rounded-md text-faint opacity-0 transition-opacity hover:bg-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/head:opacity-100 [@media(hover:none)]:opacity-100"
-                          onClick={() => openTaskDialog(priority)}
+                          onClick={() => openTaskDialog(group)}
                           aria-label={`新建${meta.label}任务`}
                           title={`新建${meta.label}任务`}
                         >
@@ -438,11 +439,11 @@ export function Board({ onNew, onEdit }: Props) {
                                 pinnedExtra={item.pinnedExtra}
                                 dragging={draggingKey === key}
                                 onOpen={() => onEdit(item.project)}
-                                onDragStart={(from, e) => {
+                                onDragStart={(e) => {
                                   dragRef.current = {
                                     projectId: item.project.id,
                                     todoId: item.todo.id,
-                                    from,
+                                    from: group,
                                   };
                                   setDraggingKey(key);
                                   setDragActive(true);
@@ -464,7 +465,9 @@ export function Board({ onNew, onEdit }: Props) {
                         </ul>
                       ) : (
                         <p className="px-2 py-3 text-xs text-faint">
-                          拖到这里设为{meta.label}
+                          {group === "pending"
+                            ? "拖到这里放回待分配"
+                            : `拖到这里设为${meta.label}`}
                         </p>
                       )}
                     </section>
@@ -495,7 +498,7 @@ export function Board({ onNew, onEdit }: Props) {
         )}
       </div>
       {activeProjects.length ? (
-        <div className="mx-auto mt-16 w-full max-w-[52rem] px-4 sm:px-8">
+        <div className="mx-auto mt-12 w-full max-w-[66rem] px-4 sm:px-6">
           <Dashboard
             showArchived={false}
             onNew={onNew}
@@ -512,7 +515,7 @@ export function Board({ onNew, onEdit }: Props) {
           preferredProjectId={
             effectiveProjectId === "all" ? undefined : effectiveProjectId
           }
-          initialPriority={dialogPriority}
+          initialGroup={dialogGroup}
           onNewProject={onNew}
           onCreated={(createdProjectId) => {
             setQuery("");
@@ -526,6 +529,21 @@ export function Board({ onNew, onEdit }: Props) {
       ) : null}
     </main>
   );
+}
+
+const PENDING_META = {
+  label: "待分配",
+  dot: "bg-transparent ring-[1.5px] ring-inset ring-muted-foreground",
+  text: "text-foreground",
+};
+
+function groupMeta(group: BoardGroup) {
+  return group === "pending" ? PENDING_META : PRIORITY_META[group];
+}
+
+/** 拖进某组时写回待办的字段；指定优先级会在 store 里清掉待分配标记。 */
+function groupPatch(group: BoardGroup): Partial<Todo> {
+  return group === "pending" ? { pending: true } : { priority: group };
 }
 
 function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {

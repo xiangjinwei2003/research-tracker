@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Plus } from "lucide-react";
 import { useStore } from "@/lib/store";
-import type { Priority } from "@/lib/types";
+import type { BoardGroup } from "@/lib/board";
 import { toast } from "@/lib/toast";
 import { Dialog } from "./ui/Dialog";
 import { Button } from "./ui/Button";
@@ -18,7 +18,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   preferredProjectId?: string;
-  initialPriority: Priority;
+  initialGroup: BoardGroup;
   onNewProject: () => void;
   onCreated: (projectId: string) => void;
 }
@@ -27,7 +27,7 @@ export function BoardTaskDialog({
   open,
   onOpenChange,
   preferredProjectId,
-  initialPriority,
+  initialGroup,
   onNewProject,
   onCreated,
 }: Props) {
@@ -39,7 +39,7 @@ export function BoardTaskDialog({
     : (projects[0]?.id ?? "");
   const [projectId, setProjectId] = useState(initialProjectId);
   const [title, setTitle] = useState("");
-  const [priority, setPriority] = useState<Priority>(initialPriority);
+  const [group, setGroup] = useState<BoardGroup>(initialGroup);
   const [endDate, setEndDate] = useState("");
   const effectiveProjectId = projects.some((p) => p.id === projectId)
     ? projectId
@@ -49,9 +49,10 @@ export function BoardTaskDialog({
     e.preventDefault();
     const clean = title.trim();
     if (!clean || !effectiveProjectId) return;
+    // 选「待分配」时不传优先级，store 会把它放进待分配组。
     addTodo(effectiveProjectId, {
       title: clean,
-      priority,
+      ...(group === "pending" ? {} : { priority: group }),
       endDate,
       inWeek: true,
     });
@@ -123,13 +124,14 @@ export function BoardTaskDialog({
             <div>
               <Label htmlFor="board-task-priority">优先级</Label>
               <Select
-                value={priority}
-                onValueChange={(v) => setPriority(v as Priority)}
+                value={group}
+                onValueChange={(v) => setGroup(v as BoardGroup)}
               >
                 <SelectTrigger id="board-task-priority" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="pending">待分配</SelectItem>
                   <SelectItem value="high">高优先级</SelectItem>
                   <SelectItem value="normal">普通优先级</SelectItem>
                   <SelectItem value="low">低优先级</SelectItem>

@@ -16,13 +16,13 @@ import {
 } from 'lucide-react'
 import {
   PROJECT_COLOR_PRESETS,
-  defaultStages,
   todoPriority,
   type Todo,
   type Priority,
   type Project,
 } from '@/lib/types'
 import { today } from '@/lib/date'
+import { emptyProjectDraft, type ProjectDraft as Draft } from '@/lib/project'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { isSubmitEnter } from '@/lib/keyboard'
@@ -210,24 +210,6 @@ function EditDialog({
 
 /* ---------- Create new project: local draft, Save on confirm ---------- */
 
-type Draft = Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'archived'>
-
-function emptyDraft(color: string): Draft {
-  const stages = defaultStages()
-  return {
-    title: '',
-    description: '',
-    color,
-    stage: stages[0].id,
-    stages,
-    startDate: today(),
-    venue: undefined,
-    collaborators: [],
-    todos: [],
-    notes: '',
-  }
-}
-
 function CreateDialog({
   open,
   onOpenChange,
@@ -240,14 +222,14 @@ function CreateDialog({
   // Pre-select the next palette hue so a new project starts with a distinct
   // accent (still changeable via the swatch before saving).
   const nextColor = () => PROJECT_COLOR_PRESETS[projectCount % PROJECT_COLOR_PRESETS.length]
-  const [draft, setDraft] = useState<Draft>(() => emptyDraft(nextColor()))
+  const [draft, setDraft] = useState<Draft>(() => emptyProjectDraft(nextColor()))
   const [prevOpen, setPrevOpen] = useState(open)
 
   // Reset the draft each time the dialog (re)opens. Done during render rather
   // than in an effect so the fresh form is ready on the first paint.
   if (open !== prevOpen) {
     setPrevOpen(open)
-    if (open) setDraft(emptyDraft(nextColor()))
+    if (open) setDraft(emptyProjectDraft(nextColor()))
   }
 
   const save = () => {
@@ -585,6 +567,7 @@ const TodoRow = memo(function TodoRow({
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         <PriorityButton
           priority={todoPriority(value)}
+          pending={value.pending}
           onChange={(p: Priority) => onChange(id, { priority: p })}
         />
         <DateButton

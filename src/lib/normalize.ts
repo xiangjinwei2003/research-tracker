@@ -67,6 +67,7 @@ function normalizeTodo(raw: unknown, validIds: Set<string>, projectStage: string
   }
   if (t.priority === 'high' || t.priority === 'normal' || t.priority === 'low') todo.priority = t.priority
   if (t.inWeek) todo.inWeek = true
+  if (t.pending) todo.pending = true
   if (typeof t.notes === 'string') todo.notes = t.notes
   return todo
 }

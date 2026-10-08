@@ -167,3 +167,20 @@ test('completeTimer discards spans under 60s and records a 5 minute early stop',
     Date.now = orig
   }
 })
+
+test('addTodo without a priority lands in 待分配; setting a priority clears it', () => {
+  const pid = add('P')
+  const s = useStore.getState()
+  const pooled = s.addTodo(pid, { title: 'new' })
+  const ranked = s.addTodo(pid, { title: 'ranked', priority: 'high' })
+  const todos = () => useStore.getState().projects[0].todos
+  assert.equal(todos().find((t: { id: string }) => t.id === pooled).pending, true)
+  assert.equal(todos().find((t: { id: string }) => t.id === ranked).pending, undefined)
+
+  useStore.getState().updateTodo(pid, pooled, { title: 'renamed' })
+  assert.equal(todos().find((t: { id: string }) => t.id === pooled).pending, true)
+  useStore.getState().updateTodo(pid, pooled, { priority: 'low' })
+  const after = todos().find((t: { id: string }) => t.id === pooled)
+  assert.equal(after.pending, undefined)
+  assert.equal(after.priority, 'low')
+})
