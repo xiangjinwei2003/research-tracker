@@ -30,10 +30,10 @@ export interface BoardResult {
   stats: { total: number; overdue: number; dueToday: number };
 }
 
-/** 首页任务分组：先是待分配，再按优先级。 */
+/** 首页任务分组：先按优先级，待分配放在最后（紧挨项目列表）。 */
 export type BoardGroup = "pending" | Priority;
 
-export const BOARD_GROUPS: BoardGroup[] = ["pending", "high", "normal", "low"];
+export const BOARD_GROUPS: BoardGroup[] = ["high", "normal", "low", "pending"];
 
 export function boardGroup(todo: Todo): BoardGroup {
   return todo.pending ? "pending" : todoPriority(todo);
