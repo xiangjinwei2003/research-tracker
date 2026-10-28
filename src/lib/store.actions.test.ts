@@ -184,3 +184,23 @@ test('addTodo without a priority lands in 待分配; setting a priority clears i
   assert.equal(after.pending, undefined)
   assert.equal(after.priority, 'low')
 })
+
+test('reorderProjects moves only the listed projects and keeps archived ones in place', () => {
+  const a = add('A')
+  const b = add('B')
+  const c = add('C')
+  // 顺序 [c, b, a]，归档 b 后首页只有 c、a。
+  useStore.getState().archiveProject(b, true)
+  useStore.getState().reorderProjects([a, c])
+  assert.deepEqual(useStore.getState().projects.map((p) => p.id), [a, b, c])
+})
+
+test('toggleProjectTag adds in canonical order and removes the field when empty', () => {
+  const a = add('A')
+  useStore.getState().toggleProjectTag(a, 'urgent')
+  useStore.getState().toggleProjectTag(a, 'waiting')
+  assert.deepEqual(useStore.getState().projects[0].tags, ['waiting', 'urgent'])
+  useStore.getState().toggleProjectTag(a, 'waiting')
+  useStore.getState().toggleProjectTag(a, 'urgent')
+  assert.equal('tags' in useStore.getState().projects[0], false)
+})

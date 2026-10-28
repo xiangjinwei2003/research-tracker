@@ -1,6 +1,10 @@
 import { memo, useRef, useState } from "react";
 import { ChevronRight, ExternalLink, Plus } from "lucide-react";
-import type { Project } from "@/lib/types";
+import {
+  PROJECT_TAG_META,
+  PROJECT_TAG_ORDER,
+  type Project,
+} from "@/lib/types";
 import { upcomingTodos, useStore } from "@/lib/store";
 import { today } from "@/lib/date";
 import { isSubmitEnter } from "@/lib/keyboard";
@@ -10,10 +14,23 @@ import { DateButton } from "./DateButton";
 import { ProgressPie } from "./ProgressPie";
 import {
   ContextMenu,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "./ui/ContextMenu";
+
+/** 项目拖动排序用的 dataTransfer 类型，与待办拖动区分。 */
+export const PROJECT_DRAG_TYPE = "application/x-rt-project";
+
+/** 项目行拖动排序的回调，由 Dashboard 统一提供。 */
+export interface ProjectDragHandlers {
+  onDragStart: (id: string) => void;
+  onDragOver: (e: React.DragEvent, id: string) => void;
+  onDrop: (e: React.DragEvent, id: string) => void;
+  onDragEnd: () => void;
+}
 
 interface Props {
   project: Project;
@@ -23,6 +40,12 @@ interface Props {
   draggableTodos?: boolean;
   /** Archived list: quieter text, no expand. */
   dimmed?: boolean;
+  /** 提供时整行可拖动排序。 */
+  drag?: ProjectDragHandlers;
+  /** 正在被拖动的行。 */
+  dragging?: boolean;
+  /** 拖动经过、松手后会被占据位置的行。 */
+  dropTarget?: boolean;
 }
 
 /**
@@ -34,7 +57,11 @@ export const ProjectRow = memo(function ProjectRow({
   onEdit,
   draggableTodos = false,
   dimmed = false,
+  drag,
+  dragging = false,
+  dropTarget = false,
 }: Props) {
+  const toggleProjectTag = useStore((s) => s.toggleProjectTag);
   const toggleTodoDone = useStore((s) => s.toggleTodoDone);
   const updateTodo = useStore((s) => s.updateTodo);
   const addTodo = useStore((s) => s.addTodo);
@@ -106,7 +133,23 @@ export const ProjectRow = memo(function ProjectRow({
   }
 
   const header = (
-    <div className="group flex items-center gap-1 rounded-lg py-1 pl-1 pr-2 transition-colors hover:bg-hover data-[state=open]:bg-hover">
+    <div
+      draggable={drag ? true : undefined}
+      onDragStart={
+        drag
+          ? (e) => {
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData(PROJECT_DRAG_TYPE, project.id);
+              drag.onDragStart(project.id);
+            }
+          : undefined
+      }
+      onDragEnd={drag?.onDragEnd}
+      className={cn(
+        "group flex items-center gap-1 rounded-lg py-1 pl-1 pr-2 transition-colors hover:bg-hover data-[state=open]:bg-hover",
+        dropTarget && "bg-accent/50 hover:bg-accent/50",
+      )}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -133,6 +176,18 @@ export const ProjectRow = memo(function ProjectRow({
         <span className="truncate text-[15px] leading-7 text-foreground">
           {title}
         </span>
+        {project.tags?.map((tag) => {
+          const meta = PROJECT_TAG_META[tag];
+          return (
+            <span
+              key={tag}
+              className="shrink-0 rounded px-1.5 text-xs leading-5"
+              style={{ backgroundColor: meta.bg, color: meta.text }}
+            >
+              {meta.label}
+            </span>
+          );
+        })}
       </button>
       {remaining > 0 ? (
         <span
@@ -146,7 +201,11 @@ export const ProjectRow = memo(function ProjectRow({
   );
 
   return (
-    <li className={cn(dimmed && "opacity-70")}>
+    <li
+      onDragOver={drag ? (e) => drag.onDragOver(e, project.id) : undefined}
+      onDrop={drag ? (e) => drag.onDrop(e, project.id) : undefined}
+      className={cn(dimmed && "opacity-70", dragging && "opacity-40")}
+    >
       {dimmed ? (
         header
       ) : (
@@ -159,6 +218,16 @@ export const ProjectRow = memo(function ProjectRow({
             <ContextMenuItem onSelect={() => onEdit(project)}>
               <ExternalLink /> 打开项目
             </ContextMenuItem>
+            <ContextMenuSeparator />
+            {PROJECT_TAG_ORDER.map((tag) => (
+              <ContextMenuCheckboxItem
+                key={tag}
+                checked={project.tags?.includes(tag) ?? false}
+                onCheckedChange={() => toggleProjectTag(project.id, tag)}
+              >
+                {PROJECT_TAG_META[tag].label}
+              </ContextMenuCheckboxItem>
+            ))}
           </ContextMenuContent>
         </ContextMenu>
       )}

@@ -12,6 +12,7 @@ import {
   defaultStages,
   PROJECT_COLOR_PRESETS,
   LEGACY_PROJECT_COLOR_PRESETS,
+  PROJECT_TAG_ORDER,
 } from './types'
 import { uid } from './id'
 import { today } from './date'
@@ -113,10 +114,14 @@ export function normalizeProject(raw: unknown): Project {
   const todos = rawTodos.map((t) => normalizeTodo(t, validIds, projectStage))
 
   const now = stamp()
+  const tags = Array.isArray(p.tags)
+    ? PROJECT_TAG_ORDER.filter((tag) => (p.tags as unknown[]).includes(tag))
+    : []
   return {
     id: asStr(p.id, '') || uid(),
     title: asStr(p.title, ''),
     description: asStr(p.description, ''),
+    ...(tags.length ? { tags } : {}),
     color: sanitizeColor(p.color, ''),
     stage: projectStage,
     stages,

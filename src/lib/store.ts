@@ -6,8 +6,9 @@ import type {
   AppState,
   FocusSession,
   ActiveTimer,
+  ProjectTag,
 } from './types'
-import { PROJECT_COLOR_PRESETS } from './types'
+import { PROJECT_COLOR_PRESETS, PROJECT_TAG_ORDER } from './types'
 import { uid } from './id'
 import { today } from './date'
 import {
@@ -80,6 +81,12 @@ interface Store extends AppState {
   removeProject: (id: string) => string
   /** Returns the undo token, or '' if the archived flag was unchanged. */
   archiveProject: (id: string, archived: boolean) => string
+  /**
+   * 按 `ids` 重排这些项目，只在它们原先占据的位置之间调换，
+   * 不在 `ids` 里的项目（如已归档项目）位置不变。
+   */
+  reorderProjects: (ids: string[]) => void
+  toggleProjectTag: (id: string, tag: ProjectTag) => void
 
   addTodo: (projectId: string, t?: Partial<Todo>) => string
   updateTodo: (projectId: string, todoId: string, patch: Partial<Todo>) => void
@@ -267,6 +274,36 @@ export const useStore = create<Store>()(
           undoStack: pushUndo(s, entry),
         }))
         return entry.token
+      },
+
+      reorderProjects: (ids) => {
+        set((s) => {
+          const subset = new Set(ids)
+          const queue = reorderBy(
+            s.projects.filter((p) => subset.has(p.id)),
+            ids,
+          )
+          let i = 0
+          return {
+            projects: s.projects.map((p) => (subset.has(p.id) ? queue[i++] : p)),
+          }
+        })
+      },
+
+      toggleProjectTag: (id, tag) => {
+        set((s) => ({
+          projects: s.projects.map((p) => {
+            if (p.id !== id) return p
+            const has = p.tags?.includes(tag) ?? false
+            const tags = PROJECT_TAG_ORDER.filter((x) =>
+              x === tag ? !has : (p.tags?.includes(x) ?? false),
+            )
+            const next = { ...p, updatedAt: stamp() }
+            if (tags.length) next.tags = tags
+            else delete next.tags
+            return next
+          }),
+        }))
       },
 
       addTodo: (projectId, t) => {

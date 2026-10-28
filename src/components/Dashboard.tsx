@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn'
 import { PROJECT_COLOR_PRESETS, type Project } from '@/lib/types'
 import { emptyProjectDraft } from '@/lib/project'
 import { isSubmitEnter } from '@/lib/keyboard'
-import { ProjectRow } from './ProjectRow'
+import { PROJECT_DRAG_TYPE, ProjectRow, type ProjectDragHandlers } from './ProjectRow'
 
 const COLLAPSE_KEY = 'rt-overview-collapsed'
 
@@ -75,10 +75,52 @@ export function Dashboard({
   }
 
   const visible = useMemo(
-    // Keep the store's array order (newest created first): rows hold a fixed
-    // position instead of reshuffling as deadlines shift or todos change.
+    // Keep the store's array order (newest created first, or the order set by
+    // dragging): rows hold a fixed position instead of reshuffling as deadlines
+    // shift or todos change.
     () => projects.filter((p) => p.archived === showArchived),
     [projects, showArchived],
+  )
+
+  // 拖动排序：松手时被拖的项目占据目标行的位置，与阶段排序的规则一致。
+  const reorderProjects = useStore((s) => s.reorderProjects)
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
+  const dragIdRef = useRef<string | null>(null)
+  const drag = useMemo<ProjectDragHandlers>(
+    () => ({
+      onDragStart: (id) => {
+        dragIdRef.current = id
+        setDragId(id)
+      },
+      onDragOver: (e, id) => {
+        if (!e.dataTransfer.types.includes(PROJECT_DRAG_TYPE)) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        setOverId(id === dragIdRef.current ? null : id)
+      },
+      onDrop: (e, targetId) => {
+        const draggedId = dragIdRef.current
+        if (!draggedId) return
+        e.preventDefault()
+        const ids = useStore
+          .getState()
+          .projects.filter((p) => !p.archived)
+          .map((p) => p.id)
+        const from = ids.indexOf(draggedId)
+        const to = ids.indexOf(targetId)
+        if (from < 0 || to < 0 || from === to) return
+        ids.splice(from, 1)
+        ids.splice(to, 0, draggedId)
+        reorderProjects(ids)
+      },
+      onDragEnd: () => {
+        dragIdRef.current = null
+        setDragId(null)
+        setOverId(null)
+      },
+    }),
+    [reorderProjects],
   )
 
   if (showArchived) {
@@ -179,6 +221,9 @@ export function Dashboard({
               project={p}
               onEdit={onEdit}
               draggableTodos={draggableTodos}
+              drag={drag}
+              dragging={dragId === p.id}
+              dropTarget={overId === p.id}
             />
           ))}
         </ul>

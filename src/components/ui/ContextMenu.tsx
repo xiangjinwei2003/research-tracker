@@ -1,4 +1,5 @@
 import { ContextMenu as Radix } from 'radix-ui'
+import { Check } from 'lucide-react'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
@@ -64,4 +65,32 @@ export function ContextMenuItem({
 
 export function ContextMenuSeparator() {
   return <Radix.Separator className="-mx-1 my-1 h-px bg-border" />
+}
+
+/** 可勾选的菜单项。选中后菜单保持打开，便于连续勾选。 */
+export function ContextMenuCheckboxItem({
+  children,
+  checked,
+  onCheckedChange,
+}: {
+  children: ReactNode
+  checked: boolean
+  onCheckedChange: (checked: boolean) => void
+}) {
+  return (
+    <Radix.CheckboxItem
+      checked={checked}
+      onCheckedChange={onCheckedChange}
+      onSelect={(e) => e.preventDefault()}
+      data-slot="context-menu-checkbox-item"
+      className="relative flex cursor-default select-none items-center gap-2 rounded-[5px] px-2 py-1.5 text-[13px] outline-hidden transition-colors data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground"
+    >
+      <span className="flex size-4 shrink-0 items-center justify-center">
+        <Radix.ItemIndicator>
+          <Check className="size-4" />
+        </Radix.ItemIndicator>
+      </span>
+      {children}
+    </Radix.CheckboxItem>
+  )
 }

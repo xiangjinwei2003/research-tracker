@@ -146,3 +146,9 @@ test('normalizeState heals a blob with null projects as empty', () => {
   const s = normalizeState({ projects: null })
   assert.deepEqual(s.projects, [])
 })
+
+test('normalizeProject keeps known tags in canonical order and drops the rest', () => {
+  const p = normalizeProject({ title: 'x', tags: ['casual', 'bogus', 'waiting', 'casual', 3] })
+  assert.deepEqual(p.tags, ['waiting', 'casual'])
+  assert.equal('tags' in normalizeProject({ title: 'y', tags: ['bogus'] }), false)
+})

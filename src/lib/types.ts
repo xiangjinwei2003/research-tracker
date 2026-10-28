@@ -118,10 +118,26 @@ export interface Venue {
   rebuttalAt?: string
 }
 
+/** 项目标签，可多选。 */
+export type ProjectTag = 'waiting' | 'active' | 'urgent' | 'casual'
+
+/** 菜单与项目行里的显示顺序。 */
+export const PROJECT_TAG_ORDER: ProjectTag[] = ['waiting', 'active', 'urgent', 'casual']
+
+/** 颜色取自 Radix Colors 暗色色阶：step 3 作底色，step 11 作文字色。 */
+export const PROJECT_TAG_META: Record<ProjectTag, { label: string; bg: string; text: string }> = {
+  waiting: { label: '等待', bg: '#302008', text: '#ffca16' }, // amber
+  active: { label: '推进', bg: '#132d21', text: '#3dd68c' }, // green
+  urgent: { label: '急迫', bg: '#3b1219', text: '#ff9592' }, // red
+  casual: { label: '随意', bg: '#212225', text: '#b0b4ba' }, // slate
+}
+
 export interface Project {
   id: string
   title: string
   description: string
+  /** 标签，按 PROJECT_TAG_ORDER 排序且不重复。Absent = 无标签。 */
+  tags?: ProjectTag[]
   /**
    * Per-project accent color (a raw CSS color string, e.g. oklch). Used as a
    * quiet identity cue so cards from the same project group visually in 本周重点.
