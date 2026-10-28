@@ -2,21 +2,16 @@ import { useRef } from 'react'
 import { dueLabel, fmtMD } from '@/lib/date'
 import { cn } from '@/lib/cn'
 
-/**
- * 截止日期按钮：显示相对日期文字，点击弹出浏览器原生日期选择器。
- * allowClear 为 false 时忽略清空（项目列表里的待办始终保留日期）。
- */
+/** 截止日期按钮：显示相对日期文字，点击弹出浏览器原生日期选择器，可清空。 */
 export function DateButton({
   value,
   todayIso,
   onChange,
-  allowClear = false,
   className,
 }: {
   value: string
   todayIso: string
   onChange: (date: string) => void
-  allowClear?: boolean
   className?: string
 }) {
   const ref = useRef<HTMLInputElement>(null)
@@ -58,9 +53,7 @@ export function DateButton({
         ref={ref}
         type="date"
         value={value}
-        onChange={(e) => {
-          if (e.target.value || allowClear) onChange(e.target.value)
-        }}
+        onChange={(e) => onChange(e.target.value)}
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
         aria-hidden

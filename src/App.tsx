@@ -14,13 +14,8 @@ import type { Project } from "@/lib/types";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("dashboard");
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Use the live project from store so it reflects external edits / undo.
-  const editing = useStore((s) =>
-    editingId ? (s.projects.find((p) => p.id === editingId) ?? null) : null,
-  );
   const undo = useStore((s) => s.undo);
 
   useEffect(() => {
@@ -51,43 +46,30 @@ export default function App() {
 
   // Stable across renders so memoized cards (ProjectCard) don't re-render every
   // time the dialog's live project updates on a keystroke.
-  const openNew = useCallback(() => {
-    setEditingId(null);
-    setDialogOpen(true);
-  }, []);
-  const openEdit = useCallback((p: Project) => {
-    setEditingId(p.id);
-    setDialogOpen(true);
-  }, []);
+  const openEdit = useCallback((p: Project) => setEditingId(p.id), []);
 
   return (
     <TooltipProvider delayDuration={200}>
       <div className="min-h-full bg-background text-foreground">
         <Toaster position="bottom-right" />
-        <Header
-          tab={tab}
-          onTabChange={setTab}
-          onNew={openNew}
-          onEdit={openEdit}
-        >
+        <Header tab={tab} onTabChange={setTab}>
           {tab === "dashboard" ? (
-            <Board onNew={openNew} onEdit={openEdit} />
+            <Board onEdit={openEdit} />
           ) : tab === "timeline" ? (
             <Timeline onEdit={openEdit} />
           ) : tab === "review" ? (
             <Review onGoBoard={() => setTab("dashboard")} />
           ) : (
-            <Dashboard showArchived onNew={openNew} onEdit={openEdit} />
+            <Dashboard showArchived onEdit={openEdit} />
           )}
         </Header>
-        <ProjectDialog
-          open={dialogOpen}
-          onOpenChange={(o) => {
-            setDialogOpen(o);
-            if (!o) setEditingId(null);
-          }}
-          project={editing}
-        />
+        {editingId ? (
+          <ProjectDialog
+            key={editingId}
+            projectId={editingId}
+            onClose={() => setEditingId(null)}
+          />
+        ) : null}
       </div>
     </TooltipProvider>
   );

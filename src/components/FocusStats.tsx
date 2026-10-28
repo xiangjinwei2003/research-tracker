@@ -63,11 +63,11 @@ export function ProjectShareCard({
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="num-rounded text-[22px] font-semibold leading-none text-foreground">
                 {total.value}
-                <span className="ml-0.5 text-[11px] font-medium text-muted-foreground">
+                <span className="ml-0.5 text-xs font-medium text-muted-foreground">
                   {total.unit}
                 </span>
               </span>
-              <span className="mt-1 text-[11px] text-faint">{centerLabel}</span>
+              <span className="mt-1 text-xs text-faint">{centerLabel}</span>
             </div>
           </div>
           <ul className="min-w-0 flex-1 space-y-2">
@@ -129,7 +129,7 @@ export function HeatmapCard({
                   title={
                     d.future
                       ? undefined
-                      : `${format(d.date, 'M月d日')} · ${d.minutes > 0 ? fmtMinutes(d.minutes) : '无记录'}`
+                      : `${format(d.date, 'M月d日')}：${d.minutes > 0 ? fmtMinutes(d.minutes) : '无记录'}`
                   }
                   className={cn(
                     'h-3 w-3 rounded-[3px]',
@@ -152,8 +152,7 @@ export function HeatmapCard({
         </div>
       </div>
       <p className="mt-auto pt-4 text-[13px] text-muted-foreground">
-        累计专注 <span className="mono text-foreground">{fmtMinutes(allTime.minutes)}</span> ·{' '}
-        {allTime.count} 次 · 覆盖 {allTime.days} 天
+        累计专注 <span className="mono text-foreground">{fmtMinutes(allTime.minutes)}</span>，{allTime.count} 次，覆盖 {allTime.days} 天
       </p>
     </Widget>
   )

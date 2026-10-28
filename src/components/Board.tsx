@@ -15,15 +15,18 @@ import {
   BOARD_GROUPS,
   boardGroup,
   buildBoard,
+  groupPatch,
   parseTodoDragPayload,
+  type BoardFilters,
   type BoardGroup,
   type BoardRange,
+  type DueFilter,
 } from "@/lib/board";
-import { PRIORITY_META, type Project, type Todo } from "@/lib/types";
+import { PRIORITY_META, type Project } from "@/lib/types";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/cn";
 import { TaskRow } from "./TaskRow";
-import { BoardTaskDialog } from "./BoardTaskDialog";
+import { TaskDialog, type TaskTarget } from "./TaskDialog";
 import { Dashboard } from "./Dashboard";
 import { Button } from "./ui/Button";
 import {
@@ -36,21 +39,17 @@ import {
 } from "./ui/DropdownMenu";
 
 interface Props {
-  onNew: () => void;
   onEdit: (project: Project) => void;
 }
 
-export function Board({ onNew, onEdit }: Props) {
+export function Board({ onEdit }: Props) {
   const projects = useStore((s) => s.projects);
   const updateTodo = useStore((s) => s.updateTodo);
   const [query, setQuery] = useState("");
   const [projectId, setProjectId] = useState("all");
   const [range, setRange] = useState<BoardRange>("recent");
-  const [overdueOnly, setOverdueOnly] = useState(false);
-  const [dueDate, setDueDate] = useState<string | null>(null);
-  const [undatedOnly, setUndatedOnly] = useState(false);
-  const [dialogGroup, setDialogGroup] = useState<BoardGroup>("pending");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [due, setDue] = useState<DueFilter>("any");
+  const [taskTarget, setTaskTarget] = useState<TaskTarget | null>(null);
   const [overCol, setOverCol] = useState<BoardGroup | null>(null);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -69,30 +68,11 @@ export function Board({ onNew, onEdit }: Props) {
       : "all";
   const now = today();
   const end = dateFromToday(7);
-  const result = useMemo(
-    () =>
-      buildBoard(projects, {
-        today: now,
-        end,
-        query,
-        projectId: effectiveProjectId,
-        range,
-        overdueOnly,
-        dueDate,
-        undatedOnly,
-      }),
-    [
-      projects,
-      now,
-      end,
-      query,
-      effectiveProjectId,
-      range,
-      overdueOnly,
-      dueDate,
-      undatedOnly,
-    ],
+  const filters: BoardFilters = useMemo(
+    () => ({ today: now, end, query, projectId: effectiveProjectId, range, due }),
+    [now, end, query, effectiveProjectId, range, due],
   );
+  const result = useMemo(() => buildBoard(projects, filters), [projects, filters]);
   // 标题下的摘要按全部未完成任务统计，不受下方筛选影响。
   const totals = useMemo(
     () =>
@@ -102,22 +82,13 @@ export function Board({ onNew, onEdit }: Props) {
         query: "",
         projectId: "all",
         range: "all",
-        overdueOnly: false,
-        dueDate: null,
-        undatedOnly: false,
+        due: "any",
       }).stats,
     [projects, now, end],
   );
-  const filtered =
-    !!query.trim() ||
-    effectiveProjectId !== "all" ||
-    overdueOnly ||
-    !!dueDate ||
-    undatedOnly;
+  const filtered = !!query.trim() || effectiveProjectId !== "all" || due !== "any";
   const filterCount =
-    (effectiveProjectId !== "all" ? 1 : 0) +
-    (overdueOnly ? 1 : 0) +
-    (undatedOnly ? 1 : 0);
+    (effectiveProjectId !== "all" ? 1 : 0) + (due !== "any" ? 1 : 0);
   const sections = BOARD_GROUPS.map((group) => ({
     group,
     items: result.items.filter((x) => boardGroup(x.todo) === group),
@@ -129,19 +100,28 @@ export function Board({ onNew, onEdit }: Props) {
   const clearFilters = () => {
     setQuery("");
     setProjectId("all");
-    setOverdueOnly(false);
-    setDueDate(null);
-    setUndatedOnly(false);
+    setDue("any");
   };
-  const showOnly = (next: { overdue?: boolean; date?: string }) => {
+  /** 标题下的逾期、今天到期统计按全部任务算，点击时清掉其他条件，只按日期看。 */
+  const showOnly = (next: DueFilter) => {
     clearFilters();
     setRange("all");
-    setOverdueOnly(!!next.overdue);
-    setDueDate(next.date ?? null);
+    setDue(next);
   };
-  const openTaskDialog = (group: BoardGroup = "pending") => {
-    setDialogGroup(group);
-    setDialogOpen(true);
+  const openTaskDialog = (group: BoardGroup = "pending") =>
+    setTaskTarget({
+      mode: "create",
+      group,
+      projectId: effectiveProjectId === "all" ? undefined : effectiveProjectId,
+    });
+  /** 新任务被当前筛选隐藏时清除筛选，保证建完就能看到；看得到就不动筛选。 */
+  const revealCreated = (createdProjectId: string, todoId: string) => {
+    const visible = buildBoard(useStore.getState().projects, filters).items.some(
+      (x) => x.project.id === createdProjectId && x.todo.id === todoId,
+    );
+    if (visible) return;
+    clearFilters();
+    setRange("recent");
   };
   const endDrag = () => {
     dragRef.current = null;
@@ -169,7 +149,7 @@ export function Board({ onNew, onEdit }: Props) {
     const todo = project?.todos.find((t) => t.id === parsed.todoId && !t.done);
     if (!project || !todo) return;
     updateTodo(project.id, todo.id, { inWeek: true, ...groupPatch(group) });
-    toast({ message: `已加入近期重点 · ${groupMeta(group).label}` });
+    toast({ message: `已加入近期重点，设为${groupMeta(group).label}` });
   };
 
   const todayDate = parse(now) ?? new Date();
@@ -200,7 +180,7 @@ export function Board({ onNew, onEdit }: Props) {
               {totals.overdue ? (
                 <button
                   type="button"
-                  onClick={() => showOnly({ overdue: true })}
+                  onClick={() => showOnly("overdue")}
                   className="rounded-sm text-destructive hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {totals.overdue} 项逾期
@@ -209,7 +189,7 @@ export function Board({ onNew, onEdit }: Props) {
               {totals.dueToday ? (
                 <button
                   type="button"
-                  onClick={() => showOnly({ date: now })}
+                  onClick={() => showOnly(now)}
                   className="rounded-sm text-today hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {totals.dueToday} 项今天到期
@@ -243,7 +223,7 @@ export function Board({ onNew, onEdit }: Props) {
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >
-                    {value === "recent" ? "近期重点" : "全部待办"}
+                    {value === "recent" ? "近期重点" : "全部任务"}
                   </button>
                 ))}
               </div>
@@ -275,25 +255,17 @@ export function Board({ onNew, onEdit }: Props) {
                     <ListFilter size={15} />
                     <span className="max-sm:sr-only">筛选</span>
                     {filterCount ? (
-                      <span className="tabular-nums">· {filterCount}</span>
+                      <span className="tabular-nums">{filterCount}</span>
                     ) : null}
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="max-h-[70vh] w-60 overflow-y-auto">
-                    <DropdownMenuItem
-                      onSelect={() => setOverdueOnly((v) => !v)}
-                    >
-                      <Check className={overdueOnly ? "" : "opacity-0"} />
-                      仅看逾期
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        setUndatedOnly((v) => !v);
-                        setDueDate(null);
-                      }}
-                    >
-                      <Check className={undatedOnly ? "" : "opacity-0"} />
-                      仅看未排期
-                    </DropdownMenuItem>
+                    <DropdownMenuLabel>截止日期</DropdownMenuLabel>
+                    {DUE_OPTIONS.map((o) => (
+                      <DropdownMenuItem key={o.value} onSelect={() => setDue(o.value)}>
+                        <Check className={due === o.value ? "" : "opacity-0"} />
+                        {o.label}
+                      </DropdownMenuItem>
+                    ))}
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>项目</DropdownMenuLabel>
                     <DropdownMenuItem onSelect={() => setProjectId("all")}>
@@ -353,23 +325,8 @@ export function Board({ onNew, onEdit }: Props) {
                     onClear={() => setProjectId("all")}
                   />
                 ) : null}
-                {overdueOnly ? (
-                  <FilterChip
-                    label="仅逾期"
-                    onClear={() => setOverdueOnly(false)}
-                  />
-                ) : null}
-                {undatedOnly ? (
-                  <FilterChip
-                    label="未排期"
-                    onClear={() => setUndatedOnly(false)}
-                  />
-                ) : null}
-                {dueDate ? (
-                  <FilterChip
-                    label={`${fmtMD(dueDate)}到期`}
-                    onClear={() => setDueDate(null)}
-                  />
+                {due !== "any" ? (
+                  <FilterChip label={dueLabelText(due)} onClear={() => setDue("any")} />
                 ) : null}
                 <button
                   type="button"
@@ -438,7 +395,10 @@ export function Board({ onNew, onEdit }: Props) {
                                 today={now}
                                 pinnedExtra={item.pinnedExtra}
                                 dragging={draggingKey === key}
-                                onOpen={() => onEdit(item.project)}
+                                onOpen={() =>
+                                  setTaskTarget({ mode: "edit", todoId: item.todo.id })
+                                }
+                                onOpenProject={() => onEdit(item.project)}
                                 onDragStart={(e) => {
                                   dragRef.current = {
                                     projectId: item.project.id,
@@ -485,48 +445,25 @@ export function Board({ onNew, onEdit }: Props) {
             )}
           </>
         ) : (
-          <div className="mt-16 max-w-sm">
-            <p className="text-[15px] font-medium">还没有进行中的项目</p>
-            <p className="mt-1.5 text-[13px] leading-6 text-muted-foreground">
-              任务挂在项目下。先建一个项目，填上阶段和投稿目标，再回来添加任务。
-            </p>
-            <Button variant="primary" className="mt-5" onClick={onNew}>
-              <Plus />
-              新建项目
-            </Button>
-          </div>
+          <p className="mt-10 text-[13px] text-muted-foreground">
+            任务属于项目。先在下方新建一个项目。
+          </p>
         )}
       </div>
-      {activeProjects.length ? (
-        <div className="mx-auto mt-12 w-full max-w-[66rem] px-4 sm:px-6">
-          <Dashboard
-            showArchived={false}
-            onNew={onNew}
-            onEdit={onEdit}
-            draggableTodos
-            collapsible
-          />
-        </div>
-      ) : null}
-      {dialogOpen ? (
-        <BoardTaskDialog
-          open
-          onOpenChange={setDialogOpen}
-          preferredProjectId={
-            effectiveProjectId === "all" ? undefined : effectiveProjectId
-          }
-          initialGroup={dialogGroup}
-          onNewProject={onNew}
-          onCreated={(createdProjectId) => {
-            setQuery("");
-            setOverdueOnly(false);
-            setDueDate(null);
-            setUndatedOnly(false);
-            setRange("recent");
-            setProjectId(createdProjectId);
-          }}
+      <div className="mx-auto mt-12 w-full max-w-[66rem] px-4 sm:px-6">
+        <Dashboard
+          showArchived={false}
+          onEdit={onEdit}
+          draggableTodos
+          collapsible={activeProjects.length > 0}
         />
-      ) : null}
+      </div>
+      <TaskDialog
+        target={taskTarget}
+        onClose={() => setTaskTarget(null)}
+        onOpenProject={onEdit}
+        onCreated={revealCreated}
+      />
     </main>
   );
 }
@@ -541,9 +478,16 @@ function groupMeta(group: BoardGroup) {
   return group === "pending" ? PENDING_META : PRIORITY_META[group];
 }
 
-/** 拖进某组时写回待办的字段；指定优先级会在 store 里清掉待分配标记。 */
-function groupPatch(group: BoardGroup): Partial<Todo> {
-  return group === "pending" ? { pending: true } : { priority: group };
+const DUE_OPTIONS: { value: DueFilter; label: string }[] = [
+  { value: "any", label: "不限" },
+  { value: "overdue", label: "逾期" },
+  { value: "undated", label: "未排期" },
+];
+
+function dueLabelText(due: DueFilter): string {
+  if (due === "overdue") return "逾期";
+  if (due === "undated") return "未排期";
+  return `${fmtMD(due)}到期`;
 }
 
 function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
@@ -582,7 +526,7 @@ function Empty({
         {filtered
           ? "没有符合筛选的任务"
           : recent
-            ? "近 7 天没有待办"
+            ? "近 7 天没有任务"
             : "所有任务都完成了"}
       </p>
       <p className="mt-1 text-[13px] text-muted-foreground">
@@ -596,7 +540,7 @@ function Empty({
         {filtered ? (
           <Button onClick={onClear}>清除筛选</Button>
         ) : recent ? (
-          <Button onClick={onAll}>查看全部待办</Button>
+          <Button onClick={onAll}>查看全部任务</Button>
         ) : null}
         <Button variant="primary" onClick={onNew}>
           <Plus />

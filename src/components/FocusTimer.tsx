@@ -107,10 +107,10 @@ export function FocusTimer() {
       // The chime + banner are what reach the user when this tab isn't in front.
       playChime()
       notifyFocusDone(
-        `${s.todoTitle || s.projectTitle || '自由专注'} · ${s.plannedMin} 分钟已完成`,
+        `${s.todoTitle || s.projectTitle || '自由专注'}，${s.plannedMin} 分钟已完成`,
       )
     }
-    toast({ message: `专注完成 · 已记录 ${s.plannedMin} 分钟` })
+    toast({ message: `专注完成，已记录 ${s.plannedMin} 分钟` })
   }, [now, end, activeTimer, completeTimer, remindOn])
 
   // Show the countdown in the tab title while running; restore on stop.
@@ -124,7 +124,7 @@ export function FocusTimer() {
   useEffect(() => {
     if (!activeTimer) return
     const clamped = Math.min(activeTimer.plannedMin * 60_000, end - now)
-    document.title = `${fmtCountdown(clamped)} · 专注中`
+    document.title = `${fmtCountdown(clamped)} 专注中`
   }, [activeTimer, end, now])
 
   const bellButton = (
@@ -195,7 +195,7 @@ export function FocusTimer() {
     `${activeTimer.plannedMin} 分钟`,
   ]
     .filter(Boolean)
-    .join(' · ')
+    .join('，')
 
   return (
     // 顶栏胶囊：进度环、倒计时与任务名、提醒/完成/取消三个图标按钮。
@@ -206,7 +206,7 @@ export function FocusTimer() {
       )}
       role="timer"
       aria-label="专注倒计时"
-      title={`${sub} · ${fmtCountdown(remaining)}`}
+      title={`${sub}，剩余 ${fmtCountdown(remaining)}`}
     >
       <div className="relative size-7 shrink-0" aria-hidden>
         <svg

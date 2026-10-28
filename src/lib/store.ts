@@ -92,6 +92,8 @@ interface Store extends AppState {
   updateTodo: (projectId: string, todoId: string, patch: Partial<Todo>) => void
   /** Returns the undo token, or '' if nothing was removed. */
   removeTodo: (projectId: string, todoId: string) => string
+  /** 把任务移到另一个项目，排在末尾；阶段在目标项目里不存在时改用目标项目的当前阶段。 */
+  moveTodo: (fromProjectId: string, todoId: string, toProjectId: string) => void
   reorderTodos: (projectId: string, ids: string[]) => void
   toggleTodoDone: (projectId: string, todoId: string) => void
   /** Returns the undo token. */
@@ -319,11 +321,12 @@ export const useStore = create<Store>()(
                     {
                       id,
                       title: '',
-                      endDate: today(),
+                      // 没选日期就是没有日期，不默认记成今天到期。
+                      endDate: '',
                       done: false,
                       stage: p.stage,
                       priority: 'normal',
-                      // 调用方没指定优先级的新待办先进待分配组。
+                      // 调用方没指定优先级的新任务先进待分配组。
                       ...(t?.priority ? {} : { pending: true }),
                       ...t,
                     },
@@ -364,7 +367,7 @@ export const useStore = create<Store>()(
         const todo = project.todos[idx]
         const entry = makeUndo(
           { kind: 'todo-removed', projectId, todo, index: idx },
-          `已删除待办「${todo.title || '未命名'}」`,
+          `已删除任务「${todo.title || '未命名'}」`,
         )
         set((s) => ({
           projects: s.projects.map((p) =>
@@ -379,6 +382,28 @@ export const useStore = create<Store>()(
           undoStack: pushUndo(s, entry),
         }))
         return entry.token
+      },
+
+      moveTodo: (fromProjectId, todoId, toProjectId) => {
+        set((s) => {
+          const from = s.projects.find((p) => p.id === fromProjectId)
+          const to = s.projects.find((p) => p.id === toProjectId)
+          const todo = from?.todos.find((t) => t.id === todoId)
+          if (!from || !to || !todo || from === to) return {}
+          const moved: Todo = to.stages.some((st) => st.id === todo.stage)
+            ? todo
+            : { ...todo, stage: to.stage }
+          const now = stamp()
+          return {
+            projects: s.projects.map((p) =>
+              p === from
+                ? { ...p, todos: p.todos.filter((t) => t.id !== todoId), updatedAt: now }
+                : p === to
+                  ? { ...p, todos: [...p.todos, moved], updatedAt: now }
+                  : p,
+            ),
+          }
+        })
       },
 
       reorderTodos: (projectId, ids) => {

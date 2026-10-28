@@ -16,19 +16,20 @@ import {
 } from 'lucide-react'
 import {
   PROJECT_COLOR_PRESETS,
+  PROJECT_TAG_META,
+  PROJECT_TAG_ORDER,
   todoPriority,
   type Todo,
   type Priority,
-  type Project,
 } from '@/lib/types'
 import { today } from '@/lib/date'
-import { emptyProjectDraft, type ProjectDraft as Draft } from '@/lib/project'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
+import { deleteTodo } from '@/lib/todoActions'
 import { isSubmitEnter } from '@/lib/keyboard'
 import { Dialog } from './ui/Dialog'
 import { Button } from './ui/Button'
-import { Input, Label, Textarea } from './ui/Input'
+import { Input, Textarea } from './ui/Input'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Collapsible } from './ui/Collapsible'
 import { PriorityButton } from './PriorityButton'
@@ -37,44 +38,18 @@ import { DateButton } from './DateButton'
 import { cn } from '@/lib/cn'
 
 interface Props {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  /** When provided, edit this project (autosave); otherwise create new. */
-  project?: Project | null
-}
-
-export function ProjectDialog({ open, onOpenChange, project }: Props) {
-  if (project) {
-    return (
-      <EditDialog
-        key={project.id}
-        projectId={project.id}
-        open={open}
-        onOpenChange={onOpenChange}
-      />
-    )
-  }
-  return <CreateDialog open={open} onOpenChange={onOpenChange} />
-}
-
-/* ---------- Edit existing project: autosave, no Save button ---------- */
-
-function EditDialog({
-  projectId,
-  open,
-  onOpenChange,
-}: {
   projectId: string
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
+  onClose: () => void
+}
+
+/** 项目详情：改动即时保存，没有保存按钮。 */
+export function ProjectDialog({ projectId, onClose }: Props) {
   const project = useStore((s) => s.projects.find((p) => p.id === projectId))
   const updateProject = useStore((s) => s.updateProject)
   const removeProject = useStore((s) => s.removeProject)
   const archiveProject = useStore((s) => s.archiveProject)
   const addTodo = useStore((s) => s.addTodo)
   const updateTodo = useStore((s) => s.updateTodo)
-  const removeTodo = useStore((s) => s.removeTodo)
   const reorderTodos = useStore((s) => s.reorderTodos)
   const undo = useStore((s) => s.undo)
 
@@ -85,19 +60,16 @@ function EditDialog({
     (id: string, patch: Partial<Todo>) => updateTodo(projectId, id, patch),
     [updateTodo, projectId],
   )
+  const toggleProjectTag = useStore((s) => s.toggleProjectTag)
   const handleTodoRemove = useCallback(
     (id: string) => {
       const t = useStore
         .getState()
         .projects.find((p) => p.id === projectId)
         ?.todos.find((x) => x.id === id)
-      const token = removeTodo(projectId, id)
-      toast({
-        message: `已删除待办「${t?.title || '未命名'}」`,
-        action: { label: '撤销', onClick: () => undo(token) },
-      })
+      deleteTodo(projectId, id, t?.title ?? '')
     },
-    [removeTodo, undo, projectId],
+    [projectId],
   )
   const handleTodoReorder = useCallback(
     (ids: string[]) => reorderTodos(projectId, ids),
@@ -117,22 +89,21 @@ function EditDialog({
 
   const activeTodoCount = project.todos.filter((t) => !t.done).length
 
+  // 删除有撤销通知和 Cmd+Z，不再额外弹确认框。
   const onDelete = () => {
-    if (confirm(`确认删除「${project.title}」？可在 6 秒内点击撤销。`)) {
-      const title = project.title
-      const token = removeProject(project.id)
-      onOpenChange(false)
-      toast({
-        message: `已删除项目「${title}」`,
-        action: { label: '撤销', onClick: () => undo(token) },
-      })
-    }
+    const title = project.title
+    const token = removeProject(project.id)
+    onClose()
+    toast({
+      message: `已删除项目「${title || '未命名项目'}」`,
+      action: { label: '撤销', onClick: () => undo(token) },
+    })
   }
 
   const onToggleArchive = () => {
     const wasArchived = project.archived
     const token = archiveProject(project.id, !wasArchived)
-    onOpenChange(false)
+    onClose()
     toast({
       message: wasArchived ? `已取消归档「${project.title}」` : `已归档「${project.title}」`,
       action: { label: '撤销', onClick: () => undo(token) },
@@ -140,13 +111,7 @@ function EditDialog({
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="编辑项目"
-      description="改动即时保存。"
-      size="lg"
-    >
+    <Dialog open onOpenChange={(o) => !o && onClose()} title="编辑项目" size="lg">
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <ProjectColorPicker
@@ -162,9 +127,32 @@ function EditDialog({
           />
         </div>
 
+        <div className="-mt-2 flex flex-wrap gap-1.5" role="group" aria-label="标签">
+          {PROJECT_TAG_ORDER.map((tag) => {
+            const meta = PROJECT_TAG_META[tag]
+            const on = project.tags?.includes(tag) ?? false
+            return (
+              <button
+                key={tag}
+                type="button"
+                aria-pressed={on}
+                onClick={() => toggleProjectTag(project.id, tag)}
+                className="h-6 rounded px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                style={
+                  on
+                    ? { backgroundColor: meta.bg, color: meta.text }
+                    : { color: 'var(--faint)', boxShadow: 'inset 0 0 0 0.5px var(--input)' }
+                }
+              >
+                {meta.label}
+              </button>
+            )
+          })}
+        </div>
+
         <div>
           <div className="flex items-baseline gap-2 border-b border-border pb-2">
-            <h3 className="text-[13px] font-semibold text-foreground">待办</h3>
+            <h3 className="text-[13px] font-semibold text-foreground">任务</h3>
             <span className="text-xs tabular-nums text-faint">{activeTodoCount} 项未完成</span>
           </div>
           <QuickAddTodo onAdd={(title) => addTodo(project.id, { title })} />
@@ -203,82 +191,6 @@ function EditDialog({
             <Trash2 size={14} /> 删除
           </Button>
         </div>
-      </div>
-    </Dialog>
-  )
-}
-
-/* ---------- Create new project: local draft, Save on confirm ---------- */
-
-function CreateDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const addProject = useStore((s) => s.addProject)
-  const projectCount = useStore((s) => s.projects.length)
-  // Pre-select the next palette hue so a new project starts with a distinct
-  // accent (still changeable via the swatch before saving).
-  const nextColor = () => PROJECT_COLOR_PRESETS[projectCount % PROJECT_COLOR_PRESETS.length]
-  const [draft, setDraft] = useState<Draft>(() => emptyProjectDraft(nextColor()))
-  const [prevOpen, setPrevOpen] = useState(open)
-
-  // Reset the draft each time the dialog (re)opens. Done during render rather
-  // than in an effect so the fresh form is ready on the first paint.
-  if (open !== prevOpen) {
-    setPrevOpen(open)
-    if (open) setDraft(emptyProjectDraft(nextColor()))
-  }
-
-  const save = () => {
-    if (!draft.title.trim()) return
-    addProject({
-      ...draft,
-      title: draft.title.trim(),
-      notes: draft.notes.trim(),
-    })
-    onOpenChange(false)
-  }
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="新建项目"
-      size="md"
-    >
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="new-title">项目名称</Label>
-          <div className="flex items-center gap-2">
-            <ProjectColorPicker
-              value={draft.color}
-              onChange={(color) => setDraft({ ...draft, color })}
-            />
-            <Input
-              id="new-title"
-              className="flex-1"
-              autoFocus
-              placeholder="例如：AI 写作助手对研究者工作流的影响"
-              value={draft.title}
-              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-              onKeyDown={(e) => {
-                if (isSubmitEnter(e) && draft.title.trim()) save()
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 flex items-center justify-end gap-2 border-t border-border pt-4">
-        <Button variant="secondary" onClick={() => onOpenChange(false)}>
-          取消
-        </Button>
-        <Button variant="primary" onClick={save} disabled={!draft.title.trim()}>
-          创建
-        </Button>
       </div>
     </Dialog>
   )
@@ -351,8 +263,8 @@ function QuickAddTodo({ onAdd }: { onAdd: (title: string) => void }) {
     <div className="mt-2 flex items-center gap-1.5">
       <Input
         value={value}
-        placeholder="输入待办，回车添加"
-        aria-label="快速添加待办"
+        placeholder="输入任务，回车添加"
+        aria-label="快速添加任务"
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
           if (isSubmitEnter(e)) {
@@ -367,8 +279,8 @@ function QuickAddTodo({ onAdd }: { onAdd: (title: string) => void }) {
         size="sm"
         onClick={submit}
         disabled={!value.trim()}
-        aria-label="添加待办"
-        title="添加待办"
+        aria-label="添加任务"
+        title="添加任务"
       >
         <Plus size={15} />
       </Button>
@@ -453,7 +365,7 @@ function TodoList({
 
   if (todos.length === 0) {
     return (
-      <p className="mt-2 text-xs text-faint">还没有待办，输入内容回车即可添加。</p>
+      <p className="mt-2 text-xs text-faint">还没有任务，输入内容回车即可添加。</p>
     )
   }
 
@@ -477,7 +389,7 @@ function TodoList({
     <div className="mt-2 space-y-1.5">
       {active.map(renderRow)}
       {active.length === 0 ? (
-        <p className="px-1 py-1.5 text-xs text-faint">没有未完成的待办。</p>
+        <p className="px-1 py-1.5 text-xs text-faint">没有未完成的任务。</p>
       ) : null}
       {done.length > 0 ? (
         <div className="pt-0.5">
@@ -559,7 +471,7 @@ const TodoRow = memo(function TodoRow({
             'min-w-0 flex-1 bg-transparent hover:bg-transparent focus-visible:bg-muted',
             value.done && 'text-muted-foreground line-through',
           )}
-          placeholder="待办内容"
+          placeholder="任务内容"
           value={value.title}
           onChange={(e) => onChange(id, { title: e.target.value })}
         />
@@ -573,7 +485,6 @@ const TodoRow = memo(function TodoRow({
         <DateButton
           value={value.endDate}
           todayIso={today()}
-          allowClear
           onChange={(d) => onChange(id, { endDate: d })}
           className="sm:w-[5.5rem] sm:justify-end"
         />
@@ -581,7 +492,7 @@ const TodoRow = memo(function TodoRow({
           type="button"
           variant="ghost"
           size="sm"
-          aria-label="移除待办"
+          aria-label="移除任务"
           onClick={() => onRemove(id)}
           className="opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
         >

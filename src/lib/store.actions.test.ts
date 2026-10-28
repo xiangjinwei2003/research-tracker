@@ -204,3 +204,23 @@ test('toggleProjectTag adds in canonical order and removes the field when empty'
   useStore.getState().toggleProjectTag(a, 'urgent')
   assert.equal('tags' in useStore.getState().projects[0], false)
 })
+
+test('addTodo leaves the due date empty unless one is given', () => {
+  const a = add('A')
+  const t = useStore.getState().addTodo(a, { title: 'x' })
+  assert.equal(useStore.getState().projects[0].todos.find((x) => x.id === t)?.endDate, '')
+})
+
+test('moveTodo moves a todo to the end of another project and remaps an unknown stage', () => {
+  const a = add('A')
+  const b = add('B')
+  const t = useStore.getState().addTodo(a, { title: 'x', stage: 'custom' })
+  useStore.getState().addTodo(b, { title: 'y' })
+  useStore.getState().moveTodo(a, t, b)
+  const projects = useStore.getState().projects
+  const pa = projects.find((p) => p.id === a)!
+  const pb = projects.find((p) => p.id === b)!
+  assert.equal(pa.todos.length, 0)
+  assert.deepEqual(pb.todos.map((x) => x.title), ['y', 'x'])
+  assert.equal(pb.todos[1].stage, pb.stage)
+})

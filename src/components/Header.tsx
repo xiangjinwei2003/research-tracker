@@ -4,7 +4,6 @@ import {
   CircleCheck,
   Download,
   Ellipsis,
-  Plus,
   Timer,
   Trash2,
   Upload,
@@ -17,10 +16,8 @@ import {
   subscribePersistHealth,
 } from "@/lib/persist";
 import { toast } from "@/lib/toast";
-import type { Project } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import { FocusTimer } from "./FocusTimer";
-import { ProgressPie } from "./ProgressPie";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,8 +31,6 @@ export type Tab = "dashboard" | "timeline" | "review" | "archived";
 interface Props {
   tab: Tab;
   onTabChange: (tab: Tab) => void;
-  onNew: () => void;
-  onEdit: (project: Project) => void;
   children: ReactNode;
 }
 // 导航图标各有固定颜色，用于区分分区；其余界面保持灰阶。
@@ -65,14 +60,12 @@ const writeMemo = (value: string) => {
   }
 };
 
-export function Header({ tab, onTabChange, onNew, onEdit, children }: Props) {
-  const projects = useStore((s) => s.projects);
+export function Header({ tab, onTabChange, children }: Props) {
   const replaceState = useStore((s) => s.replaceState);
   const clearAll = useStore((s) => s.clearAll);
   const undo = useStore((s) => s.undo);
   const fileRef = useRef<HTMLInputElement>(null);
   const [memo, setMemo] = useState(readMemo);
-  const active = projects.filter((p) => !p.archived);
   useEffect(() => {
     const tell = (health: ReturnType<typeof getPersistHealth>) => {
       if (health === "unreadable")
@@ -196,39 +189,6 @@ export function Header({ tab, onTabChange, onNew, onEdit, children }: Props) {
             </button>
           ))}
         </nav>
-        <div className="mt-6 hidden min-h-0 flex-1 overflow-y-auto px-3 min-[68.75rem]:block">
-          {active.length ? (
-            <ul className="space-y-px" aria-label="进行中项目">
-              {active.map((p) => {
-                const total = p.todos.length;
-                const done = p.todos.filter((todo) => todo.done).length;
-                return (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      onClick={() => onEdit(p)}
-                      title={p.title || "未命名项目"}
-                      className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-secondary-foreground transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <ProgressPie
-                        color={p.color}
-                        value={total ? done / total : 0}
-                      />
-                      <span className="min-w-0 flex-1 truncate">
-                        {p.title || "未命名项目"}
-                      </span>
-                      {total - done > 0 ? (
-                        <span className="shrink-0 text-xs tabular-nums text-faint">
-                          {total - done}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
-        </div>
         <div className="mt-auto shrink-0 px-3 pb-3 pt-2">
           <textarea
             value={memo}
@@ -241,17 +201,7 @@ export function Header({ tab, onTabChange, onNew, onEdit, children }: Props) {
             rows={2}
             className="mb-2 hidden w-full resize-none rounded-md bg-transparent px-2.5 py-1.5 text-xs leading-5 text-muted-foreground outline-none transition-colors placeholder:text-faint hover:bg-hover focus:bg-hover focus:text-foreground min-[68.75rem]:block"
           />
-          <div className="flex items-center gap-1 max-[68.74rem]:flex-col">
-            <button
-              type="button"
-              onClick={onNew}
-              aria-label="新建项目"
-              title="新建项目"
-              className="flex h-8 min-w-0 flex-1 items-center justify-center gap-2 rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[68.75rem]:justify-start"
-            >
-              <Plus size={16} />
-              <span className="hidden min-[68.75rem]:inline">新建项目</span>
-            </button>
+          <div className="flex items-center gap-1 max-[68.74rem]:justify-center">
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover"
@@ -296,14 +246,6 @@ export function Header({ tab, onTabChange, onNew, onEdit, children }: Props) {
             </nav>
             <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-1">
               <FocusTimer />
-              <button
-                type="button"
-                onClick={onNew}
-                className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground md:hidden"
-                aria-label="新建项目"
-              >
-                <Plus size={17} />
-              </button>
               <div className="md:hidden">
                 <DropdownMenu>
                   <DropdownMenuTrigger

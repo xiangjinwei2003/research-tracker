@@ -22,7 +22,6 @@ function readCollapsed(): boolean {
 
 interface Props {
   showArchived: boolean
-  onNew: () => void
   onEdit: (p: Project) => void
   /** Forwarded to each row so its todos can be dragged into the task list. */
   draggableTodos?: boolean

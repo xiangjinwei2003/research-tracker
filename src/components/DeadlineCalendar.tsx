@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Button } from './ui/Button'
 import { cn } from '@/lib/cn'
 import { CalendarSubscribeDialog } from './CalendarSubscribeDialog'
+import { TaskDialog, type TaskTarget } from './TaskDialog'
 
 /** 美式排法：周日是一周的第一列（与 Apple Calendar 默认一致）。 */
 const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'] as const
@@ -49,6 +50,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
   const [anchor, setAnchor] = useState<Date>(() => new Date())
   const [pickerOpen, setPickerOpen] = useState(false)
   const [subscribeOpen, setSubscribeOpen] = useState(false)
+  const [taskTarget, setTaskTarget] = useState<TaskTarget | null>(null)
   const todayIso = today()
 
   // Drag-to-reschedule: chip being dragged + the day cell currently hovered.
@@ -121,11 +123,16 @@ export function DeadlineCalendar({ onEdit }: Props) {
   }, [days, anchor, byDay])
 
   const isCurMonth = isSameMonth(anchor, new Date())
-  const subtitle = todoCount === 0 ? '本月没有到期的待办' : `本月 ${todoCount} 个待办到期`
+  const subtitle = todoCount === 0 ? '本月没有到期的任务' : `本月 ${todoCount} 个任务到期`
 
   return (
     <section aria-label="截止月历" className="flex min-w-0 flex-1 flex-col">
       <CalendarSubscribeDialog open={subscribeOpen} onOpenChange={setSubscribeOpen} />
+      <TaskDialog
+        target={taskTarget}
+        onClose={() => setTaskTarget(null)}
+        onOpenProject={onEdit}
+      />
       <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
@@ -274,18 +281,14 @@ export function DeadlineCalendar({ onEdit }: Props) {
                   )}
                 </div>
                 {evs.length > 0 ? (
-                  <div
-                    className={cn(
-                      'min-h-0 flex-1 space-y-1 overflow-y-auto [scrollbar-width:thin]',
-                      // 过去的日子整体置灰（今天及未来保持原色）。
-                      isPast && !isToday && 'opacity-50',
-                    )}
-                  >
+                  <div className="min-h-0 flex-1 space-y-1 overflow-y-auto [scrollbar-width:thin]">
                     {evs.map((e, j) => (
                       <EventChip
                         key={j}
                         e={e}
-                        onClick={() => onEdit(e.project)}
+                        // 过去日期上未完成的任务就是逾期，要醒目；已完成的才置灰。
+                        overdue={isPast && !e.done}
+                        onClick={() => setTaskTarget({ mode: 'edit', todoId: e.todoId })}
                         onDragStart={() => {
                           dragRef.current = {
                             projectId: e.project.id,
@@ -329,11 +332,13 @@ function DayWithDot(props: ComponentProps<typeof CalendarDayButton>) {
 
 function EventChip({
   e,
+  overdue,
   onClick,
   onDragStart,
   onDragEnd,
 }: {
   e: EventItem
+  overdue: boolean
   onClick: () => void
   onDragStart: () => void
   onDragEnd: () => void
@@ -354,10 +359,10 @@ function EventChip({
     <button
       type="button"
       onClick={onClick}
-      title={`${e.title} · ${e.project.title || '未命名项目'} · 拖到别的日期可改期`}
+      title={`${e.title}（${e.project.title || '未命名项目'}）`}
       {...dragProps}
       className={cn(
-        'flex w-full cursor-grab items-center gap-1.5 rounded-[4px] px-1.5 py-0.5 text-left text-[11px] transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing',
+        'flex w-full cursor-grab items-center gap-1.5 rounded-[4px] px-1.5 py-0.5 text-left text-xs transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing',
         e.done && 'opacity-50',
       )}
     >
@@ -366,7 +371,13 @@ function EventChip({
         className="size-1.5 shrink-0 rounded-full"
         style={{ background: e.project.color }}
       />
-      <span className={cn('min-w-0 flex-1 truncate text-secondary-foreground', e.done && 'line-through')}>
+      <span
+        className={cn(
+          'min-w-0 flex-1 truncate text-secondary-foreground',
+          overdue && 'text-destructive',
+          e.done && 'line-through',
+        )}
+      >
         {e.title}
       </span>
     </button>

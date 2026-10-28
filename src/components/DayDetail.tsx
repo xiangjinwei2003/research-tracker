@@ -26,7 +26,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
 
   return (
     <Widget
-      title={`${format(date, 'M月d日')} ${weekday}${isToday ? ' · 今天' : ''}`}
+      title={`${format(date, 'M月d日')} ${weekday}${isToday ? ' 今天' : ''}`}
       icon={Clock3}
       tint={isToday ? 'text-today' : 'text-secondary-foreground'}
       aria-label="当日详情"
@@ -34,8 +34,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
       aside={
         rows.length > 0 ? (
           <span className="text-[13px] text-muted-foreground">
-            <span className="mono font-semibold text-foreground">{fmtMinutes(minutes)}</span> ·{' '}
-            {rows.length} 次
+            <span className="mono font-semibold text-foreground">{fmtMinutes(minutes)}</span>，{rows.length} 次
           </span>
         ) : null
       }
@@ -54,7 +53,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
                 </span>
                 <span className="w-24 shrink-0 whitespace-nowrap mono text-[13px] text-faint">
                   {fmtMinutes(r.minutes)}
-                  {r.session.completed ? '' : ' · 提前'}
+                  {r.session.completed ? '' : ' 提前结束'}
                 </span>
                 <span className="order-last min-w-0 basis-full truncate text-secondary-foreground sm:order-none sm:basis-0 sm:flex-1">
                   <span
@@ -64,7 +63,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
                   />
                   {r.label}
                   {r.session.todoTitle && r.projectTitle !== '自由专注' ? (
-                    <span className="text-faint"> · {r.projectTitle}</span>
+                    <span className="ml-2 text-faint">{r.projectTitle}</span>
                   ) : null}
                 </span>
                 <button

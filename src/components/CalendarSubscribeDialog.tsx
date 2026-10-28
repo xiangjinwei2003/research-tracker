@@ -65,7 +65,7 @@ export function CalendarSubscribeDialog({ open, onOpenChange }: Props) {
         onOpenChange(o)
       }}
       title="订阅到苹果日历"
-      description="苹果日历订阅一个地址，定时拉取这里有到期日、未完成的待办。日历里只读，不能回写。"
+      description="苹果日历订阅一个地址，定时拉取这里有到期日、未完成的任务。日历里只读，不能回写。"
       size="md"
     >
       <div className="grid gap-5 text-sm">
@@ -161,7 +161,7 @@ export function CalendarSubscribeDialog({ open, onOpenChange }: Props) {
             <span className="text-foreground">iPhone</span>：设置 › 日历 › 日历账户 › 添加账户 › 其他 › 添加已订阅的日历，粘贴地址。不同 iOS 版本的入口名称可能略有不同。
           </p>
           <p>
-            开启后，待办标题、到期日和项目名会存到本应用在 Vercel 上的存储里。知道这个地址的人都能读取，地址泄露时请重新生成。关闭同步会删除服务端数据。
+            开启后，任务标题、到期日和项目名会存到本应用在 Vercel 上的存储里。知道这个地址的人都能读取，地址泄露时请重新生成。关闭同步会删除服务端数据。
           </p>
         </div>
       </div>

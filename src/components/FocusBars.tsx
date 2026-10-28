@@ -63,7 +63,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
             type="button"
             data-iso={d.iso}
             aria-pressed={selected}
-            title={`${format(d.date, 'M月d日')} · ${d.minutes > 0 ? `${fmtMinutes(d.minutes)} · ${d.count} 次` : '无记录'}`}
+            title={`${format(d.date, 'M月d日')}：${d.minutes > 0 ? `${fmtMinutes(d.minutes)}，${d.count} 次` : '无记录'}`}
             aria-label={`${format(d.date, 'M月d日')}，${d.minutes > 0 ? fmtMinutes(d.minutes) : '无记录'}`}
             onClick={() => onSelect(d.iso)}
             className={cn(
@@ -74,12 +74,12 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
           >
             <span
               className={cn(
-                'h-3 whitespace-nowrap text-[10px] leading-none tabular-nums transition-colors max-sm:invisible',
+                'h-3 whitespace-nowrap text-xs leading-none tabular-nums transition-colors max-sm:invisible',
                 isWeek && d.minutes > 0 ? '' : 'opacity-0',
                 selected ? 'font-medium text-foreground/90' : 'text-faint',
               )}
             >
-              {isWeek && d.minutes > 0 ? fmtMinutes(d.minutes) : '·'}
+              {isWeek && d.minutes > 0 ? fmtMinutes(d.minutes) : ''}
             </span>
             <span className="flex w-full flex-1 items-end justify-center">
               {d.minutes > 0 ? (
@@ -103,7 +103,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
             </span>
             <span
               className={cn(
-                'flex h-4 items-center gap-1 text-[10px] leading-none transition-colors',
+                'flex h-4 items-center gap-1 text-xs leading-none transition-colors',
                 selected
                   ? 'text-accent-foreground font-semibold'
                   : isToday

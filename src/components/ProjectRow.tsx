@@ -8,6 +8,7 @@ import {
 import { upcomingTodos, useStore } from "@/lib/store";
 import { today } from "@/lib/date";
 import { isSubmitEnter } from "@/lib/keyboard";
+import { completeTodo } from "@/lib/todoActions";
 import { cn } from "@/lib/cn";
 import { Checkbox } from "./Checkbox";
 import { DateButton } from "./DateButton";
@@ -21,7 +22,7 @@ import {
   ContextMenuTrigger,
 } from "./ui/ContextMenu";
 
-/** 项目拖动排序用的 dataTransfer 类型，与待办拖动区分。 */
+/** 项目拖动排序用的 dataTransfer 类型，与任务拖动区分。 */
 export const PROJECT_DRAG_TYPE = "application/x-rt-project";
 
 /** 项目行拖动排序的回调，由 Dashboard 统一提供。 */
@@ -49,7 +50,7 @@ interface Props {
 }
 
 /**
- * 项目列表的一行：进度饼、标题、未完成数；展开后列出未完成待办，
+ * 项目列表的一行：进度饼、标题、未完成数；展开后列出未完成任务，
  * 可勾选、改日期、快速添加，也可拖到上方任务列表。
  */
 export const ProjectRow = memo(function ProjectRow({
@@ -62,7 +63,6 @@ export const ProjectRow = memo(function ProjectRow({
   dropTarget = false,
 }: Props) {
   const toggleProjectTag = useStore((s) => s.toggleProjectTag);
-  const toggleTodoDone = useStore((s) => s.toggleTodoDone);
   const updateTodo = useStore((s) => s.updateTodo);
   const addTodo = useStore((s) => s.addTodo);
   const [open, setOpen] = useState(false);
@@ -121,7 +121,7 @@ export const ProjectRow = memo(function ProjectRow({
   const todos = open ? upcomingTodos(project, remaining) : [];
   const title = project.title || "未命名项目";
 
-  // 右键菜单「添加待办」：等菜单关闭、焦点范围撤掉之后再展开并打开输入框，
+  // 右键菜单「添加任务」：等菜单关闭、焦点范围撤掉之后再展开并打开输入框，
   // 否则输入框挂载时焦点会被菜单收回。
   const addAfterMenuRef = useRef(false)
   const onMenuCloseAutoFocus = (e: Event) => {
@@ -154,7 +154,7 @@ export const ProjectRow = memo(function ProjectRow({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label={open ? `收起「${title}」的待办` : `展开「${title}」的待办`}
+        aria-label={open ? `收起「${title}」的任务` : `展开「${title}」的任务`}
         disabled={dimmed}
         className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:invisible"
       >
@@ -192,7 +192,7 @@ export const ProjectRow = memo(function ProjectRow({
       {remaining > 0 ? (
         <span
           className="shrink-0 text-xs tabular-nums text-faint"
-          title="未完成待办"
+          title="未完成任务"
         >
           {remaining}
         </span>
@@ -213,7 +213,7 @@ export const ProjectRow = memo(function ProjectRow({
           <ContextMenuTrigger asChild>{header}</ContextMenuTrigger>
           <ContextMenuContent onCloseAutoFocus={onMenuCloseAutoFocus}>
             <ContextMenuItem onSelect={() => (addAfterMenuRef.current = true)}>
-              <Plus /> 添加待办
+              <Plus /> 添加任务
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => onEdit(project)}>
               <ExternalLink /> 打开项目
@@ -269,7 +269,7 @@ export const ProjectRow = memo(function ProjectRow({
                   >
                     <Checkbox
                       checked={false}
-                      onChange={() => toggleTodoDone(project.id, todo.id)}
+                      onChange={() => completeTodo(project.id, todo.id, todo.title)}
                       label={`标记「${todo.title}」为已完成`}
                     />
                     <span className="min-w-0 flex-1 truncate text-secondary-foreground">
@@ -290,7 +290,7 @@ export const ProjectRow = memo(function ProjectRow({
             </ul>
           ) : (
             <p className="px-1.5 py-1 text-[13px] text-faint">
-              {total ? "所有待办已完成" : "还没有待办"}
+              {total ? "所有任务已完成" : "还没有任务"}
             </p>
           )}
 
@@ -313,8 +313,8 @@ export const ProjectRow = memo(function ProjectRow({
                   commitDraft();
                   setAdding(false);
                 }}
-                placeholder="待办标题，回车添加并选日期，Esc 取消"
-                aria-label={`为「${title}」添加待办`}
+                placeholder="任务标题，回车添加并选日期，Esc 取消"
+                aria-label={`为「${title}」添加任务`}
                 className="h-8 w-full rounded-md bg-muted px-2 text-[14px] outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring"
               />
             ) : (
@@ -323,7 +323,7 @@ export const ProjectRow = memo(function ProjectRow({
                 onClick={openAdd}
                 className="inline-flex h-8 items-center gap-2 rounded-md px-1.5 text-[14px] text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Plus size={14} /> 添加待办
+                <Plus size={14} /> 添加任务
               </button>
             )}
             {/* Anchors the picker popped by commitAndPickDate; never shown itself. */}

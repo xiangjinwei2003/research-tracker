@@ -213,7 +213,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
             <WidgetNumber className="mt-5" value={stats.count} unit="次" />
             <p className="mt-2 text-[13px] text-muted-foreground">
               完整 {completedCount} 次
-              {stats.count > completedCount ? ` · 提前 ${stats.count - completedCount} 次` : ''}
+              {stats.count > completedCount ? `，提前结束 ${stats.count - completedCount} 次` : ''}
             </p>
           </Widget>
           <Widget title="连续专注" icon={Flame} tint="text-warn">

@@ -10,6 +10,7 @@ import {
 } from "@/lib/types";
 import { dateFromToday, dueLabel } from "@/lib/date";
 import { toast } from "@/lib/toast";
+import { completeTodo } from "@/lib/todoActions";
 import {
   primeChime,
   reminderEnabled,
@@ -32,7 +33,9 @@ interface Props {
   today: string;
   pinnedExtra: boolean;
   dragging: boolean;
+  /** 打开任务详情。 */
   onOpen: () => void;
+  onOpenProject: () => void;
   onDragStart: (event: DragEvent<HTMLElement>) => void;
   onDragEnd: () => void;
 }
@@ -47,6 +50,7 @@ export function TaskRow({
   pinnedExtra,
   dragging,
   onOpen,
+  onOpenProject,
   onDragStart,
   onDragEnd,
 }: Props) {
@@ -61,7 +65,7 @@ export function TaskRow({
     [],
   );
   const due = dueLabel(todo.endDate, today);
-  const title = todo.title || "未命名待办";
+  const title = todo.title || "未命名任务";
   const notes = todo.notes?.trim();
 
   const complete = () => {
@@ -69,14 +73,7 @@ export function TaskRow({
     setChecking(true);
     timer.current = window.setTimeout(() => {
       timer.current = null;
-      updateTodo(project.id, todo.id, { done: true });
-      toast({
-        message: `已完成「${title}」`,
-        action: {
-          label: "撤销",
-          onClick: () => updateTodo(project.id, todo.id, { done: false }),
-        },
-      });
+      completeTodo(project.id, todo.id, todo.title);
     }, COMPLETE_DELAY_MS);
   };
   const focus = (plannedMin: number) => {
@@ -201,7 +198,7 @@ export function TaskRow({
             <Ellipsis size={16} />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onSelect={onOpen}>
+            <DropdownMenuItem onSelect={onOpenProject}>
               <ExternalLink /> 打开所属项目
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setPinned(!todo.inWeek)}>

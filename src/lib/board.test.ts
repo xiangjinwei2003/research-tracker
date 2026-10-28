@@ -58,9 +58,7 @@ test("recent range is inclusive and includes overdue plus undated manual items",
     query: "",
     projectId: "all",
     range: "recent",
-    overdueOnly: false,
-    dueDate: null,
-    undatedOnly: false,
+    due: "any",
   });
   assert.deepEqual(
     result.items.map((x) => x.todo.id),
@@ -76,9 +74,7 @@ test("all range, search, project and overdue filters form an intersection", () =
     query: "alpha",
     projectId: "p1",
     range: "all",
-    overdueOnly: true,
-    dueDate: null,
-    undatedOnly: false,
+    due: "overdue",
   });
   assert.deepEqual(
     all.items.map((x) => x.todo.id),
@@ -90,9 +86,7 @@ test("all range, search, project and overdue filters form an intersection", () =
     query: "PAPER",
     projectId: "all",
     range: "all",
-    overdueOnly: false,
-    dueDate: null,
-    undatedOnly: false,
+    due: "any",
   });
   assert.deepEqual(
     taskSearch.items.map((x) => x.todo.id),
@@ -107,9 +101,7 @@ test("all range excludes archived projects and completed tasks", () => {
     query: "",
     projectId: "all",
     range: "all",
-    overdueOnly: false,
-    dueDate: null,
-    undatedOnly: false,
+    due: "any",
   });
   assert.deepEqual(
     result.items.map((x) => x.todo.id),
@@ -124,21 +116,18 @@ test("exact due-date and undated filters only return their matching tasks", () =
     query: "",
     projectId: "all",
     range: "all" as const,
-    overdueOnly: false,
   };
   assert.deepEqual(
     buildBoard(projects, {
       ...base,
-      dueDate: "2026-09-17",
-      undatedOnly: false,
+      due: "2026-09-17",
     }).items.map((x) => x.todo.id),
     ["beta"],
   );
   assert.deepEqual(
     buildBoard(projects, {
       ...base,
-      dueDate: null,
-      undatedOnly: true,
+      due: "undated",
     }).items.map((x) => x.todo.id),
     ["pin"],
   );
@@ -163,9 +152,7 @@ test("pending todos show in 近期重点 regardless of due date", () => {
       query: "",
       projectId: "all",
       range: "recent",
-      overdueOnly: false,
-      dueDate: null,
-      undatedOnly: false,
+      due: "any",
     },
   );
   assert.deepEqual(

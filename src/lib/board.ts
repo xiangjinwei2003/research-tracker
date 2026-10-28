@@ -14,15 +14,26 @@ export interface BoardItem {
   pinnedExtra: boolean;
 }
 
+/**
+ * 截止日期筛选。逾期、未排期、某一天到期三者互斥，所以是同一维度上的取值：
+ * "any" 不筛选，"overdue" 逾期，"undated" 未排期，其余为 ISO 日期。
+ */
+export type DueFilter = "any" | "overdue" | "undated" | (string & {});
+
 export interface BoardFilters {
   today: string;
   end: string;
   query: string;
   projectId: string;
   range: BoardRange;
-  overdueOnly: boolean;
-  dueDate: string | null;
-  undatedOnly: boolean;
+  due: DueFilter;
+}
+
+function matchesDue(todo: Todo, due: DueFilter, today: string): boolean {
+  if (due === "any") return true;
+  if (due === "overdue") return !!todo.endDate && todo.endDate < today;
+  if (due === "undated") return !todo.endDate;
+  return todo.endDate === due;
 }
 
 export interface BoardResult {
@@ -37,6 +48,11 @@ export const BOARD_GROUPS: BoardGroup[] = ["high", "normal", "low", "pending"];
 
 export function boardGroup(todo: Todo): BoardGroup {
   return todo.pending ? "pending" : todoPriority(todo);
+}
+
+/** 放进某组时写回任务的字段；指定优先级会在 store 里清掉待分配标记。 */
+export function groupPatch(group: BoardGroup): Partial<Todo> {
+  return group === "pending" ? { pending: true } : { priority: group };
 }
 
 function sortItems(a: BoardItem, b: BoardItem): number {
@@ -78,20 +94,19 @@ export function buildBoard(
         !todo.pending
       )
         continue;
-      if (
-        filters.overdueOnly &&
-        (!todo.endDate || todo.endDate >= filters.today)
-      )
-        continue;
-      if (filters.dueDate && todo.endDate !== filters.dueDate) continue;
-      if (filters.undatedOnly && !!todo.endDate) continue;
+      if (!matchesDue(todo, filters.due, filters.today)) continue;
       if (
         query &&
         !projectMatches &&
         !todo.title.toLocaleLowerCase("zh-CN").includes(query)
       )
         continue;
-      items.push({ project, todo, pinnedExtra: !!todo.inWeek && !inWindow });
+      // 待分配的任务本来就在近期重点里显示，不再标「手动加入」。
+      items.push({
+        project,
+        todo,
+        pinnedExtra: !!todo.inWeek && !inWindow && !todo.pending,
+      });
     }
   }
   items.sort(sortItems);
