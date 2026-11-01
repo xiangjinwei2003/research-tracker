@@ -58,7 +58,7 @@ export const PRIORITY_META: Record<Priority, PriorityMeta> = {
     label: '高优先级',
     short: '高',
     rank: 0,
-    text: 'text-destructive',
+    text: 'text-[var(--priority-high)]',
     dot: 'bg-[var(--priority-high)]',
   },
   normal: {

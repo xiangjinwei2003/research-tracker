@@ -68,10 +68,6 @@ export const ProjectRow = memo(function ProjectRow({
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
-  // Hidden date input used to pop the native picker right after a quick-add,
-  // and the id of the todo that picker should write its chosen date back to.
-  const newDateRef = useRef<HTMLInputElement>(null);
-  const pendingDateIdRef = useRef<string | null>(null);
   // Guards against a double insert: pressing Enter commits and then unmounts the
   // <input>, whose blur would otherwise fire commitDraft again from the stale
   // `draft` closure. Reset each time the quick-add input is (re)opened.
@@ -83,7 +79,7 @@ export const ProjectRow = memo(function ProjectRow({
   };
 
   /**
-   * Create the drafted todo (store default: due today, current stage). Returns
+   * Create the drafted todo (no due date; set it from the row's date button). Returns
    * the new todo's id, or null when the draft was blank or already committed.
    */
   const commitDraft = (): string | null => {
@@ -97,21 +93,10 @@ export const ProjectRow = memo(function ProjectRow({
     return addTodo(project.id, { title });
   };
 
-  /** Commit the draft, then pop the date picker so a real deadline gets set. */
-  const commitAndPickDate = () => {
-    const id = commitDraft();
-    if (!id) return;
-    pendingDateIdRef.current = id;
-    setAdding(false);
-    const el = newDateRef.current;
-    if (!el) return;
-    el.value = today();
-    try {
-      if (el.showPicker) el.showPicker();
-      else el.focus();
-    } catch {
-      el.focus();
-    }
+  /** 回车：创建任务后清空输入框并保持打开，便于连续录入。 */
+  const commitAndContinue = () => {
+    if (!commitDraft()) return;
+    committedRef.current = false;
   };
 
   const t = today();
@@ -302,7 +287,7 @@ export const ProjectRow = memo(function ProjectRow({
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
                   if (isSubmitEnter(e)) {
-                    commitAndPickDate();
+                    commitAndContinue();
                   } else if (e.key === "Escape") {
                     committedRef.current = true; // discard: block a racing blur-commit
                     setDraft("");
@@ -313,7 +298,7 @@ export const ProjectRow = memo(function ProjectRow({
                   commitDraft();
                   setAdding(false);
                 }}
-                placeholder="任务标题，回车添加并选日期，Esc 取消"
+                placeholder="任务标题，回车添加，Esc 结束"
                 aria-label={`为「${title}」添加任务`}
                 className="h-8 w-full rounded-md bg-muted px-2 text-sm outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring"
               />
@@ -326,21 +311,6 @@ export const ProjectRow = memo(function ProjectRow({
                 <Plus size={14} /> 添加任务
               </button>
             )}
-            {/* Anchors the picker popped by commitAndPickDate; never shown itself. */}
-            <input
-              ref={newDateRef}
-              type="date"
-              onChange={(e) => {
-                const id = pendingDateIdRef.current;
-                pendingDateIdRef.current = null;
-                if (id && e.target.value) {
-                  updateTodo(project.id, id, { endDate: e.target.value });
-                }
-              }}
-              tabIndex={-1}
-              aria-hidden
-              className="pointer-events-none absolute bottom-0 left-2 h-0 w-0 opacity-0"
-            />
           </div>
         </div>
       ) : null}

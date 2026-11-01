@@ -123,8 +123,32 @@ export function DeadlineCalendar({ onEdit }: Props) {
     return n
   }, [days, anchor, byDay])
 
+  // 未完成且已过截止日的任务，按日期升序；首页的逾期数与此一致。
+  const overdueKeys = useMemo(() => {
+    const keys: string[] = []
+    for (const [key, evs] of byDay) {
+      if (key >= todayIso) continue
+      for (const e of evs) if (!e.done) keys.push(key)
+    }
+    return keys.sort()
+  }, [byDay, todayIso])
+
   const isCurMonth = isSameMonth(anchor, new Date())
-  const subtitle = todoCount === 0 ? '本月没有到期的任务' : `本月 ${todoCount} 个任务到期`
+  const subtitle = (
+    <>
+      <span>{todoCount === 0 ? '本月没有到期的任务' : `本月 ${todoCount} 个任务到期`}</span>
+      {overdueKeys.length ? (
+        <button
+          type="button"
+          onClick={() => setAnchor(parse(overdueKeys[0]) ?? new Date())}
+          title="跳到最早逾期任务所在月份"
+          className="rounded-sm text-destructive hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {overdueKeys.length} 项逾期
+        </button>
+      ) : null}
+    </>
+  )
 
   return (
     <section aria-label="截止月历" className="flex min-w-0 flex-1 flex-col">
@@ -137,7 +161,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
       <div className="mb-5">
         <PageHeader
           icon={CalendarDays}
-          tint="text-destructive"
+          tint="text-purple-11"
           title="日历"
           subtitle={subtitle}
           actions={
@@ -269,7 +293,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
                   ) : (
                     <span
                       className={cn(
-                        'inline-flex h-6 items-center px-1.5 text-sm tabular-nums',
+                        'inline-flex h-6 items-center whitespace-nowrap px-1.5 text-sm tabular-nums',
                         !inMonth
                           ? 'text-faint'
                           : isPast
@@ -277,7 +301,15 @@ export function DeadlineCalendar({ onEdit }: Props) {
                             : 'text-secondary-foreground',
                       )}
                     >
-                      {d.getDate() === 1 ? format(d, 'M月d日') : d.getDate()}
+                      {d.getDate() === 1 ? (
+                        <>
+                          <span className="max-sm:hidden">{format(d, 'M月')}</span>
+                          {d.getDate()}
+                          <span className="max-sm:hidden">日</span>
+                        </>
+                      ) : (
+                        d.getDate()
+                      )}
                     </span>
                   )}
                 </div>

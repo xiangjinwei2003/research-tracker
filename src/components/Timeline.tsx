@@ -21,7 +21,7 @@ export function Timeline({ onEdit }: Props) {
       ) : (
         <PageHeader
           icon={CalendarDays}
-          tint="text-destructive"
+          tint="text-purple-11"
           title="日历"
           subtitle={
             hasArchived

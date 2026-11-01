@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import {
@@ -24,6 +24,7 @@ import {
 } from "@/lib/board";
 import { PRIORITY_META, type Project } from "@/lib/types";
 import { toast } from "@/lib/toast";
+import { isBareShortcut, overlayIsOpen } from "@/lib/keyboard";
 import { cn } from "@/lib/cn";
 import { TaskRow } from "./TaskRow";
 import { TaskDialog, type TaskTarget } from "./TaskDialog";
@@ -124,6 +125,26 @@ export function Board({ onEdit }: Props) {
     clearFilters();
     setRange("recent");
   };
+  // N 新建任务，/ 聚焦搜索。
+  const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isBareShortcut(e, overlayIsOpen(document))) return;
+      if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        setTaskTarget({
+          mode: "create",
+          group: "pending",
+          projectId: effectiveProjectId === "all" ? undefined : effectiveProjectId,
+        });
+      } else if (e.key === "/") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [effectiveProjectId]);
   const endDrag = () => {
     dragRef.current = null;
     setDraggingKey(null);
@@ -230,10 +251,12 @@ export function Board({ onEdit }: Props) {
                     aria-hidden
                   />
                   <input
+                    ref={searchRef}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="搜索"
                     aria-label="搜索任务或项目"
+                    aria-keyshortcuts="/"
                     className="h-8 w-28 min-w-0 max-sm:w-20 rounded-md bg-transparent pl-8 pr-2 text-sm outline-none transition-[width,background-color] duration-200 placeholder:text-faint hover:bg-hover focus:w-48 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring max-sm:focus:w-36"
                   />
                 </label>
@@ -299,6 +322,8 @@ export function Board({ onEdit }: Props) {
                   onClick={() => openTaskDialog()}
                   className="ml-1 max-sm:w-8 max-sm:px-0"
                   aria-label="新建任务"
+                  aria-keyshortcuts="N"
+                  title="新建任务（N）"
                 >
                   <Plus />
                   <span className="max-sm:hidden">新建任务</span>
@@ -354,7 +379,7 @@ export function Board({ onEdit }: Props) {
                       className={cn(
                         "rounded-xl transition-[background-color,box-shadow] duration-150",
                         overCol === group &&
-                          "bg-accent/40 shadow-[0_0_0_1px_var(--ring)]",
+                          "bg-accent/40 shadow-[0_0_0_0.5px_var(--ring)]",
                       )}
                       aria-label={`${meta.label}（${items.length} 项）`}
                     >
@@ -363,7 +388,7 @@ export function Board({ onEdit }: Props) {
                           aria-hidden
                           className={cn("size-2.5 rounded-full", meta.dot)}
                         />
-                        <h2 className={cn("text-base font-semibold", meta.text)}>
+                        <h2 className="text-base font-semibold">
                           {meta.label}
                         </h2>
                         <span className="text-sm tabular-nums text-faint">

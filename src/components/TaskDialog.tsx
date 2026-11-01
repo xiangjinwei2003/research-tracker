@@ -67,6 +67,22 @@ function useActiveProjects() {
   return projects.filter((p) => !p.archived);
 }
 
+const LAST_PROJECT_KEY = "rt-last-task-project";
+function readLastProject(): string | null {
+  try {
+    return localStorage.getItem(LAST_PROJECT_KEY);
+  } catch {
+    return null;
+  }
+}
+function writeLastProject(id: string) {
+  try {
+    localStorage.setItem(LAST_PROJECT_KEY, id);
+  } catch {
+    /* 隐私模式下不记住，默认回到第一个项目 */
+  }
+}
+
 function CreateTask({
   open,
   projectId: preferredProjectId,
@@ -82,11 +98,12 @@ function CreateTask({
 }) {
   const projects = useActiveProjects();
   const addTodo = useStore((s) => s.addTodo);
-  const [projectId, setProjectId] = useState(
-    projects.some((p) => p.id === preferredProjectId)
-      ? preferredProjectId!
-      : (projects[0]?.id ?? ""),
-  );
+  // 优先用首页筛选的项目，其次是上次新建任务时选的项目。
+  const [projectId, setProjectId] = useState(() => {
+    for (const id of [preferredProjectId, readLastProject()])
+      if (id && projects.some((p) => p.id === id)) return id;
+    return projects[0]?.id ?? "";
+  });
   const [title, setTitle] = useState("");
   const [group, setGroup] = useState<BoardGroup>(initialGroup);
   const [endDate, setEndDate] = useState("");
@@ -96,6 +113,7 @@ function CreateTask({
     e?.preventDefault();
     const clean = title.trim();
     if (!clean || !projectId) return;
+    writeLastProject(projectId);
     // 从首页新建的任务手动加入近期重点，保证建完就能在列表里看到。
     const todoId = addTodo(projectId, {
       title: clean,

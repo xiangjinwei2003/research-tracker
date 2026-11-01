@@ -109,7 +109,7 @@
   --today: #ffca16;
   --warn: #ff977d;
   --success: #3dd68c;
-  --priority-high: var(--destructive);
+  --priority-high: var(--warn);
   --priority-normal: #9eb1ff;
   --priority-low: var(--muted-foreground);
   --chart-grid: var(--border);

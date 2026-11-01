@@ -194,7 +194,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
           <Timer size={40} strokeWidth={1.5} className="text-input" aria-hidden />
           <p className="mt-4 text-base font-medium">还没有专注记录</p>
           <p className="mt-1 max-w-sm text-sm leading-6 text-muted-foreground">
-            把鼠标移到任务上，点计时图标开始一段专注；也可以从右上角开始不挂任务的专注。
+            在任务行点计时图标开始一段专注，或从右上角开始不挂任务的专注。
           </p>
           <Button className="mt-5" onClick={onGoBoard}>
             去任务列表

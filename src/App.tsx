@@ -10,6 +10,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStore } from "@/lib/store";
 import { toast } from "@/lib/toast";
 import { startCalendarSync } from "@/lib/calendarSync";
+import { isBareShortcut, overlayIsOpen } from "@/lib/keyboard";
 import type { Project } from "@/lib/types";
 
 export default function App() {
@@ -43,6 +44,20 @@ export default function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [undo]);
+
+  // 1 到 4 切换分区，顺序与侧栏一致。
+  useEffect(() => {
+    const order: Tab[] = ["dashboard", "timeline", "review", "archived"];
+    const onKey = (e: KeyboardEvent) => {
+      if (!isBareShortcut(e, overlayIsOpen(document))) return;
+      const index = Number(e.key) - 1;
+      if (!Number.isInteger(index) || !order[index]) return;
+      e.preventDefault();
+      setTab(order[index]);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Stable across renders so memoized cards (ProjectCard) don't re-render every
   // time the dialog's live project updates on a keystroke.

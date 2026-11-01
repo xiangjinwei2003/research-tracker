@@ -36,7 +36,7 @@ interface Props {
 // 导航图标各有固定颜色，用于区分分区；其余界面保持灰阶。
 const TABS = [
   { id: "dashboard", label: "任务", icon: CircleCheck, tint: "text-ring" },
-  { id: "timeline", label: "日历", icon: CalendarDays, tint: "text-destructive" },
+  { id: "timeline", label: "日历", icon: CalendarDays, tint: "text-purple-11" },
   { id: "review", label: "专注回顾", icon: Timer, tint: "text-success" },
   { id: "archived", label: "归档", icon: Archive, tint: "text-faint" },
 ] satisfies { id: Tab; label: string; icon: typeof Archive; tint: string }[];
@@ -176,6 +176,7 @@ export function Header({ tab, onTabChange, children }: Props) {
               onClick={() => onTabChange(id)}
               aria-current={tab === id ? "page" : undefined}
               aria-label={label}
+              aria-keyshortcuts={String(TABS.findIndex((t) => t.id === id) + 1)}
               title={label}
               className={cn(
                 "flex h-8 w-full items-center justify-center gap-2.5 rounded-md px-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[68.75rem]:justify-start",
