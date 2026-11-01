@@ -16,6 +16,7 @@ import {
   boardGroup,
   buildBoard,
   groupPatch,
+  nextItem,
   parseTodoDragPayload,
   type BoardFilters,
   type BoardGroup,
@@ -30,6 +31,7 @@ import { TaskRow } from "./TaskRow";
 import { TaskDialog, type TaskTarget } from "./TaskDialog";
 import { Dashboard } from "./Dashboard";
 import { PageHeader } from "./PageHeader";
+import { NextUp } from "./NextUp";
 import { Button } from "./ui/Button";
 import {
   DropdownMenu,
@@ -91,9 +93,14 @@ export function Board({ onEdit }: Props) {
   const filtered = !!query.trim() || effectiveProjectId !== "all" || due !== "any";
   const filterCount =
     (effectiveProjectId !== "all" ? 1 : 0) + (due !== "any" ? 1 : 0);
+  // 没有筛选时，列表第一项提到页面顶部，列表里不再重复。
+  const next = filtered ? null : nextItem(result.items);
+  const listItems = next
+    ? result.items.filter((x) => x !== next)
+    : result.items;
   const sections = BOARD_GROUPS.map((group) => ({
     group,
-    items: result.items.filter((x) => boardGroup(x.todo) === group),
+    items: listItems.filter((x) => boardGroup(x.todo) === group),
   }));
   const projectName =
     activeProjects.find((p) => p.id === effectiveProjectId)?.title ||
@@ -175,6 +182,29 @@ export function Board({ onEdit }: Props) {
   };
 
   const todayDate = parse(now) ?? new Date();
+  const dateLine = (
+    <>
+      <span>{format(todayDate, "M月d日 EEEE", { locale: zhCN })}</span>
+      {totals.overdue ? (
+        <button
+          type="button"
+          onClick={() => showOnly("overdue")}
+          className="rounded-sm text-destructive hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {totals.overdue} 项逾期
+        </button>
+      ) : null}
+      {totals.dueToday ? (
+        <button
+          type="button"
+          onClick={() => showOnly(now)}
+          className="rounded-sm text-today hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {totals.dueToday} 项今天到期
+        </button>
+      ) : null}
+    </>
+  );
 
   return (
     <main
@@ -186,40 +216,31 @@ export function Board({ onEdit }: Props) {
       onDrop={() => setDragActive(false)}
     >
       <div className="mx-auto w-full max-w-[66rem] px-4 pt-2 sm:px-6 lg:pt-4">
-        <PageHeader
-          icon={CircleCheck}
-          tint="text-ring"
-          title="任务"
-          subtitle={
-            <>
-              <span>{format(todayDate, "M月d日 EEEE", { locale: zhCN })}</span>
-              {totals.overdue ? (
-                <button
-                  type="button"
-                  onClick={() => showOnly("overdue")}
-                  className="rounded-sm text-destructive hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {totals.overdue} 项逾期
-                </button>
-              ) : null}
-              {totals.dueToday ? (
-                <button
-                  type="button"
-                  onClick={() => showOnly(now)}
-                  className="rounded-sm text-today hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {totals.dueToday} 项今天到期
-                </button>
-              ) : null}
-            </>
-          }
-        />
+        {next ? (
+          <NextUp
+            key={`${next.project.id}:${next.todo.id}`}
+            item={next}
+            today={now}
+            dateLine={dateLine}
+            onOpen={() => setTaskTarget({ mode: "edit", todoId: next.todo.id })}
+          />
+        ) : (
+          <PageHeader
+            icon={CircleCheck}
+            tint="text-ring"
+            title="任务"
+            subtitle={dateLine}
+          />
+        )}
 
         {activeProjects.length ? (
           <>
             <div
               id="task-board"
-              className="mt-6 flex min-w-0 flex-wrap items-center gap-2"
+              className={cn(
+                "flex min-w-0 flex-wrap items-center gap-2",
+                next ? "mt-8" : "mt-6",
+              )}
             >
               <div
                 className="inline-flex h-8 rounded-md bg-muted p-0.5"
@@ -358,7 +379,7 @@ export function Board({ onEdit }: Props) {
               </div>
             ) : null}
 
-            {result.items.length || dragActive ? (
+            {listItems.length || dragActive ? (
               <div className="mt-5 space-y-6">
                 {sections.map(({ group, items }) => {
                   if (!items.length && !dragActive) return null;
@@ -454,7 +475,7 @@ export function Board({ onEdit }: Props) {
                   );
                 })}
               </div>
-            ) : (
+            ) : next ? null : (
               <Empty
                 filtered={filtered}
                 recent={range === "recent"}

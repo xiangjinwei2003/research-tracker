@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildBoard, parseTodoDragPayload } from "./board.ts";
+import { buildBoard, nextItem, parseTodoDragPayload } from "./board.ts";
 import { defaultStages, type Project, type Todo } from "./types.ts";
 
 const todo = (
@@ -159,4 +159,28 @@ test("pending todos show in 近期重点 regardless of due date", () => {
     result.items.map((x) => x.todo.id),
     ["far"],
   );
+});
+
+test("nextItem follows the home group order, so pending comes after low", () => {
+  const filters = {
+    today: "2026-11-01",
+    end: "2026-11-08",
+    query: "",
+    projectId: "all",
+    range: "all" as const,
+    due: "any" as const,
+  };
+  const items = buildBoard(
+    [
+      project("p", "P", [
+        todo("a", "pending overdue", "2026-10-01", { pending: true, priority: "high" }),
+        todo("b", "low later", "2026-12-01", { priority: "low" }),
+        todo("c", "normal soon", "2026-11-03", { priority: "normal" }),
+      ]),
+    ],
+    filters,
+  ).items;
+  assert.equal(nextItem(items)?.todo.id, "c");
+  assert.equal(nextItem(items.filter((x) => x.todo.id !== "c"))?.todo.id, "b");
+  assert.equal(nextItem([]), null);
 });

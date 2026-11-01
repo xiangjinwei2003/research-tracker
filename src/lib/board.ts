@@ -123,6 +123,15 @@ export function buildBoard(
   };
 }
 
+/** 按首页分组顺序取第一项，作为首页顶部的「下一件事」。 */
+export function nextItem(items: BoardItem[]): BoardItem | null {
+  for (const group of BOARD_GROUPS) {
+    const hit = items.find((x) => boardGroup(x.todo) === group);
+    if (hit) return hit;
+  }
+  return null;
+}
+
 export function parseTodoDragPayload(
   raw: string,
 ): { projectId: string; todoId: string } | null {

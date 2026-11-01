@@ -10,12 +10,7 @@ import {
 } from "@/lib/types";
 import { dateFromToday, dueLabel } from "@/lib/date";
 import { toast } from "@/lib/toast";
-import { completeTodo } from "@/lib/todoActions";
-import {
-  primeChime,
-  reminderEnabled,
-  requestNotifyPermission,
-} from "@/lib/reminder";
+import { completeTodo, startTodoFocus } from "@/lib/todoActions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +50,6 @@ export function TaskRow({
   onDragEnd,
 }: Props) {
   const updateTodo = useStore((s) => s.updateTodo);
-  const startTimer = useStore((s) => s.startTimer);
   const [checking, setChecking] = useState(false);
   const timer = useRef<number | null>(null);
   useEffect(
@@ -76,14 +70,8 @@ export function TaskRow({
       completeTodo(project.id, todo.id, todo.title);
     }, COMPLETE_DELAY_MS);
   };
-  const focus = (plannedMin: number) => {
-    if (reminderEnabled()) {
-      primeChime();
-      void requestNotifyPermission();
-    }
-    startTimer({ plannedMin, projectId: project.id, todoId: todo.id });
-    toast({ message: `开始专注 ${plannedMin} 分钟` });
-  };
+  const focus = (plannedMin: number) =>
+    startTodoFocus(project.id, todo.id, plannedMin);
   const setPinned = (value: boolean) => {
     updateTodo(project.id, todo.id, { inWeek: value });
     const remains =
