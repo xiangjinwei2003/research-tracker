@@ -40,7 +40,7 @@ export function ProjectShareCard({
   }
 
   return (
-    <Widget title="项目占比" icon={PieChart} tint="text-[oklch(0.75_0.13_300)]" className={className}>
+    <Widget title="项目占比" icon={PieChart} tint="text-purple-11" className={className}>
       {stats.minutes > 0 ? (
         <div className="mt-4 flex flex-1 items-center gap-5">
           <div className="relative shrink-0">
@@ -61,7 +61,7 @@ export function ProjectShareCard({
               ))}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="num-rounded text-[22px] font-semibold leading-none text-foreground">
+              <span className="num-rounded text-title font-semibold leading-none text-foreground">
                 {total.value}
                 <span className="ml-0.5 text-xs font-medium text-muted-foreground">
                   {total.unit}
@@ -72,7 +72,7 @@ export function ProjectShareCard({
           </div>
           <ul className="min-w-0 flex-1 space-y-2">
             {segments.map((s) => (
-              <li key={s.key} className="flex items-center gap-2 text-[13px]">
+              <li key={s.key} className="flex items-center gap-2 text-sm">
                 <span
                   aria-hidden
                   className="size-2.5 shrink-0 rounded-full"
@@ -88,7 +88,7 @@ export function ProjectShareCard({
           </ul>
         </div>
       ) : (
-        <p className="mt-3 text-[13px] text-faint">该时段没有专注记录</p>
+        <p className="mt-3 text-sm text-faint">该时段没有专注记录</p>
       )}
     </Widget>
   )
@@ -112,7 +112,7 @@ export function HeatmapCard({
             {WEEKDAY_CN.map((w, i) => (
               <span
                 key={w}
-                className="flex h-3 w-4 items-center text-[9px] leading-none text-faint"
+                className="flex h-3 w-4 items-center text-xs leading-none text-faint"
               >
                 {i % 2 === 0 ? w : ''}
               </span>
@@ -120,7 +120,7 @@ export function HeatmapCard({
           </div>
           {heat.map((week, wi) => (
             <div key={wi} className="flex flex-col gap-1">
-              <span className="h-3.5 overflow-visible whitespace-nowrap text-[9px] leading-none text-faint">
+              <span className="h-3.5 overflow-visible whitespace-nowrap text-xs leading-none text-faint">
                 {week.monthLabel}
               </span>
               {week.days.map((d) => (
@@ -136,14 +136,14 @@ export function HeatmapCard({
                     d.future
                       ? 'opacity-0'
                       : d.minutes === 0
-                        ? 'bg-white/[.06]'
+                        ? 'bg-selected'
                         : d.minutes < 30
-                          ? 'bg-brand-900'
+                          ? 'bg-indigo-4'
                           : d.minutes < 60
-                            ? 'bg-brand-700'
+                            ? 'bg-indigo-6'
                             : d.minutes < 120
-                              ? 'bg-brand-500'
-                              : 'bg-brand-400',
+                              ? 'bg-indigo-8'
+                              : 'bg-indigo-10',
                   )}
                 />
               ))}
@@ -151,7 +151,7 @@ export function HeatmapCard({
           ))}
         </div>
       </div>
-      <p className="mt-auto pt-4 text-[13px] text-muted-foreground">
+      <p className="mt-auto pt-4 text-sm text-muted-foreground">
         累计专注 <span className="mono text-foreground">{fmtMinutes(allTime.minutes)}</span>，{allTime.count} 次，覆盖 {allTime.days} 天
       </p>
     </Widget>

@@ -27,7 +27,7 @@ export function ContextMenuContent({
         onCloseAutoFocus={onCloseAutoFocus}
         data-slot="context-menu-content"
         className={cn(
-          'z-50 min-w-[11rem] origin-(--radix-context-menu-content-transform-origin) overflow-hidden rounded-lg border border-white/[.06] bg-popover p-1 text-popover-foreground shadow-[0_12px_32px_-8px_rgba(0,0,0,.55)]',
+          'z-50 min-w-[11rem] origin-(--radix-context-menu-content-transform-origin) overflow-hidden rounded-lg border-[0.5px] border-border bg-popover p-1 text-popover-foreground shadow-popover',
           'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
           className,
         )}
@@ -52,7 +52,7 @@ export function ContextMenuItem({
       onSelect={onSelect}
       data-slot="context-menu-item"
       className={cn(
-        "relative flex cursor-default select-none items-center gap-2 rounded-[5px] px-2 py-1.5 text-[13px] outline-hidden transition-colors [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex cursor-default select-none items-center gap-2 rounded-[5px] px-2 py-1.5 text-sm outline-hidden transition-colors [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         destructive
           ? 'text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-white [&_svg:not([class*=text-])]:text-current'
           : 'data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground [&_svg:not([class*=text-])]:text-muted-foreground data-[highlighted]:[&_svg]:text-current',
@@ -83,7 +83,7 @@ export function ContextMenuCheckboxItem({
       onCheckedChange={onCheckedChange}
       onSelect={(e) => e.preventDefault()}
       data-slot="context-menu-checkbox-item"
-      className="relative flex cursor-default select-none items-center gap-2 rounded-[5px] px-2 py-1.5 text-[13px] outline-hidden transition-colors data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground"
+      className="relative flex cursor-default select-none items-center gap-2 rounded-[5px] px-2 py-1.5 text-sm outline-hidden transition-colors data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground"
     >
       <span className="flex size-4 shrink-0 items-center justify-center">
         <Radix.ItemIndicator>

@@ -144,7 +144,7 @@ export function FocusTimer() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover data-[state=open]:text-foreground"
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover data-[state=open]:text-foreground"
           aria-label="开始专注倒计时"
         >
           <Timer size={15} /> 专注
@@ -242,7 +242,7 @@ export function FocusTimer() {
       <div className="flex min-w-0 items-baseline gap-2">
         <span
           className={cn(
-            'mono text-[14px] font-semibold leading-none text-foreground',
+            'mono text-sm font-semibold leading-none text-foreground',
             remaining <= 60_000 && 'text-today',
           )}
         >

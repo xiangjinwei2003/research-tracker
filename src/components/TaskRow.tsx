@@ -123,14 +123,14 @@ export function TaskRow({
       >
         <span
           className={cn(
-            "block break-words text-[15px] leading-6 text-foreground transition-colors",
+            "block break-words text-base leading-6 text-foreground transition-colors",
             checking && "text-muted-foreground line-through decoration-faint",
             !todo.title && "italic text-faint",
           )}
         >
           {title}
         </span>
-        <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] leading-5 text-muted-foreground">
+        <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-sm leading-5 text-muted-foreground">
           <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
             <span
               aria-hidden

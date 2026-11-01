@@ -17,6 +17,7 @@ import { fmtMD, parse, today } from '@/lib/date'
 import type { Project } from '@/lib/types'
 import { Calendar, CalendarDayButton } from './ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { PageHeader } from './PageHeader'
 import { Button } from './ui/Button'
 import { cn } from '@/lib/cn'
 import { CalendarSubscribeDialog } from './CalendarSubscribeDialog'
@@ -133,76 +134,76 @@ export function DeadlineCalendar({ onEdit }: Props) {
         onClose={() => setTaskTarget(null)}
         onOpenProject={onEdit}
       />
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
-            <CalendarDays size={26} strokeWidth={2.2} className="text-destructive" aria-hidden />
-            日历
-          </h1>
-          <p className="mt-1.5 pl-[36px] text-[13px] text-muted-foreground">{subtitle}</p>
-        </div>
+      <div className="mb-5">
+        <PageHeader
+          icon={CalendarDays}
+          tint="text-destructive"
+          title="日历"
+          subtitle={subtitle}
+          actions={
+            <>
+              <Button variant="ghost" size="sm" className="mr-2" onClick={() => setSubscribeOpen(true)}>
+                <CalendarPlus />
+                订阅到苹果日历
+              </Button>
 
-        <div className="flex items-center gap-0.5">
-          <Button variant="ghost" size="sm" className="mr-2" onClick={() => setSubscribeOpen(true)}>
-            <CalendarPlus />
-            订阅到苹果日历
-          </Button>
-
-          <button
-            type="button"
-            onClick={() => setAnchor((a) => addMonths(a, -1))}
-            aria-label="上个月"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ChevronLeft size={16} />
-          </button>
-
-          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-            <PopoverTrigger asChild>
               <button
                 type="button"
-                title="点击跳到任意日期"
-                className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-[15px] font-semibold tabular-nums text-foreground transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => setAnchor((a) => addMonths(a, -1))}
+                aria-label="上个月"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {format(anchor, 'yyyy年M月')}
-                <ChevronDown size={14} className="text-muted-foreground" />
+                <ChevronLeft size={16} />
               </button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={anchor}
-                onSelect={(d) => {
-                  if (d) {
-                    setAnchor(d)
-                    setPickerOpen(false)
-                  }
-                }}
-                defaultMonth={anchor}
-                weekStartsOn={0}
-                locale={zhCN}
-                modifiers={{ hasTodo: todoDates }}
-                components={{ DayButton: DayWithDot }}
-                className="[--cell-size:2.25rem]"
-              />
-            </PopoverContent>
-          </Popover>
 
-          <button
-            type="button"
-            onClick={() => setAnchor((a) => addMonths(a, 1))}
-            aria-label="下个月"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ChevronRight size={16} />
-          </button>
+              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    title="点击跳到任意日期"
+                    className="inline-flex h-8 items-center gap-1 rounded-md px-3 text-base font-semibold tabular-nums text-foreground transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {format(anchor, 'yyyy年M月')}
+                    <ChevronDown size={14} className="text-muted-foreground" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={anchor}
+                    onSelect={(d) => {
+                      if (d) {
+                        setAnchor(d)
+                        setPickerOpen(false)
+                      }
+                    }}
+                    defaultMonth={anchor}
+                    weekStartsOn={0}
+                    locale={zhCN}
+                    modifiers={{ hasTodo: todoDates }}
+                    components={{ DayButton: DayWithDot }}
+                    className="[--cell-size:2.25rem]"
+                  />
+                </PopoverContent>
+              </Popover>
 
-          {!isCurMonth ? (
-            <Button variant="ghost" size="sm" onClick={() => setAnchor(new Date())}>
-              今天
-            </Button>
-          ) : null}
-        </div>
+              <button
+                type="button"
+                onClick={() => setAnchor((a) => addMonths(a, 1))}
+                aria-label="下个月"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <ChevronRight size={16} />
+              </button>
+
+              {!isCurMonth ? (
+                <Button variant="ghost" size="sm" onClick={() => setAnchor(new Date())}>
+                  今天
+                </Button>
+              ) : null}
+            </>
+          }
+        />
       </div>
 
       <div className="flex flex-1 flex-col">
@@ -213,7 +214,7 @@ export function DeadlineCalendar({ onEdit }: Props) {
               key={w}
               className={cn(
                 'px-2 pb-2 text-right text-xs text-faint',
-                (i === 0 || i === 6) && 'text-faint/70',
+                (i === 0 || i === 6) && 'text-faint',
               )}
             >
               周{w}
@@ -253,24 +254,24 @@ export function DeadlineCalendar({ onEdit }: Props) {
                   handleDrop(key)
                 }}
                 className={cn(
-                  'flex min-h-0 flex-col gap-0.5 border-t px-1 pb-1 pt-1 transition-colors',
-                  !lastCol && 'border-r border-r-border/50',
-                  lastRow && 'border-b',
+                  'flex min-h-0 flex-col gap-0.5 border-t-[0.5px] px-1 pb-1 pt-1 transition-colors',
+                  !lastCol && 'border-r-[0.5px] border-r-border/50',
+                  lastRow && 'border-b-[0.5px]',
                   !inMonth && 'bg-sidebar/50',
                   dragOverKey === key && 'bg-accent/50 ring-1 ring-inset ring-ring',
                 )}
               >
                 <div className="flex shrink-0 items-center justify-end">
                   {isToday ? (
-                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-[13px] font-semibold tabular-nums text-primary-foreground">
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-sm font-semibold tabular-nums text-primary-foreground">
                       {d.getDate()}
                     </span>
                   ) : (
                     <span
                       className={cn(
-                        'inline-flex h-6 items-center px-1.5 text-[13px] tabular-nums',
+                        'inline-flex h-6 items-center px-1.5 text-sm tabular-nums',
                         !inMonth
-                          ? 'text-faint/60'
+                          ? 'text-faint'
                           : isPast
                             ? 'text-faint'
                             : 'text-secondary-foreground',

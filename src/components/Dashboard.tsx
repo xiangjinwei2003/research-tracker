@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn'
 import { PROJECT_COLOR_PRESETS, type Project } from '@/lib/types'
 import { emptyProjectDraft } from '@/lib/project'
 import { isSubmitEnter } from '@/lib/keyboard'
+import { PageHeader } from './PageHeader'
 import { PROJECT_DRAG_TYPE, ProjectRow, type ProjectDragHandlers } from './ProjectRow'
 
 const COLLAPSE_KEY = 'rt-overview-collapsed'
@@ -125,21 +126,20 @@ export function Dashboard({
   if (showArchived) {
     return (
       <main className="mx-auto w-full max-w-[66rem] px-4 pb-24 pt-2 sm:px-6 lg:pt-4">
-        <h1 className="flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.01em]">
-          <Archive size={26} strokeWidth={2.2} className="text-faint" aria-hidden />
-          归档
-        </h1>
-        <p className="mt-1.5 pl-[36px] text-[13px] text-muted-foreground">
-          {visible.length ? `${visible.length} 个项目` : '已完成或搁置的项目会放在这里'}
-        </p>
+        <PageHeader
+          icon={Archive}
+          tint="text-faint"
+          title="归档"
+          subtitle={visible.length ? `${visible.length} 个项目` : '已完成或搁置的项目会放在这里'}
+        />
         {visible.length ? (
-          <ul className="mt-8 border-t border-border pt-2">
+          <ul className="mt-8 border-t-[0.5px] border-border pt-2">
             {visible.map((p) => (
               <ProjectRow key={p.id} project={p} onEdit={onEdit} dimmed />
             ))}
           </ul>
         ) : (
-          <p className="mt-8 max-w-sm pl-[36px] text-[13px] leading-6 text-faint">
+          <p className="mt-8 max-w-sm pl-9 text-sm leading-6 text-faint">
             在项目详情里选择归档，项目就会从任务列表移到这里，数据保留。
           </p>
         )}
@@ -149,14 +149,14 @@ export function Dashboard({
 
   return (
     <section aria-label="项目">
-      <div className="flex h-10 items-center gap-2 border-b border-border">
+      <div className="flex h-10 items-center gap-2 border-b-[0.5px] border-border">
         {collapsible ? (
           <button
             type="button"
             onClick={toggleCollapsed}
             aria-expanded={!collapsed}
             aria-controls="overview-list"
-            className="-ml-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-[15px] font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="-ml-1 inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-base font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ChevronRight
               size={14}
@@ -169,15 +169,15 @@ export function Dashboard({
             项目
           </button>
         ) : (
-          <h2 className="text-[15px] font-semibold">项目</h2>
+          <h2 className="text-base font-semibold">项目</h2>
         )}
-        <span className="text-[13px] tabular-nums text-faint">{visible.length}</span>
+        <span className="text-sm tabular-nums text-faint">{visible.length}</span>
         <button
           type="button"
           onClick={openAdd}
           aria-label="新建项目"
           title="新建项目"
-          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Plus size={15} />
           新建项目
@@ -207,7 +207,7 @@ export function Dashboard({
             onBlur={commitProject}
             placeholder="项目名称，回车创建，Esc 取消"
             aria-label="新项目名称"
-            className="h-9 min-w-0 flex-1 rounded-md bg-muted px-2.5 text-[15px] outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-9 min-w-0 flex-1 rounded-md bg-muted px-2.5 text-base outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
       ) : null}

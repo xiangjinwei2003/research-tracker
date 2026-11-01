@@ -19,6 +19,7 @@ import { FocusBars } from './FocusBars'
 import { DayDetail } from './DayDetail'
 import { HeatmapCard, ProjectShareCard } from './FocusStats'
 import { Widget, WidgetNumber } from './Widget'
+import { PageHeader } from './PageHeader'
 
 /** Trailing window of the contribution heatmap, in weeks (~4 months). */
 const HEATMAP_WEEKS = 16
@@ -125,74 +126,74 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
 
   return (
     <main className="mx-auto w-full max-w-[66rem] px-4 pb-24 pt-2 sm:px-6 lg:pt-4">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-2.5 text-[30px] font-bold leading-tight tracking-[-0.01em]">
-            <Timer size={26} strokeWidth={2.2} className="text-success" aria-hidden />
-            专注回顾
-          </h1>
-        </div>
-
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <div
-            className="inline-flex h-8 rounded-md bg-muted p-0.5"
-            role="tablist"
-            aria-label="统计范围"
-          >
-            {(['week', 'month'] as const).map((s) => (
-              <button
-                key={s}
-                role="tab"
-                aria-selected={scope === s}
-                onClick={() => setScope(s)}
-                className={cn(
-                  'rounded-[5px] px-3 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  scope === s
-                    ? 'bg-input font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,.3)]'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
+      <div className="mb-6">
+        <PageHeader
+          icon={Timer}
+          tint="text-success"
+          title="专注回顾"
+          actions={
+            <>
+              <div
+                className="inline-flex h-8 rounded-md bg-muted p-0.5"
+                role="group"
+                aria-label="统计范围"
               >
-                {s === 'week' ? '周' : '月'}
-              </button>
-            ))}
-          </div>
+                {(['week', 'month'] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    aria-pressed={scope === s}
+                    onClick={() => setScope(s)}
+                    className={cn(
+                      'rounded-[5px] px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      scope === s
+                        ? 'bg-input font-medium text-foreground'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {s === 'week' ? '周' : '月'}
+                  </button>
+                ))}
+              </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setAnchor((a) => (isWeek ? addWeeks(a, -1) : addMonths(a, -1)))}
-              aria-label={isWeek ? '上一周' : '上个月'}
-              title={isWeek ? '上一周' : '上个月'}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="min-w-[9.5rem] text-center mono text-[13px] text-secondary-foreground">
-              {periodLabel}
-            </span>
-            <button
-              type="button"
-              onClick={() => setAnchor((a) => (isWeek ? addWeeks(a, 1) : addMonths(a, 1)))}
-              aria-label={isWeek ? '下一周' : '下个月'}
-              title={isWeek ? '下一周' : '下个月'}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <ChevronRight size={16} />
-            </button>
-            {!isCurrentPeriod ? (
-              <Button variant="ghost" size="sm" onClick={() => setAnchor(new Date())}>
-                {isWeek ? '本周' : '本月'}
-              </Button>
-            ) : null}
-          </div>
-        </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setAnchor((a) => (isWeek ? addWeeks(a, -1) : addMonths(a, -1)))}
+                  aria-label={isWeek ? '上一周' : '上个月'}
+                  title={isWeek ? '上一周' : '上个月'}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="min-w-[9.5rem] text-center mono text-sm text-secondary-foreground">
+                  {periodLabel}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAnchor((a) => (isWeek ? addWeeks(a, 1) : addMonths(a, 1)))}
+                  aria-label={isWeek ? '下一周' : '下个月'}
+                  title={isWeek ? '下一周' : '下个月'}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <ChevronRight size={16} />
+                </button>
+                {!isCurrentPeriod ? (
+                  <Button variant="ghost" size="sm" onClick={() => setAnchor(new Date())}>
+                    {isWeek ? '本周' : '本月'}
+                  </Button>
+                ) : null}
+              </div>
+            </>
+          }
+        />
       </div>
 
       {sessions.length === 0 ? (
         <div className="mt-12 flex flex-col items-center py-6 text-center">
           <Timer size={40} strokeWidth={1.5} className="text-input" aria-hidden />
-          <p className="mt-4 text-[15px] font-medium">还没有专注记录</p>
-          <p className="mt-1 max-w-sm text-[13px] leading-6 text-muted-foreground">
+          <p className="mt-4 text-base font-medium">还没有专注记录</p>
+          <p className="mt-1 max-w-sm text-sm leading-6 text-muted-foreground">
             把鼠标移到任务上，点计时图标开始一段专注；也可以从右上角开始不挂任务的专注。
           </p>
           <Button className="mt-5" onClick={onGoBoard}>
@@ -203,7 +204,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <Widget title="专注时长" icon={Timer} tint="text-success">
             <WidgetNumber className="mt-5" value={total.value} unit={total.unit} />
-            <p className="mt-2 text-[13px] text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground">
               {stats.prevMinutes > 0
                 ? `${prevWord} ${pct > 0 ? '+' : ''}${pct}%`
                 : `${periodWord}累计`}
@@ -211,14 +212,14 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
           </Widget>
           <Widget title="专注次数" icon={Target} tint="text-ring">
             <WidgetNumber className="mt-5" value={stats.count} unit="次" />
-            <p className="mt-2 text-[13px] text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground">
               完整 {completedCount} 次
               {stats.count > completedCount ? `，提前结束 ${stats.count - completedCount} 次` : ''}
             </p>
           </Widget>
           <Widget title="连续专注" icon={Flame} tint="text-warn">
             <WidgetNumber className="mt-5" value={streak.current} unit="天" />
-            <p className="mt-2 text-[13px] text-muted-foreground">最长 {streak.longest} 天</p>
+            <p className="mt-2 text-sm text-muted-foreground">最长 {streak.longest} 天</p>
           </Widget>
           <Widget title="最佳一天" icon={Trophy} tint="text-today">
             <WidgetNumber
@@ -226,7 +227,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
               value={best ? best.value : '0'}
               unit={best ? best.unit : '分钟'}
             />
-            <p className="mt-2 text-[13px] text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground">
               {stats.best ? format(stats.best.date, 'M月d日') : `${periodWord}暂无`}
             </p>
           </Widget>

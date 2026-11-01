@@ -121,7 +121,7 @@ export function ProjectDialog({ projectId, onClose }: Props) {
           <Input
             id="title"
             aria-label="项目名称"
-            className="h-9 flex-1 text-[15px] font-medium"
+            className="h-9 flex-1 text-base font-medium"
             value={project.title}
             onChange={(e) => updateProject(project.id, { title: e.target.value })}
           />
@@ -151,8 +151,8 @@ export function ProjectDialog({ projectId, onClose }: Props) {
         </div>
 
         <div>
-          <div className="flex items-baseline gap-2 border-b border-border pb-2">
-            <h3 className="text-[13px] font-semibold text-foreground">任务</h3>
+          <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-2">
+            <h3 className="text-sm font-semibold text-foreground">任务</h3>
             <span className="text-xs tabular-nums text-faint">{activeTodoCount} 项未完成</span>
           </div>
           <QuickAddTodo onAdd={(title) => addTodo(project.id, { title })} />
@@ -174,7 +174,7 @@ export function ProjectDialog({ projectId, onClose }: Props) {
         </Collapsible>
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-2 border-t border-border pt-4">
+      <div className="mt-5 flex items-center justify-between gap-2 border-t-[0.5px] border-border pt-4">
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={onToggleArchive}>
             {project.archived ? (

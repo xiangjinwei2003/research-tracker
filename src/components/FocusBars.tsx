@@ -69,7 +69,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
             className={cn(
               'group flex min-w-0 flex-1 flex-col items-center justify-end gap-1.5 rounded-lg px-0.5 pb-1.5 pt-1 transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              selected ? 'bg-white/[.035]' : 'hover:bg-white/[.025]',
+              selected ? 'bg-hover' : 'hover:bg-hover',
             )}
           >
             <span
@@ -88,7 +88,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
                   className={cn(
                     'w-full transition-colors',
                     isWeek ? 'max-w-12 rounded-[10px]' : 'max-w-[9px] rounded-full',
-                    selected ? 'bg-brand-400' : 'bg-brand-500/80 group-hover:bg-brand-400/85',
+                    selected ? 'bg-indigo-10' : 'bg-indigo-9 group-hover:bg-indigo-10',
                   )}
                 />
               ) : (
@@ -96,7 +96,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
                   className={cn(
                     'h-1 w-full rounded-sm',
                     isWeek ? 'max-w-14' : 'max-w-[9px]',
-                    selected ? 'bg-brand-800' : 'bg-muted',
+                    selected ? 'bg-indigo-4' : 'bg-muted',
                   )}
                 />
               )}

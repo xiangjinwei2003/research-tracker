@@ -173,7 +173,7 @@ export const ProjectRow = memo(function ProjectRow({
         className="flex min-w-0 flex-1 cursor-default items-center gap-2.5 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ProgressPie color={project.color} value={total ? done / total : 0} />
-        <span className="truncate text-[15px] leading-7 text-foreground">
+        <span className="truncate text-base leading-7 text-foreground">
           {title}
         </span>
         {project.tags?.map((tag) => {
@@ -263,7 +263,7 @@ export const ProjectRow = memo(function ProjectRow({
                         : undefined
                     }
                     className={cn(
-                      "flex items-center gap-3 rounded-md px-1.5 py-1.5 text-[14px] hover:bg-hover",
+                      "flex items-center gap-3 rounded-md px-1.5 py-1.5 text-sm hover:bg-hover",
                       draggableTodos && "cursor-grab active:cursor-grabbing",
                     )}
                   >
@@ -289,7 +289,7 @@ export const ProjectRow = memo(function ProjectRow({
               })}
             </ul>
           ) : (
-            <p className="px-1.5 py-1 text-[13px] text-faint">
+            <p className="px-1.5 py-1 text-sm text-faint">
               {total ? "所有任务已完成" : "还没有任务"}
             </p>
           )}
@@ -315,13 +315,13 @@ export const ProjectRow = memo(function ProjectRow({
                 }}
                 placeholder="任务标题，回车添加并选日期，Esc 取消"
                 aria-label={`为「${title}」添加任务`}
-                className="h-8 w-full rounded-md bg-muted px-2 text-[14px] outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-8 w-full rounded-md bg-muted px-2 text-sm outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring"
               />
             ) : (
               <button
                 type="button"
                 onClick={openAdd}
-                className="inline-flex h-8 items-center gap-2 rounded-md px-1.5 text-[14px] text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex h-8 items-center gap-2 rounded-md px-1.5 text-sm text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Plus size={14} /> 添加任务
               </button>

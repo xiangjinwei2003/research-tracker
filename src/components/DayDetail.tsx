@@ -33,7 +33,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
       className={className}
       aside={
         rows.length > 0 ? (
-          <span className="text-[13px] text-muted-foreground">
+          <span className="text-sm text-muted-foreground">
             <span className="mono font-semibold text-foreground">{fmtMinutes(minutes)}</span>，{rows.length} 次
           </span>
         ) : null
@@ -46,12 +46,12 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
               // truncating it to two characters next to the fixed time columns.
               <li
                 key={r.session.id}
-                className="group flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-xl px-2 py-1.5 text-[14px] hover:bg-hover"
+                className="group flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-xl px-2 py-1.5 text-sm hover:bg-hover"
               >
-                <span className="w-24 shrink-0 mono text-[13px] text-faint">
+                <span className="w-24 shrink-0 mono text-sm text-faint">
                   {fmtHM(r.session.startedAt)}–{fmtHM(r.session.endedAt)}
                 </span>
-                <span className="w-24 shrink-0 whitespace-nowrap mono text-[13px] text-faint">
+                <span className="w-24 shrink-0 whitespace-nowrap mono text-sm text-faint">
                   {fmtMinutes(r.minutes)}
                   {r.session.completed ? '' : ' 提前结束'}
                 </span>
@@ -84,7 +84,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
             ))}
           </ul>
       ) : (
-        <p className="mt-3 text-[13px] text-faint">这一天没有专注记录。</p>
+        <p className="mt-3 text-sm text-faint">这一天没有专注记录。</p>
       )}
     </Widget>
   )

@@ -72,7 +72,7 @@ export function CalendarSubscribeDialog({ open, onOpenChange }: Props) {
         <div className="flex items-center justify-between gap-4">
           <p
             className={cn(
-              'min-w-0 text-[13px]',
+              'min-w-0 text-sm',
               enabled && (phase === 'error' || phase === 'unconfigured')
                 ? 'text-destructive'
                 : 'text-muted-foreground',
@@ -123,7 +123,7 @@ export function CalendarSubscribeDialog({ open, onOpenChange }: Props) {
               )}
               {confirmRegen ? (
                 <span className="flex items-center gap-1">
-                  <span className="text-[13px] text-muted-foreground">旧地址会失效</span>
+                  <span className="text-sm text-muted-foreground">旧地址会失效</span>
                   <Button
                     variant="danger"
                     size="sm"
@@ -150,7 +150,7 @@ export function CalendarSubscribeDialog({ open, onOpenChange }: Props) {
           </div>
         ) : null}
 
-        <div className="grid gap-2 text-[13px] leading-relaxed text-muted-foreground">
+        <div className="grid gap-2 text-sm leading-relaxed text-muted-foreground">
           <p>
             改动会在几分钟内出现在日历里，不是即时的：苹果日历按自己的周期拉取。Mac 上可把自动刷新设为每 5 分钟；iPhone 的刷新时间由系统决定，可能更久。
           </p>

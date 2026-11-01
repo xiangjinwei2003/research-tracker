@@ -21,7 +21,7 @@ interface Props {
 export function Collapsible({ title, summary, defaultOpen = false, children }: Props) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <section className="border-t border-border">
+    <section className="border-t-[0.5px] border-border">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -35,7 +35,7 @@ export function Collapsible({ title, summary, defaultOpen = false, children }: P
             open && 'rotate-90',
           )}
         />
-        <span className="shrink-0 whitespace-nowrap text-[13px] font-medium text-foreground">{title}</span>
+        <span className="shrink-0 whitespace-nowrap text-sm font-medium text-foreground">{title}</span>
         {!open && summary ? (
           <span className="ml-auto min-w-0 truncate pl-3 text-xs text-muted-foreground">
             {summary}

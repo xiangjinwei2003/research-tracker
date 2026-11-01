@@ -28,6 +28,7 @@ import { cn } from "@/lib/cn";
 import { TaskRow } from "./TaskRow";
 import { TaskDialog, type TaskTarget } from "./TaskDialog";
 import { Dashboard } from "./Dashboard";
+import { PageHeader } from "./PageHeader";
 import { Button } from "./ui/Button";
 import {
   DropdownMenu,
@@ -164,18 +165,12 @@ export function Board({ onEdit }: Props) {
       onDrop={() => setDragActive(false)}
     >
       <div className="mx-auto w-full max-w-[66rem] px-4 pt-2 sm:px-6 lg:pt-4">
-        <header className="flex flex-wrap items-end gap-x-6 gap-y-3">
-          <div className="min-w-0">
-            <h1 className="flex items-center gap-2.5 text-[30px] font-bold leading-tight tracking-[-0.01em]">
-              <CircleCheck
-                size={26}
-                strokeWidth={2.4}
-                className="text-ring"
-                aria-hidden
-              />
-              任务
-            </h1>
-            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 pl-[36px] text-[14px] text-muted-foreground">
+        <PageHeader
+          icon={CircleCheck}
+          tint="text-ring"
+          title="任务"
+          subtitle={
+            <>
               <span>{format(todayDate, "M月d日 EEEE", { locale: zhCN })}</span>
               {totals.overdue ? (
                 <button
@@ -195,9 +190,9 @@ export function Board({ onEdit }: Props) {
                   {totals.dueToday} 项今天到期
                 </button>
               ) : null}
-            </p>
-          </div>
-        </header>
+            </>
+          }
+        />
 
         {activeProjects.length ? (
           <>
@@ -217,9 +212,9 @@ export function Board({ onEdit }: Props) {
                     aria-pressed={range === value}
                     onClick={() => setRange(value)}
                     className={cn(
-                      "rounded-[5px] px-3 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "rounded-[5px] px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       range === value
-                        ? "bg-input font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,.3)]"
+                        ? "bg-input font-medium text-foreground"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >
@@ -239,13 +234,13 @@ export function Board({ onEdit }: Props) {
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="搜索"
                     aria-label="搜索任务或项目"
-                    className="h-8 w-28 min-w-0 max-sm:w-20 rounded-md bg-transparent pl-8 pr-2 text-[13px] outline-none transition-[width,background-color] duration-200 placeholder:text-faint hover:bg-hover focus:w-48 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring max-sm:focus:w-36"
+                    className="h-8 w-28 min-w-0 max-sm:w-20 rounded-md bg-transparent pl-8 pr-2 text-sm outline-none transition-[width,background-color] duration-200 placeholder:text-faint hover:bg-hover focus:w-48 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring max-sm:focus:w-36"
                   />
                 </label>
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     className={cn(
-                      "inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover",
+                      "inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover",
                       filterCount
                         ? "text-accent-foreground"
                         : "text-muted-foreground hover:text-foreground",
@@ -363,15 +358,15 @@ export function Board({ onEdit }: Props) {
                       )}
                       aria-label={`${meta.label}（${items.length} 项）`}
                     >
-                      <div className="group/head flex h-10 items-center gap-2 border-b border-border px-2">
+                      <div className="group/head flex h-10 items-center gap-2 border-b-[0.5px] border-border px-2">
                         <span
                           aria-hidden
                           className={cn("size-2.5 rounded-full", meta.dot)}
                         />
-                        <h2 className={cn("text-[15px] font-semibold", meta.text)}>
+                        <h2 className={cn("text-base font-semibold", meta.text)}>
                           {meta.label}
                         </h2>
-                        <span className="text-[13px] tabular-nums text-faint">
+                        <span className="text-sm tabular-nums text-faint">
                           {items.length}
                         </span>
                         <button
@@ -445,7 +440,7 @@ export function Board({ onEdit }: Props) {
             )}
           </>
         ) : (
-          <p className="mt-10 text-[13px] text-muted-foreground">
+          <p className="mt-10 text-sm text-muted-foreground">
             任务属于项目。先在下方新建一个项目。
           </p>
         )}
@@ -498,7 +493,7 @@ function FilterChip({ label, onClear }: { label: string; onClear: () => void }) 
         type="button"
         onClick={onClear}
         aria-label={`移除筛选：${label}`}
-        className="inline-flex size-4 shrink-0 items-center justify-center rounded-full hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex size-4 shrink-0 items-center justify-center rounded-full hover:bg-selected focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <X size={11} strokeWidth={2.5} />
       </button>
@@ -522,14 +517,14 @@ function Empty({
   return (
     <div className="mt-12 flex flex-col items-center py-6 text-center">
       <CircleCheck size={40} strokeWidth={1.5} className="text-input" aria-hidden />
-      <p className="mt-4 text-[15px] font-medium">
+      <p className="mt-4 text-base font-medium">
         {filtered
           ? "没有符合筛选的任务"
           : recent
             ? "近 7 天没有任务"
             : "所有任务都完成了"}
       </p>
-      <p className="mt-1 text-[13px] text-muted-foreground">
+      <p className="mt-1 text-sm text-muted-foreground">
         {filtered
           ? "调整条件，或清除筛选。"
           : recent

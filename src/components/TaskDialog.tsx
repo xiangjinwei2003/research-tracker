@@ -120,7 +120,7 @@ function CreateTask({
         <Input
           autoFocus
           aria-label="任务标题"
-          className="h-9 text-[15px] font-medium"
+          className="h-9 text-base font-medium"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
@@ -188,7 +188,7 @@ function EditTask({
       <div className="space-y-4">
         <Input
           aria-label="任务标题"
-          className="h-9 text-[15px] font-medium"
+          className="h-9 text-base font-medium"
           value={todo.title}
           placeholder="未命名任务"
           onChange={(e) => patch({ title: e.target.value })}
@@ -205,7 +205,7 @@ function EditTask({
           onNotesChange={(n) => patch({ notes: n })}
         />
       </div>
-      <div className="mt-5 flex items-center justify-between gap-2 border-t border-border pt-4">
+      <div className="mt-5 flex items-center justify-between gap-2 border-t-[0.5px] border-border pt-4">
         <Button
           variant="danger"
           size="sm"

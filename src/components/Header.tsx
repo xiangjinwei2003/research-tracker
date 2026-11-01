@@ -164,7 +164,7 @@ export function Header({ tab, onTabChange, children }: Props) {
       <aside className="app-sidebar z-40 bg-sidebar">
         <div className="flex h-14 shrink-0 items-center gap-2.5 px-5 max-[68.74rem]:justify-center max-[68.74rem]:px-0">
           <img src="/logo-mark.svg" alt="" className="size-6 rounded-md" />
-          <span className="hidden truncate text-[13px] font-semibold text-secondary-foreground min-[68.75rem]:block">
+          <span className="hidden truncate text-sm font-semibold text-secondary-foreground min-[68.75rem]:block">
             Research Tracker
           </span>
         </div>
@@ -180,7 +180,7 @@ export function Header({ tab, onTabChange, children }: Props) {
               className={cn(
                 "flex h-8 w-full items-center justify-center gap-2.5 rounded-md px-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[68.75rem]:justify-start",
                 tab === id
-                  ? "bg-white/[.08] font-medium text-foreground"
+                  ? "bg-selected font-medium text-foreground"
                   : "text-secondary-foreground hover:bg-hover",
               )}
             >
@@ -235,7 +235,7 @@ export function Header({ tab, onTabChange, children }: Props) {
                   className={cn(
                     "flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md text-xs",
                     tab === id
-                      ? "bg-white/[.08] font-medium text-foreground"
+                      ? "bg-selected font-medium text-foreground"
                       : "text-muted-foreground",
                   )}
                 >

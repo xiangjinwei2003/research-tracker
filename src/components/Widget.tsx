@@ -31,13 +31,13 @@ export function Widget({
     <section
       aria-label={rest['aria-label'] ?? title}
       className={cn(
-        'flex min-w-0 flex-col rounded-[22px] bg-widget p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.045)] sm:p-5',
+        'flex min-w-0 flex-col rounded-[22px] bg-widget p-4 sm:p-5',
         className,
       )}
     >
       <header className="flex min-h-5 items-center gap-1.5">
         {Icon ? <Icon size={14} strokeWidth={2.4} className={tint} /> : null}
-        <h2 className={cn('text-[13px] font-semibold', tint)}>{title}</h2>
+        <h2 className={cn('text-sm font-semibold', tint)}>{title}</h2>
         {aside ? <div className="ml-auto flex items-center">{aside}</div> : null}
       </header>
       {children}
@@ -56,10 +56,10 @@ export function WidgetNumber({
   className?: string
 }) {
   return (
-    <p className={cn('num-rounded text-[34px] font-semibold leading-none tracking-[-0.02em]', className)}>
+    <p className={cn('num-rounded text-title font-semibold leading-none tracking-[-0.02em]', className)}>
       {value}
       {unit ? (
-        <span className="ml-1 text-[15px] font-medium tracking-normal text-muted-foreground">
+        <span className="ml-1 text-base font-medium tracking-normal text-muted-foreground">
           {unit}
         </span>
       ) : null}
