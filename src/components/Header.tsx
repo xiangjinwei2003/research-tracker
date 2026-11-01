@@ -162,13 +162,13 @@ export function Header({ tab, onTabChange, children }: Props) {
   return (
     <div className="app-shell">
       <aside className="app-sidebar z-40 bg-sidebar">
-        <div className="flex h-14 shrink-0 items-center gap-2.5 px-5 max-[68.74rem]:justify-center max-[68.74rem]:px-0">
+        <div className="flex h-12 shrink-0 items-center gap-2.5 px-5 max-[68.74rem]:justify-center max-[68.74rem]:px-0">
           <img src="/logo-mark.svg" alt="" className="size-6 rounded-md" />
           <span className="hidden truncate text-sm font-semibold text-secondary-foreground min-[68.75rem]:block">
             Research Tracker
           </span>
         </div>
-        <nav className="space-y-px px-3 pt-2" aria-label="主导航">
+        <nav className="space-y-px px-3 pt-4" aria-label="主导航">
           {TABS.map(({ id, label, icon: Icon, tint }) => (
             <button
               key={id}

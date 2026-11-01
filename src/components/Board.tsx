@@ -383,7 +383,7 @@ export function Board({ onEdit }: Props) {
                       )}
                       aria-label={`${meta.label}（${items.length} 项）`}
                     >
-                      <div className="group/head flex h-10 items-center gap-2 border-b-[0.5px] border-border px-2">
+                      <div className="group/head flex h-9 items-center gap-2 border-b-[0.5px] border-border px-2">
                         <span
                           aria-hidden
                           className={cn("size-2.5 rounded-full", meta.dot)}
@@ -404,7 +404,7 @@ export function Board({ onEdit }: Props) {
                         </button>
                       </div>
                       {items.length ? (
-                        <ul className="mt-1">
+                        <ul className="mt-0.5">
                           {items.map((item) => {
                             const key = `${item.project.id}:${item.todo.id}`;
                             return (

@@ -105,7 +105,7 @@ export function TaskRow({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       className={cn(
-        "group relative flex items-start gap-3 rounded-lg px-2 py-2 transition-[background-color,opacity] duration-150 hover:bg-hover has-[[data-state=open]]:bg-hover",
+        "group relative flex items-start gap-3 rounded-lg px-2 py-1.5 transition-[background-color,opacity] duration-150 hover:bg-hover has-[[data-state=open]]:bg-hover",
         dragging && "opacity-40",
         checking && "opacity-60",
       )}
@@ -119,18 +119,18 @@ export function TaskRow({
       <button
         type="button"
         onClick={onOpen}
-        className="min-w-0 flex-1 cursor-default rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-w-0 flex-1 cursor-default flex-col rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring @3xl/pane:flex-row @3xl/pane:items-baseline @3xl/pane:gap-4"
       >
         <span
           className={cn(
-            "block break-words text-base leading-6 text-foreground transition-colors",
+            "block min-w-0 break-words text-base leading-6 text-foreground transition-colors @3xl/pane:flex-1",
             checking && "text-muted-foreground line-through decoration-faint",
             !todo.title && "italic text-faint",
           )}
         >
           {title}
         </span>
-        <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-sm leading-5 text-muted-foreground">
+        <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-sm leading-5 text-muted-foreground @3xl/pane:mt-0 @3xl/pane:max-w-[55%] @3xl/pane:flex-nowrap @3xl/pane:justify-end">
           <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
             <span
               aria-hidden
@@ -171,7 +171,7 @@ export function TaskRow({
           ) : null}
         </span>
       </button>
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
+      <div className="-my-0.5 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
         <DropdownMenu>
           <DropdownMenuTrigger
             className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover data-[state=open]:text-foreground"
