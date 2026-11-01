@@ -194,7 +194,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
       {sessions.length === 0 ? (
         <div className="mt-12 flex flex-col items-center py-6 text-center">
           <p className="text-base font-medium">还没有专注记录</p>
-          <p className="mt-1 max-w-sm text-sm leading-6 text-muted-foreground">
+          <p className="mt-1 max-w-sm text-balance text-sm leading-6 text-muted-foreground">
             在任务行点计时图标开始一段专注，或从右上角开始不挂任务的专注。
           </p>
           <Button className="mt-5" onClick={onGoBoard}>

@@ -105,7 +105,7 @@ export function TaskRow({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       className={cn(
-        "group relative flex items-start gap-3 rounded-lg px-2 py-1.5 transition-[background-color,opacity] duration-150 hover:bg-hover has-[[data-state=open]]:bg-hover",
+        "group relative flex items-start gap-3 rounded-lg px-2 py-1.5 transition-[background-color,opacity] hover:bg-hover has-[[data-state=open]]:bg-hover",
         dragging && "opacity-40",
         checking && "opacity-60",
       )}
@@ -171,7 +171,7 @@ export function TaskRow({
           ) : null}
         </span>
       </button>
-      <div className="-my-0.5 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
+      <div className="-my-0.5 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
         <DropdownMenu>
           <DropdownMenuTrigger
             className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover data-[state=open]:text-foreground"

@@ -377,7 +377,7 @@ export function Board({ onEdit }: Props) {
                       }}
                       onDrop={(e) => handleDrop(group, e)}
                       className={cn(
-                        "rounded-xl transition-[background-color,box-shadow] duration-150",
+                        "rounded-xl transition-[background-color,box-shadow]",
                         overCol === group &&
                           "bg-accent/40 shadow-[0_0_0_0.5px_var(--ring)]",
                       )}

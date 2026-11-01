@@ -42,9 +42,7 @@ export function DateButton({
             ? 'text-destructive'
             : due?.tone === 'today'
               ? 'text-today'
-              : due
-                ? 'text-muted-foreground'
-                : 'text-muted-foreground',
+              : 'text-muted-foreground',
         )}
       >
         {due?.text ?? '设置日期'}

@@ -24,7 +24,7 @@ export function Checkbox({
         onChange()
       }}
       className={cn(
-        'relative inline-flex size-4 shrink-0 after:absolute after:-inset-1.5 after:content-[""] items-center justify-center rounded-[4px] border-[1.5px] transition-[background-color,border-color,transform] duration-150 ease-out active:scale-90',
+        'relative inline-flex size-4 shrink-0 after:absolute after:-inset-1.5 after:content-[""] items-center justify-center rounded-[4px] border-[1.5px] transition-[background-color,border-color,transform] ease-out active:scale-90',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         checked
           ? 'border-primary bg-primary text-primary-foreground'

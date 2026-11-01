@@ -162,7 +162,7 @@ export function Dashboard({
               size={14}
               strokeWidth={2.4}
               className={cn(
-                'text-muted-foreground transition-transform duration-200',
+                'text-muted-foreground transition-transform',
                 !collapsed && 'rotate-90',
               )}
             />

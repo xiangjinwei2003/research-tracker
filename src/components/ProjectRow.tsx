@@ -147,7 +147,7 @@ export const ProjectRow = memo(function ProjectRow({
           size={14}
           strokeWidth={2.4}
           className={cn(
-            "transition-transform duration-200",
+            "transition-transform",
             open && "rotate-90",
           )}
         />

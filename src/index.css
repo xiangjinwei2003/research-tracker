@@ -15,6 +15,10 @@
     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
+  /* 动效：过渡与浮层出现统一为 250ms ease-out */
+  --default-transition-duration: 250ms;
+  --default-transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+
   /* 字号只有四档：辅助 12、正文次要 13、正文 15、页面标题 28。 */
   --text-xs: 12px;
   --text-xs--line-height: 16px;
@@ -270,6 +274,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .review-split {
     grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
   }
+}
+
+/* 浮层（菜单、对话框、提示）只淡入淡出，不缩放不位移 */
+[data-state="open"],
+[data-state="closed"] {
+  --tw-animation-duration: 250ms;
+  --tw-ease: cubic-bezier(0, 0, 0.2, 1);
 }
 
 /* prefers-reduced-motion：全部动效瞬时化 */

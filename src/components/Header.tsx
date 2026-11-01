@@ -116,7 +116,7 @@ export function Header({ tab, onTabChange, children }: Props) {
         action: { label: "撤销", onClick: () => undo(token) },
       });
     } catch (error) {
-      alert(`导入失败：${(error as Error).message}`);
+      toast({ message: `导入失败：${(error as Error).message}` });
     }
   };
   const onClear = () => {
@@ -130,7 +130,7 @@ export function Header({ tab, onTabChange, children }: Props) {
       toast({ message: "当前没有任何数据" });
       return;
     }
-    if (confirm("确认清空全部数据？可在通知里点击撤销。")) {
+    if (confirm("确认清空全部数据？")) {
       const token = clearAll();
       toast({
         message: "已清空全部数据",
