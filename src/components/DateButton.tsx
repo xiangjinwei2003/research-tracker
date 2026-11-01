@@ -44,7 +44,7 @@ export function DateButton({
               ? 'text-today'
               : due
                 ? 'text-muted-foreground'
-                : 'text-faint',
+                : 'text-muted-foreground',
         )}
       >
         {due?.text ?? '设置日期'}

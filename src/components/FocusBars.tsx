@@ -76,7 +76,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
               className={cn(
                 'h-3 whitespace-nowrap text-xs leading-none tabular-nums transition-colors max-sm:invisible',
                 isWeek && d.minutes > 0 ? '' : 'opacity-0',
-                selected ? 'font-medium text-foreground/90' : 'text-faint',
+                selected ? 'font-medium text-foreground/90' : 'text-muted-foreground',
               )}
             >
               {isWeek && d.minutes > 0 ? fmtMinutes(d.minutes) : ''}
@@ -108,7 +108,7 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
                   ? 'text-accent-foreground font-semibold'
                   : isToday
                     ? 'text-muted-foreground'
-                    : 'text-faint',
+                    : 'text-muted-foreground',
               )}
             >
               {label}

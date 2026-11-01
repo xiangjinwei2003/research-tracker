@@ -52,7 +52,7 @@ export function ProjectShareCard({
                   cy={64}
                   r={R}
                   fill="none"
-                  stroke={s.color || 'var(--faint)'}
+                  stroke={s.color || 'var(--muted-foreground)'}
                   strokeWidth={12}
                   strokeLinecap={segments.length > 1 ? 'butt' : 'round'}
                   strokeDasharray={`${Math.max(0, C * s.frac - gap)} ${C}`}
@@ -67,7 +67,7 @@ export function ProjectShareCard({
                   {total.unit}
                 </span>
               </span>
-              <span className="mt-1 text-xs text-faint">{centerLabel}</span>
+              <span className="mt-1 text-xs text-muted-foreground">{centerLabel}</span>
             </div>
           </div>
           <ul className="min-w-0 flex-1 space-y-2">
@@ -76,11 +76,11 @@ export function ProjectShareCard({
                 <span
                   aria-hidden
                   className="size-2.5 shrink-0 rounded-full"
-                  style={{ background: s.color || 'var(--faint)' }}
+                  style={{ background: s.color || 'var(--muted-foreground)' }}
                 />
                 <span className="min-w-0 flex-1 truncate text-secondary-foreground">{s.name}</span>
                 <span className="shrink-0 mono text-muted-foreground">{fmtMinutes(s.minutes)}</span>
-                <span className="w-9 shrink-0 text-right mono text-faint">
+                <span className="w-9 shrink-0 text-right mono text-muted-foreground">
                   {Math.round(s.frac * 100)}%
                 </span>
               </li>
@@ -88,7 +88,7 @@ export function ProjectShareCard({
           </ul>
         </div>
       ) : (
-        <p className="mt-3 text-sm text-faint">该时段没有专注记录</p>
+        <p className="mt-3 text-sm text-muted-foreground">该时段没有专注记录</p>
       )}
     </Widget>
   )
@@ -112,7 +112,7 @@ export function HeatmapCard({
             {WEEKDAY_CN.map((w, i) => (
               <span
                 key={w}
-                className="flex h-3 w-4 items-center text-xs leading-none text-faint"
+                className="flex h-3 w-4 items-center text-xs leading-none text-muted-foreground"
               >
                 {i % 2 === 0 ? w : ''}
               </span>
@@ -120,7 +120,7 @@ export function HeatmapCard({
           </div>
           {heat.map((week, wi) => (
             <div key={wi} className="flex flex-col gap-1">
-              <span className="h-3.5 overflow-visible whitespace-nowrap text-xs leading-none text-faint">
+              <span className="h-3.5 overflow-visible whitespace-nowrap text-xs leading-none text-muted-foreground">
                 {week.monthLabel}
               </span>
               {week.days.map((d) => (

@@ -58,7 +58,6 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-faint: var(--faint);
   --color-warn: var(--warn);
   --color-success: var(--success);
   --color-panel: var(--panel);
@@ -95,7 +94,6 @@
   --popover-foreground: var(--foreground);
   --secondary-foreground: #edeef0;
   --muted-foreground: #b0b4ba;
-  --faint: #b0b4ba;
   /* 强调：indigo */
   --primary: #3e63dd;
   --primary-hover: #5472e4;

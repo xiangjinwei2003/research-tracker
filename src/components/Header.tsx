@@ -22,7 +22,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/DropdownMenu";
@@ -38,7 +37,7 @@ const TABS = [
   { id: "dashboard", label: "任务", icon: CircleCheck, tint: "text-ring" },
   { id: "timeline", label: "日历", icon: CalendarDays, tint: "text-purple-11" },
   { id: "review", label: "专注回顾", icon: Timer, tint: "text-success" },
-  { id: "archived", label: "归档", icon: Archive, tint: "text-faint" },
+  { id: "archived", label: "归档", icon: Archive, tint: "text-muted-foreground" },
 ] satisfies { id: Tab; label: string; icon: typeof Archive; tint: string }[];
 const MEMO_KEY = "research-tracker.memo";
 const readMemo = () => {
@@ -142,7 +141,6 @@ export function Header({ tab, onTabChange, children }: Props) {
 
   const dataMenu = (
     <DropdownMenuContent align="start">
-      <DropdownMenuLabel>数据只保存在此浏览器</DropdownMenuLabel>
       <DropdownMenuItem onSelect={onExport}>
         <Download />
         导出 JSON 备份
@@ -200,7 +198,7 @@ export function Header({ tab, onTabChange, children }: Props) {
             placeholder="便签"
             aria-label="便签"
             rows={2}
-            className="mb-2 hidden w-full resize-none rounded-md bg-transparent px-2.5 py-1.5 text-xs leading-5 text-muted-foreground outline-none transition-colors placeholder:text-faint hover:bg-hover focus:bg-hover focus:text-foreground min-[68.75rem]:block"
+            className="mb-2 hidden w-full resize-none rounded-md bg-transparent px-2.5 py-1.5 text-xs leading-5 text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground hover:bg-hover focus:bg-hover focus:text-foreground min-[68.75rem]:block"
           />
           <div className="flex items-center gap-1 max-[68.74rem]:justify-center">
             <DropdownMenu>

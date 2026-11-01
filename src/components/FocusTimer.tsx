@@ -136,7 +136,7 @@ export function FocusTimer() {
       title={remindOn ? '结束提醒：响铃与系统通知' : '结束提醒已关闭'}
       className="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      {remindOn ? <Bell size={14} /> : <BellOff size={14} className="text-faint" />}
+      {remindOn ? <Bell size={14} /> : <BellOff size={14} className="text-muted-foreground" />}
     </button>
   )
 
@@ -268,7 +268,7 @@ export function FocusTimer() {
           onClick={onCancel}
           title="取消（不记录）"
           aria-label="取消（不记录）"
-          className="inline-flex size-7 items-center justify-center rounded-full text-faint transition-colors hover:bg-hover hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-hover hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X size={14} />
         </button>

@@ -28,7 +28,7 @@ export function Checkbox({
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         checked
           ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-faint/80 text-transparent hover:border-ring',
+          : 'border-muted-foreground/80 text-transparent hover:border-ring',
         className,
       )}
     >

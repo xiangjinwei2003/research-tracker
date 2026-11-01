@@ -128,9 +128,9 @@ export function Dashboard({
       <main className="mx-auto w-full max-w-[66rem] px-4 pb-24 pt-2 sm:px-6 lg:pt-4">
         <PageHeader
           icon={Archive}
-          tint="text-faint"
+          tint="text-muted-foreground"
           title="归档"
-          subtitle={visible.length ? `${visible.length} 个项目` : '已完成或搁置的项目会放在这里'}
+          subtitle={visible.length ? `${visible.length} 个项目` : undefined}
         />
         {visible.length ? (
           <ul className="mt-8 border-t-[0.5px] border-border pt-2">
@@ -139,7 +139,7 @@ export function Dashboard({
             ))}
           </ul>
         ) : (
-          <p className="mt-8 max-w-sm pl-9 text-sm leading-6 text-faint">
+          <p className="mt-8 max-w-sm pl-9 text-sm leading-6 text-muted-foreground">
             在项目详情里选择归档，项目就会从任务列表移到这里，数据保留。
           </p>
         )}
@@ -162,7 +162,7 @@ export function Dashboard({
               size={14}
               strokeWidth={2.4}
               className={cn(
-                'text-faint transition-transform duration-200',
+                'text-muted-foreground transition-transform duration-200',
                 !collapsed && 'rotate-90',
               )}
             />
@@ -171,7 +171,7 @@ export function Dashboard({
         ) : (
           <h2 className="text-base font-semibold">项目</h2>
         )}
-        <span className="text-sm tabular-nums text-faint">{visible.length}</span>
+        <span className="text-sm tabular-nums text-muted-foreground">{visible.length}</span>
         <button
           type="button"
           onClick={openAdd}
@@ -207,7 +207,7 @@ export function Dashboard({
             onBlur={commitProject}
             placeholder="项目名称，回车创建，Esc 取消"
             aria-label="新项目名称"
-            className="h-9 min-w-0 flex-1 rounded-md bg-muted px-2.5 text-base outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-9 min-w-0 flex-1 rounded-md bg-muted px-2.5 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
       ) : null}

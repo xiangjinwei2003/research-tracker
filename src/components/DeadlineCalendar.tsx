@@ -237,8 +237,8 @@ export function DeadlineCalendar({ onEdit }: Props) {
             <div
               key={w}
               className={cn(
-                'px-2 pb-2 text-right text-xs text-faint',
-                (i === 0 || i === 6) && 'text-faint',
+                'px-2 pb-2 text-right text-xs text-muted-foreground',
+                (i === 0 || i === 6) && 'text-muted-foreground',
               )}
             >
               周{w}
@@ -295,9 +295,9 @@ export function DeadlineCalendar({ onEdit }: Props) {
                       className={cn(
                         'inline-flex h-6 items-center whitespace-nowrap px-1.5 text-sm tabular-nums',
                         !inMonth
-                          ? 'text-faint'
+                          ? 'text-muted-foreground'
                           : isPast
-                            ? 'text-faint'
+                            ? 'text-muted-foreground'
                             : 'text-secondary-foreground',
                       )}
                     >
@@ -356,7 +356,7 @@ function DayWithDot(props: ComponentProps<typeof CalendarDayButton>) {
       {m.hasTodo ? (
         <span
           aria-hidden
-          className="pointer-events-none absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-faint"
+          className="pointer-events-none absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-muted-foreground"
         />
       ) : null}
     </span>

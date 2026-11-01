@@ -247,7 +247,7 @@ export function Board({ onEdit }: Props) {
                 <label className="group relative flex h-8 min-w-0 items-center">
                   <Search
                     size={15}
-                    className="pointer-events-none absolute left-2.5 text-faint"
+                    className="pointer-events-none absolute left-2.5 text-muted-foreground"
                     aria-hidden
                   />
                   <input
@@ -257,7 +257,7 @@ export function Board({ onEdit }: Props) {
                     placeholder="搜索"
                     aria-label="搜索任务或项目"
                     aria-keyshortcuts="/"
-                    className="h-8 w-28 min-w-0 max-sm:w-20 rounded-md bg-transparent pl-8 pr-2 text-sm outline-none transition-[width,background-color] duration-200 placeholder:text-faint hover:bg-hover focus:w-48 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring max-sm:focus:w-36"
+                    className="h-8 w-40 min-w-0 rounded-md bg-transparent pl-8 pr-2 text-sm outline-none transition-colors placeholder:text-muted-foreground hover:bg-hover focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring max-sm:w-24"
                   />
                 </label>
                 <DropdownMenu>
@@ -391,11 +391,11 @@ export function Board({ onEdit }: Props) {
                         <h2 className="text-base font-semibold">
                           {meta.label}
                         </h2>
-                        <span className="text-sm tabular-nums text-faint">
+                        <span className="text-sm tabular-nums text-muted-foreground">
                           {items.length}
                         </span>
                         <button
-                          className="ml-auto flex size-7 items-center justify-center rounded-md text-faint opacity-0 transition-opacity hover:bg-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/head:opacity-100 [@media(hover:none)]:opacity-100"
+                          className="ml-auto flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-hover hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/head:opacity-100 [@media(hover:none)]:opacity-100"
                           onClick={() => openTaskDialog(group)}
                           aria-label={`新建${meta.label}任务`}
                           title={`新建${meta.label}任务`}
@@ -444,7 +444,7 @@ export function Board({ onEdit }: Props) {
                           })}
                         </ul>
                       ) : (
-                        <p className="px-2 py-3 text-xs text-faint">
+                        <p className="px-2 py-3 text-xs text-muted-foreground">
                           {group === "pending"
                             ? "拖到这里放回待分配"
                             : `拖到这里设为${meta.label}`}
@@ -541,8 +541,7 @@ function Empty({
 }) {
   return (
     <div className="mt-12 flex flex-col items-center py-6 text-center">
-      <CircleCheck size={40} strokeWidth={1.5} className="text-input" aria-hidden />
-      <p className="mt-4 text-base font-medium">
+      <p className="text-base font-medium">
         {filtered
           ? "没有符合筛选的任务"
           : recent

@@ -141,7 +141,7 @@ export const ProjectRow = memo(function ProjectRow({
         aria-expanded={open}
         aria-label={open ? `收起「${title}」的任务` : `展开「${title}」的任务`}
         disabled={dimmed}
-        className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:invisible"
+        className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:invisible"
       >
         <ChevronRight
           size={14}
@@ -176,7 +176,7 @@ export const ProjectRow = memo(function ProjectRow({
       </button>
       {remaining > 0 ? (
         <span
-          className="shrink-0 text-xs tabular-nums text-faint"
+          className="shrink-0 text-xs tabular-nums text-muted-foreground"
           title="未完成任务"
         >
           {remaining}
@@ -259,7 +259,7 @@ export const ProjectRow = memo(function ProjectRow({
                     />
                     <span className="min-w-0 flex-1 truncate text-secondary-foreground">
                       {todo.title || (
-                        <span className="italic text-faint">未命名</span>
+                        <span className="italic text-muted-foreground">未命名</span>
                       )}
                     </span>
                     <DateButton
@@ -274,7 +274,7 @@ export const ProjectRow = memo(function ProjectRow({
               })}
             </ul>
           ) : (
-            <p className="px-1.5 py-1 text-sm text-faint">
+            <p className="px-1.5 py-1 text-sm text-muted-foreground">
               {total ? "所有任务已完成" : "还没有任务"}
             </p>
           )}
@@ -300,13 +300,13 @@ export const ProjectRow = memo(function ProjectRow({
                 }}
                 placeholder="任务标题，回车添加，Esc 结束"
                 aria-label={`为「${title}」添加任务`}
-                className="h-8 w-full rounded-md bg-muted px-2 text-sm outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-8 w-full rounded-md bg-muted px-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               />
             ) : (
               <button
                 type="button"
                 onClick={openAdd}
-                className="inline-flex h-8 items-center gap-2 rounded-md px-1.5 text-sm text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex h-8 items-center gap-2 rounded-md px-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Plus size={14} /> 添加任务
               </button>

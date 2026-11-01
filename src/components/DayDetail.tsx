@@ -48,10 +48,10 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
                 key={r.session.id}
                 className="group flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-xl px-2 py-1.5 text-sm hover:bg-hover"
               >
-                <span className="w-24 shrink-0 mono text-sm text-faint">
+                <span className="w-24 shrink-0 mono text-sm text-muted-foreground">
                   {fmtHM(r.session.startedAt)}–{fmtHM(r.session.endedAt)}
                 </span>
-                <span className="w-24 shrink-0 whitespace-nowrap mono text-sm text-faint">
+                <span className="w-24 shrink-0 whitespace-nowrap mono text-sm text-muted-foreground">
                   {fmtMinutes(r.minutes)}
                   {r.session.completed ? '' : ' 提前结束'}
                 </span>
@@ -59,11 +59,11 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
                   <span
                     aria-hidden
                     className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full align-middle"
-                    style={{ background: r.color || 'var(--faint)' }}
+                    style={{ background: r.color || 'var(--muted-foreground)' }}
                   />
                   {r.label}
                   {r.session.todoTitle && r.projectTitle !== '自由专注' ? (
-                    <span className="ml-2 text-faint">{r.projectTitle}</span>
+                    <span className="ml-2 text-muted-foreground">{r.projectTitle}</span>
                   ) : null}
                 </span>
                 <button
@@ -84,7 +84,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
             ))}
           </ul>
       ) : (
-        <p className="mt-3 text-sm text-faint">这一天没有专注记录。</p>
+        <p className="mt-3 text-sm text-muted-foreground">这一天没有专注记录。</p>
       )}
     </Widget>
   )

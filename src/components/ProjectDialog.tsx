@@ -141,7 +141,7 @@ export function ProjectDialog({ projectId, onClose }: Props) {
                 style={
                   on
                     ? { backgroundColor: meta.bg, color: meta.text }
-                    : { color: 'var(--faint)', boxShadow: 'inset 0 0 0 0.5px var(--input)' }
+                    : { color: 'var(--muted-foreground)', boxShadow: 'inset 0 0 0 0.5px var(--input)' }
                 }
               >
                 {meta.label}
@@ -153,7 +153,7 @@ export function ProjectDialog({ projectId, onClose }: Props) {
         <div>
           <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-2">
             <h3 className="text-sm font-semibold text-foreground">任务</h3>
-            <span className="text-xs tabular-nums text-faint">{activeTodoCount} 项未完成</span>
+            <span className="text-xs tabular-nums text-muted-foreground">{activeTodoCount} 项未完成</span>
           </div>
           <QuickAddTodo onAdd={(title) => addTodo(project.id, { title })} />
           <TodoList
@@ -365,7 +365,7 @@ function TodoList({
 
   if (todos.length === 0) {
     return (
-      <p className="mt-2 text-xs text-faint">还没有任务，输入内容回车即可添加。</p>
+      <p className="mt-2 text-xs text-muted-foreground">还没有任务，输入内容回车即可添加。</p>
     )
   }
 
@@ -389,7 +389,7 @@ function TodoList({
     <div className="mt-2 space-y-1.5">
       {active.map(renderRow)}
       {active.length === 0 ? (
-        <p className="px-1 py-1.5 text-xs text-faint">没有未完成的任务。</p>
+        <p className="px-1 py-1.5 text-xs text-muted-foreground">没有未完成的任务。</p>
       ) : null}
       {done.length > 0 ? (
         <div className="pt-0.5">
@@ -397,7 +397,7 @@ function TodoList({
             type="button"
             onClick={() => setDoneOpen((v) => !v)}
             aria-expanded={doneOpen}
-            className="group flex items-center gap-1 rounded-md px-1 py-1 text-xs text-faint transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="group flex items-center gap-1 rounded-md px-1 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ChevronRight
               size={13}
@@ -454,7 +454,7 @@ const TodoRow = memo(function TodoRow({
           type="button"
           draggable
           onDragStart={(e) => onDragStart(e, id)}
-          className="inline-flex size-6 shrink-0 cursor-grab items-center justify-center text-faint opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
+          className="inline-flex size-6 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100"
           aria-label="拖拽以重排"
           title="拖拽以重排"
         >

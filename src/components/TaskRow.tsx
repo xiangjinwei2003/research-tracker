@@ -124,8 +124,8 @@ export function TaskRow({
         <span
           className={cn(
             "block min-w-0 break-words text-base leading-6 text-foreground transition-colors @3xl/pane:flex-1",
-            checking && "text-muted-foreground line-through decoration-faint",
-            !todo.title && "italic text-faint",
+            checking && "text-muted-foreground line-through decoration-muted-foreground",
+            !todo.title && "italic text-muted-foreground",
           )}
         >
           {title}
@@ -153,7 +153,7 @@ export function TaskRow({
           ) : null}
           {pinnedExtra ? (
             <span
-              className="inline-flex shrink-0 items-center text-faint"
+              className="inline-flex shrink-0 items-center text-muted-foreground"
               title="手动加入近期重点"
               aria-label="手动加入近期重点"
             >
@@ -162,7 +162,7 @@ export function TaskRow({
           ) : null}
           {notes ? (
             <span
-              className="inline-flex min-w-0 max-w-[24rem] items-center gap-1 text-faint"
+              className="inline-flex min-w-0 max-w-[24rem] items-center gap-1 text-muted-foreground"
               title={notes}
             >
               <StickyNote size={11} className="shrink-0" />
@@ -181,7 +181,6 @@ export function TaskRow({
             <Timer size={15} />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuLabel>专注这项任务</DropdownMenuLabel>
             <DropdownMenuItem onSelect={() => focus(30)}>
               <Timer /> 30 分钟
             </DropdownMenuItem>
