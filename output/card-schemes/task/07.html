@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>任务方案 7</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #151517;
+    color: #f2f2f4;
+    font: 14px/1.45 ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  main { max-width: 920px; margin: 0 auto; padding: 28px 20px 64px; }
+  .kicker { margin: 0; color: #89898d; font-size: 11px; letter-spacing: 0.12em; }
+  .scheme { margin: 8px 0 0; font-size: 22px; font-weight: 650; }
+  .interaction { margin: 8px 0 18px; color: #aaaab3; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .card {
+    width: min(420px, 100%);
+    padding: 14px;
+    border: 1px solid #323236;
+    border-radius: 12px;
+    background: #222225;
+  }
+  .name, .project {
+    display: inline-block;
+    max-width: 100%;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #6f8cff;
+    color: #16161a;
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .stage, .venue {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 8px;
+    border: 1px solid #323236;
+    border-radius: 999px;
+    color: #aaaab3;
+    font-size: 11px;
+  }
+  .deadline, .due { color: #efa768; }
+  .todo-due { color: #ef8396; }
+  .track { display: block; height: 6px; overflow: hidden; border-radius: 999px; background: #29292e; }
+  .fill { display: block; width: 25%; height: 100%; background: #6f8cff; }
+  .check, .add, .open, .complete, .focus {
+    border: 1px solid #3a3a40;
+    border-radius: 8px;
+    background: #29292e;
+  }
+  h2 { margin: 0; font-size: 16px; font-weight: 650; }
+  p { margin: 0; }
+</style>
+<style id="card-treatment">
+.card { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 8px; }
+.title { grid-column: 1; grid-row: 1; width: 100%; font-size: 20px; padding-right: 112px; }
+.project { grid-column: 1; grid-row: 1; justify-self: end; align-self: start; width: fit-content; max-width: 46%; font-size: 11px; }
+.due, .pin, .minutes, .people { font-size: 12px; }
+.complete, .focus { justify-self: start; min-height: 32px; padding: 0 10px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">矩形卡片</p>
+  <h1 class="scheme">任务方案 7</h1>
+  <p class="interaction">项目缩成色片角标，标题占满第一行。</p>
+  <!-- facts-start -->
+<article class="card" data-sample-card>
+  <span class="project">注意力机制综述</span>
+  <h2 class="title">补全第三周的文献矩阵</h2>
+  <p class="notes">只保留有全文的条目</p>
+  <span class="due">逾期 · 9月30日</span>
+  <span class="pin">手动加入</span>
+  <span class="people">林可</span>
+  <span class="minutes">45 分钟</span>
+  <button type="button" class="complete">完成</button>
+  <button type="button" class="focus">专注</button>
+</article>
+  <!-- facts-end -->
+</main>
+</body>
+</html>

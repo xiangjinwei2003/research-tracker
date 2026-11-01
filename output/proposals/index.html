@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>首页顶部的 10 个提案</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #101012;
+    --card: #1c1c20;
+    --ink: #f4f4f5;
+    --muted: #a3a3ab;
+    --faint: #8a8a94;
+    --line: rgba(255, 255, 255, 0.07);
+    --gold: #e0a24a;
+    --gold-dim: #4c4c54;
+    --plan: #8d96f5;
+    --up: #3dcc84;
+    --down: #ff5d6c;
+    --grid: #34343c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .intro, .shot { width: 1160px; margin: 0 auto; }
+  .intro { padding: 32px 28px 12px; }
+  .intro h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+  .intro p { margin: 10px 0 0; max-width: 68ch; color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .shot { padding: 26px 28px 28px; }
+  .cap h2 { display: inline; margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .idx { margin-right: 8px; color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .cap p { margin: 6px 0 0; max-width: 76ch; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .mock { margin-top: 14px; }
+  .mock-head, .card-h, .keyline, .delta, .numline, .axis, .stats {
+    display: flex; align-items: center;
+  }
+  .mock-head { justify-content: space-between; margin-bottom: 12px; }
+  .mock-head strong { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+  .keyline { gap: 12px; margin-left: auto; color: #c4c4ca; font-size: 12px; font-weight: 500; }
+  .keyline span { display: inline-flex; align-items: center; gap: 5px; }
+  .keyline i {
+    width: 8px; height: 8px; border-radius: 2px; display: block;
+  }
+  .keyline i.ln { width: 14px; height: 2px; border-radius: 1px; background: var(--ink); }
+  .grid-ref {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.92fr) minmax(0, 1.25fr);
+    grid-template-rows: minmax(148px, 1fr) minmax(148px, 1fr);
+    gap: 10px;
+  }
+  .status { grid-column: 1; grid-row: 1 / span 2; }
+  .focus { grid-column: 2; grid-row: 1; }
+  .done { grid-column: 2; grid-row: 2; }
+  .burn { grid-column: 3; grid-row: 1 / span 2; }
+  .status, .burn, .focus, .done { display: flex; flex-direction: column; }
+  .focus .metric, .done .metric { margin-top: auto; margin-bottom: auto; }
+  .card {
+    background: var(--card);
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px var(--line);
+    padding: 14px 16px 12px;
+    min-width: 0;
+  }
+  .span2 { grid-row: span 2; display: flex; flex-direction: column; }
+  .card-h { gap: 8px; font-size: 13.5px; font-weight: 600; }
+  .card-h svg { color: var(--faint); display: block; }
+  .grow { margin-top: auto; }
+  .stats { gap: 28px; margin: 16px 0 0; }
+  .stats b, .numline b, .pri-col b, .rail b {
+    font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+  }
+  .stats b { display: block; font-size: 32px; line-height: 1; }
+  .stats span, .pri-col span {
+    display: block; margin-top: 6px; color: var(--muted); font-size: 12px;
+  }
+  .numline { align-items: baseline; gap: 6px; }
+  .numline b { font-size: 32px; line-height: 1; }
+  .numline em { font-style: normal; color: var(--muted); font-size: 12px; }
+  .metric {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 16px;
+    row-gap: 6px;
+    align-items: center;
+    margin-top: 16px;
+  }
+  .metric .viz { grid-column: 2; grid-row: 1 / span 2; }
+  .delta { gap: 4px; font-size: 12px; }
+  .delta b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .delta.up { color: var(--up); }
+  .delta.down { color: var(--down); }
+  .delta .win { color: var(--faint); font-weight: 400; }
+  .axis { justify-content: space-between; margin-top: 6px; color: var(--faint); font-size: 11px; }
+  .stripe { display: flex; height: 44px; gap: 2px; border-radius: 4px; overflow: hidden; background: #141418; }
+  .day { flex: 1; display: flex; gap: 0; min-width: 0; }
+  .day i { flex: 1; display: block; }
+  .day.dim i { background: #2a2a30; }
+  svg.chart { display: block; width: 100%; height: auto; }
+  .weight { display: flex; height: 88px; gap: 3px; }
+  .seg {
+    display: flex; flex-direction: column; justify-content: space-between;
+    min-width: 0; padding: 8px 10px; border-radius: 4px;
+  }
+  .seg b { font-size: 22px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .seg em { font-style: normal; font-size: 12px; opacity: 0.88; }
+  .due7 {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;
+    margin-top: 16px; min-height: 36px; align-items: end;
+  }
+  .due-col { display: flex; flex-direction: column-reverse; gap: 3px; min-height: 28px; }
+  .due-col i { display: block; width: 100%; height: 10px; border-radius: 2px; }
+  .due-col i.none { background: #2a2a30; }
+  .five { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+  .mini-top { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+  .sw { width: 8px; height: 8px; border-radius: 2px; display: block; }
+  .mini-top span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mini-num { margin-top: 14px; font-size: 28px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .mini-num + .quiet { margin-top: 6px; }
+  .quiet { color: var(--muted); font-size: 12px; }
+  .mini-bars { margin-top: 16px; }
+  .pri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+  .pri-col { padding-right: 20px; }
+  .pri-col + .pri-col { padding-left: 20px; box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.08); }
+  .pri-col b { display: block; font-size: 32px; line-height: 1; }
+  .ticks { display: flex; flex-wrap: nowrap; gap: 4px; width: 100%; margin-top: 16px; }
+  .ticks i { flex: 1; width: auto; height: 8px; border-radius: 2px; display: block; min-width: 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rows { display: flex; flex-direction: column; gap: 12px; }
+  .row08, .row10 { display: grid; align-items: center; gap: 12px; }
+  .row08 { grid-template-columns: 8px 72px 28px minmax(0, 1fr) 52px; }
+  .row10 { grid-template-columns: 8px 72px 42px minmax(0, 1fr) 28px; }
+  .nm { font-size: 13px; font-weight: 600; }
+  .count { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); text-align: right; }
+  .days { font-variant-numeric: tabular-nums; font-size: 13px; text-align: right; }
+  .days em { font-style: normal; color: var(--faint); font-size: 11px; margin-left: 2px; }
+  .track { height: 8px; border-radius: 2px; background: #2a2a30; overflow: hidden; }
+  .track b { display: block; height: 100%; border-radius: 2px; }
+  .pipe { display: flex; gap: 3px; height: 8px; }
+  .pipe i { flex: 1; border-radius: 2px; display: block; }
+  .rail {
+    display: flex; align-items: center; gap: 18px;
+    min-height: 72px; padding: 12px 16px;
+  }
+  .rail .stats { margin: 0; gap: 16px; }
+  .rail .stats b { font-size: 22px; }
+  .rail .stats span { margin-top: 3px; }
+  .sep { width: 1px; align-self: stretch; margin: 8px 0; background: rgba(255, 255, 255, 0.08); }
+  .rail .bit { width: 168px; flex: none; }
+  .rail .bit.wide { width: 210px; }
+  .sqs { display: flex; gap: 6px; }
+  .sqs i { width: 18px; height: 18px; border-radius: 3px; display: block; }
+  .err { color: #ff8f98; white-space: pre-wrap; padding: 24px; }
+</style>
+</head>
+<body>
+  <header class="intro">
+    <h1>首页顶部的 10 个提案</h1>
+    <p>建议放四组现在就有的数：待办、近期、逾期；近 7 日到期，颜色用项目色；专注分钟和这 7 日完成数；按截止日期往下走的剩余任务。评论、提交、估点在当前数据里没有，不放。</p>
+    <p>项目颜色不再做卡片左侧竖条。名字旁用 8px 方块。图里按项目拆开的点、柱、线、色条用这个颜色。圆角 6px，底保持黑。卡片里不写说明句。</p>
+    <p>下面用同一组示例数，方便比较版式。数字不是你浏览器里的实时数据。</p>
+  </header>
+  <section class="shot" id="p01">
+    <div class="cap"><span class="idx">01</span><h2>参照版式</h2>
+      <p>构图贴近参考图。三个数是待办、近期、逾期。色条和散点用项目色。柱是每日完成。紫线是按截止日期的应剩，金线是实际未完成。</p>
+    </div>
+    <div class="mock"></div>
+  </section>
+  <section class="shot" id="p02">
+    <div class="cap"><span class="idx">02</span><h2>项目色带</h2>
+      <p>色块宽度等于该项目的未完成数。下面 7 列是这 7 天各项目到期的任务，一截一种项目色。</p>
+    </div>
+    <div class="mock"></div>
+  </section>
+  <section class="shot" id="p03">
+    <div class="cap"><span class="idx">03</span><h2>分项目</h2>
+      <p>一张卡一个项目。大数字是未完成数，柱是该项目近 7 日的专注分钟。</p>
+    </div>
+    <div class="mock"></div>
+  </section>
+  <section class="shot" id="p04">
+    <div class="cap"><span class="idx">04</span><h2>任务散点</h2>
+      <p>一个点是一条未完成任务。横轴从逾期到 7 日以后，纵轴是高、普通、低，颜色是项目。</p>
+    </div>
+    <div class="mock"></div>
+  </section>
+  <section class="shot" id="p05">
+    <div class="cap"><span class="idx">05</span><h2>分项目剩余</h2>
+      <p>一条阶梯线是一个项目的剩余任务。纵轴到这组里最多的未完成数。下落发生在该项目的逾期和截止日期。</p>
+    </div>
+    <div class="mock"></div>
+  </section>
+  <section class="shot" id="p06">
+    <div class="cap"><span class="idx">06</span><h2>专注与到期</h2>
+      <p>左图是近 14 日专注分钟，按项目堆叠。右图是剩余任务，在到期日用项目色往下掉。</p>
+    </div>
+    <div class="mock"></div>
+  </section>
+  <section class="shot" id="p07">
+    <div class="cap"><span class="idx">07</span><h2>优先级</h2>
+      <p>高、普通、低各一列。一笔是一条未完成任务，颜色是项目。</p>
+    </div>
+    <div class="mock"></div>
+  </section>
+  <section class="shot" id="p08">
+    <div class="cap"><span class="idx">08</span><h2>截稿距离</h2>
+      <p>横条长度是距截稿的天数，颜色是项目。右侧是天数，中间的数是未完成。</p>
+    </div>
+    <div class="mock"></div>
+  </section>
+  <section class="shot" id="p09">
+    <div class="cap"><span class="idx">09</span><h2>单行</h2>
+      <p>同一组数收成一条。方块是项目，接着是三个数、7 日色条、专注、剩余曲线。</p>
+    </div>
+    <div class="mock"></div>
+  </section>
+  <section class="shot" id="p10">
+    <div class="cap"><span class="idx">10</span><h2>阶段</h2>
+      <p>一行一个项目。方块是项目色。管道是阶段，当前阶段用阶段色，过去的阶段降低亮度。右侧是未完成数。</p>
+    </div>
+    <div class="mock"></div>
+  </section>
+<script>
+const P = {
+  a: { name: "协作注意", short: "协作", color: "oklch(0.72 0.15 264)", stage: 5, venue: 18 },
+  b: { name: "临床对话", short: "临床", color: "oklch(0.71 0.16 40)", stage: 4, venue: 41 },
+  c: { name: "可解释标注", short: "标注", color: "oklch(0.74 0.14 162)", stage: 3, venue: 70 },
+  d: { name: "评审负担", short: "评审", color: "oklch(0.69 0.16 328)", stage: 1, venue: 12 },
+  e: { name: "现场记录", short: "现场", color: "oklch(0.80 0.13 96)", stage: 0, venue: null },
+};
+const order = ["a", "b", "c", "d", "e"];
+const stages = [
+  ["文献", "oklch(0.78 0.10 250)"],
+  ["设计", "oklch(0.78 0.10 200)"],
+  ["IRB", "oklch(0.80 0.10 100)"],
+  ["数据", "oklch(0.78 0.10 150)"],
+  ["分析", "oklch(0.78 0.10 50)"],
+  ["写作", "oklch(0.78 0.10 320)"],
+  ["投稿", "oklch(0.78 0.10 0)"],
+  ["Rebuttal", "oklch(0.78 0.10 30)"],
+  ["完成", "oklch(0.70 0.05 250)"],
+];
+const tasks = [
+  { when: -1, p: "a", pri: "high" },
+  { when: -1, p: "a", pri: "normal" },
+  { when: -1, p: "b", pri: "normal" },
+  { when: -1, p: "c", pri: "normal" },
+  { when: -1, p: "d", pri: "high" },
+  { when: -1, p: "d", pri: "low" },
+  { when: -1, p: "e", pri: "low" },
+  { when: 0, p: "a", pri: "high" },
+  { when: 0, p: "d", pri: "normal" },
+  { when: 1, p: "b", pri: "normal" },
+  { when: 2, p: "a", pri: "high" },
+  { when: 2, p: "a", pri: "normal" },
+  { when: 2, p: "c", pri: "low" },
+  { when: 3, p: "d", pri: "normal" },
+  { when: 3, p: "d", pri: "low" },
+  { when: 4, p: "e", pri: "normal" },
+  { when: 4, p: "b", pri: "low" },
+  { when: 5, p: "a", pri: "normal" },
+  { when: 6, p: "d", pri: "high" },
+  { when: 6, p: "c", pri: "normal" },
+  { when: 6, p: "b", pri: "low" },
+  { when: 7, p: "a", pri: "low" },
+  { when: 7, p: "b", pri: "normal" },
+  { when: 7, p: "a", pri: "normal" },
+];
+const done = [1, 0, 3, 2, 1, 3, 1];
+const donePrev = 9;
+const focusSplit = {
+  a: [10, 15, 30, 0, 20, 40, 20],
+  b: [10, 20, 10, 20, 10, 30, 25],
+  c: [10, 10, 0, 0, 15, 10, 0],
+  d: [0, 0, 40, 0, 15, 20, 25],
+  e: [0, 0, 0, 0, 0, 10, 0],
+};
+const focusPrevSplit = {
+  a: [15, 10, 20, 0, 15, 25, 20],
+  b: [10, 5, 15, 10, 10, 20, 15],
+  c: [5, 10, 0, 5, 10, 5, 0],
+  d: [10, 0, 25, 0, 15, 15, 25],
+  e: [0, 0, 0, 0, 0, 5, 0],
+};
+const sessions = [
+  [0, 0.4, "a"], [0, 0.62, "b"], [0, 0.28, "c"],
+  [1, 0.45, "a"], [1, 0.7, "b"], [1, 0.33, "c"], [1, 0.55, "b"],
+  [2, 0.5, "a"], [2, 0.78, "d"], [2, 0.36, "a"], [2, 0.64, "b"], [2, 0.86, "d"],
+  [3, 0.42, "b"],
+  [4, 0.48, "a"], [4, 0.72, "d"], [4, 0.34, "c"], [4, 0.6, "a"],
+  [5, 0.55, "a"], [5, 0.82, "b"], [5, 0.4, "d"], [5, 0.7, "a"], [5, 0.9, "b"], [5, 0.62, "d"],
+  [6, 0.5, "a"], [6, 0.74, "d"], [6, 0.38, "e"], [6, 0.66, "b"],
+];
+const recent = 4;
+
+function assert(cond, msg) {
+  if (!cond) throw new Error(msg);
+}
+function sum(arr) { return arr.reduce((s, n) => s + n, 0); }
+function openOf(key) { return tasks.filter((t) => t.p === key).length; }
+function dayKeys(day) {
+  return tasks.filter((t) => (day === 0 ? t.when <= 0 : t.when === day)).map((t) => t.p);
+}
+function dueKeys(day) {
+  return tasks.filter((t) => t.when === day).map((t) => t.p);
+}
+function group(keys) {
+  const map = new Map();
+  for (const key of keys) map.set(key, (map.get(key) || 0) + 1);
+  return order.filter((key) => map.has(key)).map((key) => [key, map.get(key)]);
+}
+function planOf(key) {
+  let left = key ? openOf(key) : tasks.length;
+  const pts = [left];
+  for (let day = 0; day <= 6; day++) {
+    const keys = key ? dayKeys(day).filter((k) => k === key) : dayKeys(day);
+    left -= keys.length;
+    pts.push(left);
+  }
+  return pts;
+}
+function actualCurve() {
+  let left = tasks.length;
+  const pts = [left];
+  for (const n of done) {
+    left -= n;
+    pts.push(left);
+  }
+  return pts;
+}
+function inkFor() {
+  return "#16161a";
+}
+function icon(name) {
+  const paths = {
+    clip: '<rect x="7" y="4" width="10" height="16" rx="1.4"/><path d="M9 4.2h6V7H9z"/>',
+    clock: '<circle cx="12" cy="12" r="7"/><path d="M12 8.5V12l2.5 2"/>',
+    check: '<path d="M5 12.5 9.2 17 19 7"/>',
+    flag: '<path d="M6 20V4"/><path d="M6 4h10l-2.2 3.5L16 11H6"/>',
+  };
+  return `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
+}
+function keyline(extra) {
+  const items = order.map((key) => `<span><i style="background:${P[key].color}"></i>${P[key].short}</span>`).join("");
+  return `<div class="keyline">${items}${extra || ""}</div>`;
+}
+function delta(curr, prev) {
+  const r = Math.round(((curr - prev) / prev) * 100);
+  const up = r >= 0;
+  const tri = up
+    ? '<svg viewBox="0 0 10 10" width="9" height="9"><path d="M5 1.6 8.4 8H1.6Z" fill="currentColor"/></svg>'
+    : '<svg viewBox="0 0 10 10" width="9" height="9"><path d="M5 8.4 1.6 2h6.8Z" fill="currentColor"/></svg>';
+  return `<div class="delta ${up ? "up" : "down"}">${tri}<b>${Math.abs(r)}%</b><span class="win">7日</span></div>`;
+}
+function fibers(color, n) {
+  let html = "";
+  for (let i = 0; i < n; i++) {
+    const dark = i % 4 === 0;
+    const amount = dark ? 86 : 76 + (i % 3) * 6;
+    const other = dark ? "black" : "white";
+    html += `<i style="background:color-mix(in oklab, ${color} ${amount}%, ${other})"></i>`;
+  }
+  return html;
+}
+function stripe() {
+  const lines = 18;
+  let html = "";
+  for (let day = 0; day < 7; day++) {
+    const groups = group(dueKeys(day));
+    if (!groups.length) {
+      html += `<div class="day dim">${"<i></i>".repeat(lines)}</div>`;
+      continue;
+    }
+    const total = groups.reduce((s, g) => s + g[1], 0);
+    let used = 0;
+    const parts = groups.map(([key, n], idx) => {
+      const count = idx === groups.length - 1
+        ? Math.max(1, lines - used)
+        : Math.max(1, Math.round((n / total) * lines));
+      used += count;
+      return fibers(P[key].color, count);
+    }).join("");
+    html += `<div class="day">${parts}</div>`;
+  }
+  return `<div class="stripe">${html}</div><div class="axis"><span>今天</span><span>7日</span></div>`;
+}
+function dots(points, w, h, r) {
+  const circles = points.map((p) => {
+    const cx = 8 + p.x * (w - 16);
+    const cy = 8 + (1 - p.y) * (h - 16);
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${p.color}"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${w} ${h}" class="chart">${circles}</svg>`;
+}
+function bars(values, colorAt, w, h) {
+  const max = Math.max(...values, 1);
+  const gap = 6;
+  const bw = (w - gap * (values.length - 1)) / values.length;
+  const rects = values.map((v, i) => {
+    const bh = v === 0 ? 2 : Math.max(4, (v / max) * (h - 2));
+    const x = i * (bw + gap);
+    const y = h - bh;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.4" fill="${colorAt(i, v)}"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${w} ${h}" class="chart">${rects}</svg>`;
+}
+function stepPath(values, X, Y) {
+  let d = `M ${X(0).toFixed(1)} ${Y(values[0]).toFixed(1)}`;
+  for (let i = 1; i < values.length; i++) d += ` H ${X(i).toFixed(1)} V ${Y(values[i]).toFixed(1)}`;
+  return d;
+}
+function lineChart(series, opts) {
+  const w = opts.w;
+  const h = opts.h;
+  const max = opts.max;
+  const l = opts.l || 28;
+  const r = 8;
+  const t = 12;
+  const b = opts.axis ? 20 : 8;
+  const iw = w - l - r;
+  const ih = h - t - b;
+  const n = series[0].values.length;
+  const X = (i) => l + (i / (n - 1)) * iw;
+  const Y = (v) => t + (1 - v / max) * ih;
+  const ticks = opts.ticks || [];
+  const grid = ticks.map((v) => {
+    const y = Y(v);
+    return `<line x1="${l}" y1="${y.toFixed(1)}" x2="${w - r}" y2="${y.toFixed(1)}" stroke="${opts.grid || "#34343c"}" stroke-dasharray="2 4"/>
+      <text x="${l - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" fill="#8a8a94" font-size="11" font-family="inherit">${v}</text>`;
+  }).join("");
+  const paths = series.map((s) => {
+    const d = stepPath(s.values, X, Y);
+    const width = s.width || 1.75;
+    return `<path d="${d}" fill="none" stroke="#1c1c20" stroke-width="${width + 1.6}" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="${d}" fill="none" stroke="${s.color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }).join("");
+  const axis = opts.axis
+    ? `<text x="${(X(0) + 16).toFixed(1)}" y="${h - 4}" fill="#8a8a94" font-size="11" font-family="inherit">${opts.axis[0]}</text>
+       <text x="${(X(n - 1) - 2).toFixed(1)}" y="${h - 4}" text-anchor="end" fill="#8a8a94" font-size="11" font-family="inherit">${opts.axis[1]}</text>`
+    : "";
+  return `<svg viewBox="0 0 ${w} ${h}" class="chart">${grid}${paths}${axis}</svg>`;
+}
+function stacked(days, w, h) {
+  const totals = days.map((d) => order.reduce((s, key) => s + d[key], 0));
+  const max = Math.max(...totals, 1);
+  const gap = 5;
+  const bw = (w - gap * (days.length - 1)) / days.length;
+  let rects = "";
+  days.forEach((d, i) => {
+    let y = h;
+    const x = i * (bw + gap);
+    for (const key of order) {
+      if (!d[key]) continue;
+      const bh = (d[key] / max) * (h - 2);
+      y -= bh;
+      const draw = Math.max(bh - 1, 1);
+      rects += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${bw.toFixed(2)}" height="${draw.toFixed(2)}" rx="1" fill="${P[key].color}"/>`;
+    }
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" class="chart">${rects}</svg>`;
+}
+function waterfall() {
+  const w = 520;
+  const h = 210;
+  const max = 26;
+  const l = 28;
+  const r = 10;
+  const t = 12;
+  const b = 16;
+  const n = 8;
+  const X = (i) => l + (i / (n - 1)) * (w - l - r);
+  const Y = (v) => t + (1 - v / max) * (h - t - b);
+  const plan = planOf(null);
+  let grid = "";
+  for (const v of [24, 16, 8, 0]) {
+    const y = Y(v);
+    grid += `<line x1="${l}" y1="${y.toFixed(1)}" x2="${w - r}" y2="${y.toFixed(1)}" stroke="#34343c" stroke-dasharray="2 4"/>
+      <text x="${l - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" fill="#8a8a94" font-size="11" font-family="inherit">${v}</text>`;
+  }
+  let marks = "";
+  let level = plan[0];
+  for (let day = 0; day < 7; day++) {
+    const next = plan[day + 1];
+    const x0 = X(day);
+    const x1 = X(day + 1);
+    const y0 = Y(level);
+    const y1 = Y(next);
+    marks += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y0.toFixed(1)}" stroke="#b7b7bf" stroke-width="1.5"/>`;
+    const groups = group(dayKeys(day));
+    const total = groups.reduce((s, g) => s + g[1], 0) || 1;
+    let y = y0;
+    const span = y1 - y0;
+    for (const [key, count] of groups) {
+      const seg = span * (count / total);
+      marks += `<rect x="${(x1 - 3.5).toFixed(1)}" y="${y.toFixed(1)}" width="7" height="${Math.max(seg, 0).toFixed(1)}" fill="${P[key].color}"/>`;
+      y += seg;
+    }
+    level = next;
+  }
+  const axis = `<text x="${(X(0) + 16).toFixed(1)}" y="${h - 2}" fill="#8a8a94" font-size="11" font-family="inherit">今天</text>
+    <text x="${(X(7) - 2).toFixed(1)}" y="${h - 2}" text-anchor="end" fill="#8a8a94" font-size="11" font-family="inherit">7日</text>`;
+  return `<svg viewBox="0 0 ${w} ${h}" class="chart">${grid}${marks}${axis}</svg>`;
+}
+function focusDays(split, from, to) {
+  const days = [];
+  for (let i = from; i < to; i++) {
+    const row = {};
+    for (const key of order) row[key] = split[key][i];
+    days.push(row);
+  }
+  return days;
+}
+function taskDots() {
+  const w = 1040;
+  const h = 250;
+  const l = 44;
+  const r = 16;
+  const t = 16;
+  const b = 28;
+  const yBand = { high: 46, normal: 112, low: 178 };
+  const xBase = { "-1": 0.05, 0: 0.17, 1: 0.29, 2: 0.4, 3: 0.5, 4: 0.6, 5: 0.71, 6: 0.82, 7: 0.93 };
+  const X = (u) => l + u * (w - l - r);
+  const bands = ["high", "normal", "low"].map((pri) => {
+    const y = yBand[pri];
+    return `<line x1="${l}" y1="${y}" x2="${w - r}" y2="${y}" stroke="#2e2e34"/>`;
+  }).join("");
+  const labels = `<text x="8" y="50" fill="#8a8a94" font-size="11" font-family="inherit">高</text>
+    <text x="8" y="116" fill="#8a8a94" font-size="11" font-family="inherit">普通</text>
+    <text x="8" y="182" fill="#8a8a94" font-size="11" font-family="inherit">低</text>
+    <text x="${X(0.05)}" y="${h - 8}" fill="#8a8a94" font-size="11" font-family="inherit">逾期</text>
+    <text x="${X(0.17)}" y="${h - 8}" fill="#8a8a94" font-size="11" font-family="inherit">今天</text>
+    <text x="${X(0.82)}" y="${h - 8}" text-anchor="middle" fill="#8a8a94" font-size="11" font-family="inherit">7日</text>
+    <text x="${X(0.93)}" y="${h - 8}" text-anchor="end" fill="#8a8a94" font-size="11" font-family="inherit">其后</text>`;
+  const seen = {};
+  const circles = tasks.map((task) => {
+    const bucket = `${task.when}:${task.pri}`;
+    const slot = seen[bucket] || 0;
+    seen[bucket] = slot + 1;
+    const jx = (slot - 1) * 0.022;
+    const jy = (slot % 2 === 0 ? -1 : 1) * (4 + slot * 3);
+    const cx = X(xBase[String(task.when)] + jx);
+    const cy = yBand[task.pri] + jy;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5.5" fill="${P[task.p].color}" stroke="#101012" stroke-width="1"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${w} ${h}" class="chart">${bands}${labels}${circles}</svg>`;
+}
+
+function card(title, glyph, body, cls, legend) {
+  return `<article class="card ${cls || ""}"><div class="card-h">${glyph ? icon(glyph) : ""}<span>${title}</span>${legend || ""}</div>${body}</article>`;
+}
+function lineKey() {
+  return `<div class="keyline"><span><i class="ln" style="background:#8d96f5"></i>应剩</span><span><i class="ln" style="background:#e0a24a"></i>未完成</span></div>`;
+}
+
+function proposal01() {
+  const focusNow = sum(focusSplit.a) + sum(focusSplit.b) + sum(focusSplit.c) + sum(focusSplit.d) + sum(focusSplit.e);
+  const focusOld = sum(focusPrevSplit.a) + sum(focusPrevSplit.b) + sum(focusPrevSplit.c) + sum(focusPrevSplit.d) + sum(focusPrevSplit.e);
+  const hours = Math.round((focusNow / 60) * 10) / 10;
+  const spark = dots(sessions.map(([day, y, key]) => ({ x: day / 6, y, color: P[key].color })), 210, 78, 3.3);
+  const doneBars = bars(done, (i) => (i >= 4 ? "#e0a24a" : "#4c4c54"), 180, 64);
+  const burn = lineChart(
+    [
+      { values: planOf(null), color: "#8d96f5", width: 1.75 },
+      { values: actualCurve(), color: "#e0a24a", width: 1.75 },
+    ],
+    { w: 560, h: 250, max: 26, ticks: [24, 16, 8, 0], axis: ["今天", "7日"] },
+  );
+  const overdue = tasks.filter((t) => t.when < 0).length;
+  return `
+    <div class="mock-head"><strong>任务</strong>${keyline()}</div>
+    <div class="grid-ref">
+      ${card("状态", "clip", `<div class="stats"><div><b>${tasks.length}</b><span>待办</span></div><div><b>${recent}</b><span>近期</span></div><div><b>${overdue}</b><span>逾期</span></div></div><div class="grow">${stripe()}</div>`, "status")}
+      ${card("专注", "clock", `<div class="metric"><div class="numline"><b>${hours}</b><em>小时</em></div>${delta(focusNow, focusOld)}<div class="viz">${spark}</div></div>`, "focus")}
+      ${card("完成", "check", `<div class="metric"><div class="numline"><b>${sum(done)}</b></div>${delta(sum(done), donePrev)}<div class="viz">${doneBars}</div></div>`, "done")}
+      ${card("剩余", "flag", `<div class="grow">${burn}</div>`, "burn", lineKey())}
+    </div>`;
+}
+
+function proposal02() {
+  const segs = order.map((key) => {
+    const n = openOf(key);
+    return `<div class="seg" style="flex:${n};background:${P[key].color};color:${inkFor(key)}"><em>${P[key].short}</em><b>${n}</b></div>`;
+  }).join("");
+  const cols = Array.from({ length: 7 }, (_, day) => {
+    const groups = group(dueKeys(day));
+    if (!groups.length) return `<div class="due-col"><i class="none"></i></div>`;
+    return `<div class="due-col">${groups.map(([key, n]) => `<i style="background:${P[key].color};height:${10 * n}px"></i>`).join("")}</div>`;
+  }).join("");
+  return `<article class="card">${segs ? `<div class="weight">${segs}</div>` : ""}<div class="due7">${cols}</div><div class="axis"><span>今天</span><span>7日</span></div></article>`;
+}
+
+function proposal03() {
+  const cards = order.map((key) => {
+    const values = focusSplit[key];
+    return `<article class="card">
+      <div class="mini-top"><i class="sw" style="background:${P[key].color}"></i><span>${P[key].name}</span></div>
+      <div class="mini-num" style="color:${P[key].color}">${openOf(key)}</div>
+      <div class="mini-bars">${bars(values, () => P[key].color, 180, 56)}</div>
+    </article>`;
+  }).join("");
+  return `<div class="five">${cards}</div>`;
+}
+
+function proposal04() {
+  return `<article class="card"><div class="card-h"><span>未完成</span>${keyline()}</div><div style="margin-top:8px">${taskDots()}</div></article>`;
+}
+
+function proposal05() {
+  const series = order.map((key) => ({ values: planOf(key), color: P[key].color, width: 1.8 }));
+  const chart = lineChart(series, { w: 1080, h: 250, max: 8, ticks: [8, 4, 0], l: 28, axis: ["今天", "7日"] });
+  return `<article class="card"><div class="card-h"><span>剩余</span>${keyline()}</div><div style="margin-top:8px">${chart}</div></article>`;
+}
+
+function proposal06() {
+  const days = focusDays(focusPrevSplit, 0, 7).concat(focusDays(focusSplit, 0, 7));
+  const focusNow = order.reduce((s, key) => s + sum(focusSplit[key]), 0);
+  const focusOld = order.reduce((s, key) => s + sum(focusPrevSplit[key]), 0);
+  const hours = Math.round((focusNow / 60) * 10) / 10;
+  const left = card(
+    "专注",
+    "clock",
+    `<div class="numline" style="margin-top:14px"><b>${hours}</b><em>小时</em></div>${delta(focusNow, focusOld)}<div style="margin-top:12px">${stacked(days, 520, 120)}</div><div class="axis"><span>14日</span><span>今天</span></div>`,
+  );
+  const right = card("剩余", "flag", `<div style="margin-top:8px">${waterfall()}</div>`);
+  return `<div class="mock-head" style="margin-bottom:10px">${keyline()}</div><div class="two">${left}${right}</div>`;
+}
+
+function proposal07() {
+  const cols = ["high", "normal", "low"].map((pri) => {
+    const label = pri === "high" ? "高" : pri === "normal" ? "普通" : "低";
+    const items = tasks.filter((t) => t.pri === pri).slice().sort((a, b) => order.indexOf(a.p) - order.indexOf(b.p));
+    return `<div class="pri-col"><b>${items.length}</b><span>${label}</span><div class="ticks">${items.map((t) => `<i style="background:${P[t.p].color}"></i>`).join("")}</div></div>`;
+  }).join("");
+  return `<article class="card"><div class="pri">${cols}</div></article>`;
+}
+
+function proposal08() {
+  const maxDay = 80;
+  const rows = order.map((key) => {
+    const venue = P[key].venue;
+    const width = venue == null ? 0 : Math.max(6, (venue / maxDay) * 100);
+    const right = venue == null ? `<span class="days" style="color:#8a8a94">未设</span>` : `<span class="days">${venue}<em>天</em></span>`;
+    const fill = venue == null ? "" : `<b style="width:${width}%;background:${P[key].color}"></b>`;
+    return `<div class="row08"><i class="sw" style="background:${P[key].color}"></i><div class="nm">${P[key].short}</div><div class="count">${openOf(key)}</div><div class="track">${fill}</div>${right}</div>`;
+  }).join("");
+  return `<article class="card"><div class="rows">${rows}</div></article>`;
+}
+
+function proposal09() {
+  const overdue = tasks.filter((t) => t.when < 0).length;
+  const focusNow = order.reduce((s, key) => s + sum(focusSplit[key]), 0);
+  const hours = Math.round((focusNow / 60) * 10) / 10;
+  const spark = dots(sessions.map(([day, y, key]) => ({ x: day / 6, y, color: P[key].color })), 168, 40, 2.4);
+  const burn = lineChart(
+    [
+      { values: planOf(null), color: "#8d96f5", width: 1.5 },
+      { values: actualCurve(), color: "#e0a24a", width: 1.5 },
+    ],
+    { w: 210, h: 44, max: 26, ticks: [], l: 2 },
+  );
+  const squares = order.map((key) => `<i style="background:${P[key].color}"></i>`).join("");
+  return `<article class="card rail">
+    <div class="sqs">${squares}</div>
+    <div class="sep"></div>
+    <div class="stats"><div><b>${tasks.length}</b><span>待办</span></div><div><b>${recent}</b><span>近期</span></div><div><b>${overdue}</b><span>逾期</span></div></div>
+    <div class="sep"></div>
+    <div class="bit">${stripe()}</div>
+    <div class="sep"></div>
+    <div><div class="numline"><b style="font-size:22px">${hours}</b><em>小时</em></div></div>
+    <div class="bit">${spark}</div>
+    <div class="sep"></div>
+    <div class="bit wide">${burn}</div>
+  </article>`;
+}
+
+function proposal10() {
+  const rows = order.map((key) => {
+    const cur = P[key].stage;
+    const segs = stages.map((stage, i) => {
+      let bg = "#2a2a30";
+      if (i < cur) bg = `color-mix(in oklab, ${stage[1]} 42%, #1c1c20)`;
+      if (i === cur) bg = stage[1];
+      return `<i style="background:${bg}"></i>`;
+    }).join("");
+    return `<div class="row10"><i class="sw" style="background:${P[key].color}"></i><div class="nm">${P[key].short}</div><div class="quiet">${stages[cur][0]}</div><div class="pipe">${segs}</div><div class="count">${openOf(key)}</div></div>`;
+  }).join("");
+  return `<article class="card"><div class="rows">${rows}</div></article>`;
+}
+
+function render() {
+  assert(tasks.length === 24, "task count");
+  assert(order.reduce((s, key) => s + openOf(key), 0) === 24, "open sum");
+  const plan = planOf(null);
+  assert(plan[0] === 24 && plan[plan.length - 1] === 3, "plan ends");
+  assert(order.every((key) => planOf(key).every((n) => n >= 0)), "negative remain");
+  const mounts = {
+    p01: proposal01, p02: proposal02, p03: proposal03, p04: proposal04, p05: proposal05,
+    p06: proposal06, p07: proposal07, p08: proposal08, p09: proposal09, p10: proposal10,
+  };
+  for (const [id, fn] of Object.entries(mounts)) {
+    document.querySelector(`#${id} .mock`).innerHTML = fn();
+  }
+  document.body.dataset.ready = "1";
+}
+try {
+  render();
+} catch (err) {
+  document.body.dataset.ready = "err";
+  document.body.insertAdjacentHTML("afterbegin", `<pre class="err">${String(err && err.stack || err)}</pre>`);
+}
+</script>
+</body>
+</html>

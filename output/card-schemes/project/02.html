@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>项目方案 2</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #151517;
+    color: #f2f2f4;
+    font: 14px/1.45 ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  main { max-width: 920px; margin: 0 auto; padding: 28px 20px 64px; }
+  .kicker { margin: 0; color: #89898d; font-size: 11px; letter-spacing: 0.12em; }
+  .scheme { margin: 8px 0 0; font-size: 22px; font-weight: 650; }
+  .interaction { margin: 8px 0 18px; color: #aaaab3; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .card {
+    width: min(420px, 100%);
+    padding: 14px;
+    border: 1px solid #323236;
+    border-radius: 12px;
+    background: #222225;
+  }
+  .name, .project {
+    display: inline-block;
+    max-width: 100%;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #6f8cff;
+    color: #16161a;
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .stage, .venue {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 8px;
+    border: 1px solid #323236;
+    border-radius: 999px;
+    color: #aaaab3;
+    font-size: 11px;
+  }
+  .deadline, .due { color: #efa768; }
+  .todo-due { color: #ef8396; }
+  .track { display: block; height: 6px; overflow: hidden; border-radius: 999px; background: #29292e; }
+  .fill { display: block; width: 25%; height: 100%; background: #6f8cff; }
+  .check, .add, .open, .complete, .focus {
+    border: 1px solid #3a3a40;
+    border-radius: 8px;
+    background: #29292e;
+  }
+  h2 { margin: 0; font-size: 16px; font-weight: 650; }
+  p { margin: 0; }
+</style>
+<style id="card-treatment">
+.card { display: flex; flex-flow: row nowrap; align-items: center; gap: 2px; width: 100%; padding: 8px 6px; overflow-x: auto; font-size: 12px; }
+.progress { display: flex; align-items: center; gap: 4px; }
+.track { width: 20px; flex: none; }
+.todos, .todo { display: flex; align-items: center; gap: 4px; }
+.deadline, .todo-title, .todo-due, .progress-label, .progress-count, .todo-count, .open, .add, .check, .name, .stage, .venue { white-space: nowrap; }
+.stage, .venue { margin-right: 0; }
+.name { font-size: 12px; padding: 1px 6px; }
+.progress-label, .todo-count { color: #89898d; font-size: 11px; }
+.check, .add, .open { padding: 2px 6px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">矩形卡片</p>
+  <h1 class="scheme">项目方案 2</h1>
+  <p class="interaction">全部事实收成一条横带，一屏可以扫过很多项目。</p>
+  <!-- facts-start -->
+<article class="card" data-sample-card>
+  <h2 class="name">注意力机制综述</h2>
+  <span class="stage">文献</span>
+  <span class="venue">CHI</span>
+  <p class="deadline">还剩 2 天 · CHI 投稿 · 10月3日</p>
+  <div class="progress">
+    <span class="progress-label">研究阶段</span>
+    <span class="progress-count">文献 1/4</span>
+    <span class="track"><i class="fill"></i></span>
+  </div>
+  <div class="todos">
+    <span class="todo-count">待办 0/1</span>
+    <div class="todo">
+      <button type="button" class="check">完成</button>
+      <span class="todo-title">完整prototype1</span>
+      <span class="todo-due">逾期 · 9月30日</span>
+    </div>
+    <button type="button" class="add">添加待办</button>
+  </div>
+  <button type="button" class="open">打开项目</button>
+</article>
+  <!-- facts-end -->
+</main>
+</body>
+</html>

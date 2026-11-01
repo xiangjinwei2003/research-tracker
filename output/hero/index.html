@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>首页顶部方案</title>
+<style>
+  /* 颜色全部取自 Radix 暗色色阶，与 src/index.css 一致 */
+  :root {
+    color-scheme: dark;
+    --sidebar: #111113;
+    --bg: #18191b;
+    --panel: #212225;
+    --panel2: #272a2d;
+    --line: #363a3f;
+    --ink: #edeef0;
+    --muted: #b0b4ba;
+    --hover: #d8f4f609;
+    --selected: #ddeaf814;
+    --indigo9: #3e63dd;
+    --indigo3: #182449;
+    --indigo11: #9eb1ff;
+    --red11: #ff9592;
+    --red3: #3b1219;
+    --amber11: #ffca16;
+    --orange11: #ff977d;
+    --orange3: #331e0b;
+    --green11: #3dd68c;
+    --teal9: #12a594;
+    --crimson9: #e93d82;
+    --purple11: #d19dff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #111113; color: var(--ink); }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "PingFang SC", sans-serif;
+    font-size: 15px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .num { font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  .page { width: 1080px; margin: 0 auto; padding: 40px 0 80px; }
+  .cap { display: flex; align-items: baseline; gap: 12px; margin: 56px 0 14px; }
+  .cap:first-child { margin-top: 0; }
+  .cap b { font-size: 15px; font-weight: 600; }
+  .cap span { font-size: 13px; color: var(--muted); }
+  .frame { background: var(--bg); border: 0.5px solid var(--line); border-radius: 12px; padding: 32px 40px 28px; overflow: hidden; }
+
+  /* 共用：任务行 */
+  .group { display: flex; align-items: center; gap: 8px; height: 36px; font-size: 13px; font-weight: 600; border-bottom: 0.5px solid var(--line); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .row { display: flex; align-items: center; gap: 12px; height: 36px; font-size: 15px; }
+  .box { width: 16px; height: 16px; border: 1.5px solid #696e77; border-radius: 4px; flex: none; }
+  .meta { margin-left: auto; display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
+  .meta i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .od, .d-title .od { color: var(--red11); }
+  .toolbar { display: flex; align-items: center; gap: 8px; margin: 24px 0 8px; font-size: 13px; color: var(--muted); }
+  .seg { display: flex; background: var(--panel); border-radius: 6px; padding: 2px; }
+  .seg span { padding: 3px 10px; border-radius: 4px; }
+  .seg .on { background: var(--panel2); color: var(--ink); }
+  .btn { margin-left: auto; background: var(--indigo9); color: #fff; border-radius: 6px; padding: 4px 12px; font-weight: 500; }
+
+  /* A 下一件事 */
+  .a-date { font-size: 13px; color: var(--muted); }
+  .a-next { margin-top: 20px; display: flex; align-items: center; gap: 20px; }
+  .a-next .box { width: 24px; height: 24px; border-radius: 6px; border-width: 2px; }
+  .a-title { font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+  .a-sub { margin-top: 6px; font-size: 13px; color: var(--muted); display: flex; gap: 14px; }
+  .a-act { margin-left: auto; display: flex; gap: 8px; font-size: 13px; }
+  .a-act span { padding: 6px 14px; border-radius: 6px; }
+  .a-act .p { background: var(--indigo9); color: #fff; font-weight: 500; }
+  .a-act .s { background: var(--panel2); }
+  .a-then { margin-top: 24px; padding-top: 12px; border-top: 0.5px solid var(--line); font-size: 13px; color: var(--muted); display: flex; gap: 24px; }
+  .a-then em { font-style: normal; color: var(--ink); }
+
+  /* B 状态数字 */
+  .b-head { display: flex; align-items: flex-end; gap: 56px; }
+  .b-title { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  .b-title small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); margin-bottom: 4px; }
+  .b-stats { display: flex; gap: 0; margin-left: auto; }
+  .b-stat { padding: 0 28px; border-left: 0.5px solid var(--line); }
+  .b-stat:first-child { border-left: 0; }
+  .b-stat .n { font-size: 56px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+  .b-stat .l { margin-top: 8px; font-size: 13px; color: var(--muted); }
+
+  /* C 大日期 */
+  .c-wrap { display: grid; grid-template-columns: auto 1fr; gap: 40px; align-items: end; }
+  .c-day { font-size: 96px; font-weight: 600; line-height: 0.9; letter-spacing: -0.04em; }
+  .c-side { padding-bottom: 6px; }
+  .c-month { font-size: 15px; font-weight: 600; }
+  .c-line { margin-top: 4px; font-size: 13px; color: var(--muted); display: flex; gap: 14px; }
+  .c-week { margin-top: 28px; display: grid; grid-template-columns: repeat(7, 1fr); border-top: 0.5px solid var(--line); }
+  .c-week div { padding: 10px 0 0; font-size: 13px; color: var(--muted); }
+  .c-week div b { display: block; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .c-week .today b { color: var(--amber11); }
+  .c-week .bar { display: flex; gap: 3px; margin-top: 8px; }
+  .c-week .bar i { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* D 项目截稿 */
+  .d-title { display: flex; align-items: baseline; gap: 14px; }
+  .d-title h1 { margin: 0; font-size: 28px; font-weight: 700; }
+  .d-title span { font-size: 13px; color: var(--muted); }
+  .d-projects { margin-top: 24px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); border-radius: 10px; overflow: hidden; border: 0.5px solid var(--line); }
+  .d-p { background: var(--bg); padding: 18px 20px; }
+  .d-p .top { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+  .d-p .n { margin-top: 14px; display: flex; align-items: baseline; gap: 8px; }
+  .d-p .n b { font-size: 28px; font-weight: 600; line-height: 1; }
+  .d-p .n span { font-size: 13px; color: var(--muted); }
+  .d-p .track { margin-top: 14px; height: 4px; border-radius: 2px; background: var(--panel2); overflow: hidden; }
+  .d-p .track i { display: block; height: 100%; border-radius: 2px; }
+  .d-p .foot { margin-top: 10px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cap"><b>A 下一件事</b><span>顶部只放最该做的一项，勾选和开始专注就在旁边</span></div>
+  <div class="frame">
+    <div class="a-date">11月1日 星期日</div>
+    <div class="a-next">
+      <div class="box"></div>
+      <div>
+        <div class="a-title">写访谈提纲</div>
+        <div class="a-sub"><span><span class="dot" style="display:inline-block;background:var(--teal9);margin-right:6px"></span>AI回想法</span><span class="od">逾期 6 天</span><span>高优先级</span></div>
+      </div>
+      <div class="a-act"><span class="s">推迟</span><span class="p">开始专注</span></div>
+    </div>
+    <div class="a-then"><span>接下来</span><em>约两位参与者</em><em>清洗数据</em><em>读 Waycott 2019</em></div>
+    <div class="toolbar"><div class="seg"><span class="on">近期重点</span><span>全部任务</span></div><span class="btn">新建任务</span></div>
+    <div class="group"><span class="dot" style="background:var(--indigo11)"></span>普通优先级</div>
+    <div class="row"><div class="box"></div>约两位参与者<div class="meta"><span><i style="background:var(--teal9)"></i>AI回想法</span><span class="od">逾期 4 天</span></div></div>
+  </div>
+
+  <div class="cap"><b>B 状态数字</b><span>标题右侧放四个大数字，点数字即筛选</span></div>
+  <div class="frame">
+    <div class="b-head">
+      <div class="b-title"><small>11月1日 星期日</small>任务</div>
+      <div class="b-stats">
+        <div class="b-stat"><div class="n num" style="color:var(--red11)">4</div><div class="l">逾期</div></div>
+        <div class="b-stat"><div class="n num" style="color:var(--amber11)">0</div><div class="l">今天到期</div></div>
+        <div class="b-stat"><div class="n num">2</div><div class="l">本周到期</div></div>
+        <div class="b-stat"><div class="n num" style="color:var(--green11)">3</div><div class="l">本周完成</div></div>
+      </div>
+    </div>
+    <div class="toolbar"><div class="seg"><span class="on">近期重点</span><span>全部任务</span></div><span class="btn">新建任务</span></div>
+    <div class="group"><span class="dot" style="background:var(--orange11)"></span>高优先级</div>
+    <div class="row"><div class="box"></div>写访谈提纲<div class="meta"><span><i style="background:var(--teal9)"></i>AI回想法</span><span class="od">逾期 6 天</span></div></div>
+  </div>
+
+  <div class="cap"><b>C 大日期与本周</b><span>今天的日期做主视觉，下方一周七天，圆点表示当天到期的任务</span></div>
+  <div class="frame">
+    <div class="c-wrap">
+      <div class="c-day num">1</div>
+      <div class="c-side">
+        <div class="c-month">11月 星期日</div>
+        <div class="c-line"><span class="od">4 项逾期</span><span>本周还有 2 项到期</span></div>
+      </div>
+    </div>
+    <div class="c-week">
+      <div class="today">日<b>1</b><div class="bar"></div></div>
+      <div>一<b>2</b><div class="bar"><i style="background:var(--teal9)"></i></div></div>
+      <div>二<b>3</b><div class="bar"></div></div>
+      <div>三<b>4</b><div class="bar"><i style="background:var(--crimson9)"></i><i style="background:var(--teal9)"></i></div></div>
+      <div>四<b>5</b><div class="bar"></div></div>
+      <div>五<b>6</b><div class="bar"></div></div>
+      <div>六<b>7</b><div class="bar"></div></div>
+    </div>
+    <div class="toolbar"><div class="seg"><span class="on">近期重点</span><span>全部任务</span></div><span class="btn">新建任务</span></div>
+    <div class="group"><span class="dot" style="background:var(--orange11)"></span>高优先级</div>
+    <div class="row"><div class="box"></div>写访谈提纲<div class="meta"><span><i style="background:var(--teal9)"></i>AI回想法</span><span class="od">逾期 6 天</span></div></div>
+  </div>
+
+  <div class="cap"><b>D 项目进度</b><span>标题下按项目分块，显示剩余任务数、完成比例和最近截止日期</span></div>
+  <div class="frame">
+    <div class="d-title"><h1>任务</h1><span>11月1日 星期日</span><span class="od">4 项逾期</span></div>
+    <div class="d-projects">
+      <div class="d-p">
+        <div class="top"><span class="dot" style="background:var(--teal9)"></span>AI回想法</div>
+        <div class="n"><b class="num">3</b><span>项未完成</span></div>
+        <div class="track"><i style="width:40%;background:var(--teal9)"></i></div>
+        <div class="foot"><span>完成 2 / 5</span><span class="od">最近一项逾期 6 天</span></div>
+      </div>
+      <div class="d-p">
+        <div class="top"><span class="dot" style="background:var(--crimson9)"></span>语料库</div>
+        <div class="n"><b class="num">1</b><span>项未完成</span></div>
+        <div class="track"><i style="width:75%;background:var(--crimson9)"></i></div>
+        <div class="foot"><span>完成 3 / 4</span><span class="od">最近一项逾期 3 天</span></div>
+      </div>
+    </div>
+    <div class="toolbar"><div class="seg"><span class="on">近期重点</span><span>全部任务</span></div><span class="btn">新建任务</span></div>
+    <div class="group"><span class="dot" style="background:var(--orange11)"></span>高优先级</div>
+    <div class="row"><div class="box"></div>写访谈提纲<div class="meta"><span><i style="background:var(--teal9)"></i>AI回想法</span><span class="od">逾期 6 天</span></div></div>
+  </div>
+
+</div>
+</body>
+</html>
