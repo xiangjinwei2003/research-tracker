@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { manualSessionError, resolveSession, streakDays, sessionMinutes } from './focus.ts'
+import { manualSpan, projectShare, recentLabels, resolveSession, streakDays, sessionMinutes } from './focus.ts'
 import type { FocusSession } from './types.ts'
 
 function sess(id: string, startedAt: number): FocusSession {
@@ -96,19 +96,36 @@ test('sessionMinutes floors at 1', () => {
   )
 })
 
-test('manualSessionError rejects reversed, short, future and overlapping spans', () => {
+test('manualSpan ends today at now and starts past days at midnight', () => {
   const M = 60_000
-  const base = { sessions: [sess('a', 100 * M)], now: 1000 * M }
-  assert.equal(manualSessionError({ ...base, startedAt: 10 * M, endedAt: 5 * M }), '结束时间需晚于开始时间')
-  assert.equal(manualSessionError({ ...base, startedAt: 10 * M, endedAt: 10 * M + 30_000 }), '时长不足 1 分钟')
-  assert.equal(manualSessionError({ ...base, startedAt: 990 * M, endedAt: 1001 * M }), '结束时间晚于现在')
-  assert.match(manualSessionError({ ...base, startedAt: 120 * M, endedAt: 140 * M }) ?? '', /重叠/)
-  // 首尾相接不算重叠。
-  assert.equal(manualSessionError({ ...base, startedAt: 130 * M, endedAt: 160 * M }), null)
-  assert.equal(manualSessionError({ ...base, startedAt: 70 * M, endedAt: 100 * M }), null)
-  assert.equal(
-    manualSessionError({ ...base, startedAt: 500 * M, endedAt: 600 * M, activeStartedAt: 550 * M }),
-    '与正在进行的专注重叠',
+  const now = new Date(2026, 10, 2, 10, 0).getTime()
+  assert.deepEqual(manualSpan({ iso: '2026-11-02', minutes: 45, now }), {
+    startedAt: now - 45 * M,
+    endedAt: now,
+  })
+  const past = new Date(2026, 9, 30).getTime()
+  assert.deepEqual(manualSpan({ iso: '2026-10-30', minutes: 90, now }), {
+    startedAt: past,
+    endedAt: past + 90 * M,
+  })
+  assert.deepEqual(manualSpan({ iso: '2026-11-02', minutes: 11 * 60, now }), {
+    error: '超过今天已经过去的时长',
+  })
+  assert.deepEqual(manualSpan({ iso: '2026-11-03', minutes: 30, now }), { error: '不能补记未来的日子' })
+  assert.deepEqual(manualSpan({ iso: '2026-11-02', minutes: 0, now }), { error: '请选择时长' })
+  assert.deepEqual(manualSpan({ iso: '', minutes: 30, now }), { error: '请选择日期' })
+})
+
+test('custom labels resolve as their own item and their own share row', () => {
+  const a = { ...sess('a', 1000), label: '英语' }
+  const b = { ...sess('b', 2000), label: '英语' }
+  const c = { ...sess('c', 3000), label: '健身' }
+  const r = [a, b, c].map((s) => resolveSession(s, new Map()))
+  assert.equal(r[0].label, '英语')
+  assert.equal(r[0].projectTitle, '英语')
+  assert.deepEqual(
+    projectShare(r).map((x) => [x.name, x.minutes]),
+    [['英语', 60], ['健身', 30]],
   )
-  assert.equal(manualSessionError({ ...base, startedAt: NaN, endedAt: 600 * M }), '请填写开始和结束时间')
+  assert.deepEqual(recentLabels([a, b, c]), ['健身', '英语'])
 })

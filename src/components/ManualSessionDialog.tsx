@@ -1,25 +1,31 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { format } from 'date-fns'
 import { useStore } from '@/lib/store'
-import { manualSessionError } from '@/lib/focus'
-import { fmtMinutes, today } from '@/lib/date'
+import { manualSpan, recentLabels } from '@/lib/focus'
+import { today } from '@/lib/date'
 import { toast } from '@/lib/toast'
 import { Dialog } from './ui/Dialog'
 import { Button } from './ui/Button'
-import { Input, Label } from './ui/Input'
+import { Input, Label, Textarea } from './ui/Input'
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from './ui/select'
 
 const FREE = 'free'
+const NEW = 'new'
+const HOURS = Array.from({ length: 13 }, (_, i) => i)
+const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5)
 
-/** 绑定目标编码成 Select 的值：free、p:项目、t:项目:任务。 */
-function decode(value: string): { projectId?: string; todoId?: string } {
+/**
+ * 事项选择编码成 Select 的值：free 自由专注，new 新事项，l:名称 用过的自定义事项，
+ * p:项目，t:项目:任务。
+ */
+function decode(value: string): { projectId?: string; todoId?: string; label?: string } {
+  if (value.startsWith('l:')) return { label: value.slice(2) }
   if (value.startsWith('p:')) return { projectId: value.slice(2) }
   if (value.startsWith('t:')) {
     const [projectId, todoId] = value.slice(2).split(':')
@@ -28,20 +34,11 @@ function decode(value: string): { projectId?: string; todoId?: string } {
   return {}
 }
 
-/** yyyy-MM-dd + HH:mm → 本地时间的 epoch ms；格式不对返回 NaN。 */
-function toMs(iso: string, hm: string): number {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || !/^\d{2}:\d{2}$/.test(hm)) return NaN
-  return new Date(`${iso}T${hm}:00`).getTime()
-}
-
-/** 今天默认「最近半小时」，结束取整到 5 分钟；其他日子默认 09:00 到 09:30。 */
-function defaultRange(iso: string): { start: string; end: string } {
-  if (iso !== today()) return { start: '09:00', end: '09:30' }
-  const now = new Date()
-  const end = new Date(now)
-  end.setMinutes(Math.floor(now.getMinutes() / 5) * 5, 0, 0)
-  const start = new Date(Math.max(end.getTime() - 30 * 60_000, new Date(now).setHours(0, 0, 0, 0)))
-  return { start: format(start, 'HH:mm'), end: format(end, 'HH:mm') }
+/** 补记时长按填写的值原样显示，例如 1 小时 15 分钟。 */
+function fmtDuration(min: number): string {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return [h ? `${h} 小时` : '', m ? `${m} 分钟` : ''].filter(Boolean).join(' ')
 }
 
 interface Props {
@@ -50,7 +47,7 @@ interface Props {
   onClose: () => void
 }
 
-/** 补记专注：计时器没开或忘了停时，事后填写开始、结束时间和关联任务。 */
+/** 补记专注：计时器没开或忘了点时，事后填写日期、时长、事项和备注。 */
 export function ManualSessionDialog({ date, onClose }: Props) {
   return (
     <Dialog open={date !== null} onOpenChange={(o) => !o && onClose()} title="补记专注" size="md">
@@ -62,46 +59,42 @@ export function ManualSessionDialog({ date, onClose }: Props) {
 function Form({ initialDate, onClose }: { initialDate: string; onClose: () => void }) {
   const projects = useStore((s) => s.projects)
   const sessions = useStore((s) => s.sessions)
-  const activeTimer = useStore((s) => s.activeTimer)
   const addManualSession = useStore((s) => s.addManualSession)
 
   const todayIso = today()
   const [iso, setIso] = useState(initialDate)
-  const [start, setStart] = useState(() => defaultRange(initialDate).start)
-  const [end, setEnd] = useState(() => defaultRange(initialDate).end)
+  const [hours, setHours] = useState('0')
+  const [mins, setMins] = useState('30')
   const [target, setTarget] = useState(FREE)
-  // 「晚于现在」的判断需要当前时刻；弹窗开着时每 15 秒刷新一次，提交时再复查。
+  const [newLabel, setNewLabel] = useState('')
+  const [note, setNote] = useState('')
+  // 今天的补记以现在为结束时刻；弹窗开着时每 15 秒刷新一次，提交时取当前时刻。
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 15_000)
     return () => clearInterval(t)
   }, [])
 
-  const startedAt = toMs(iso, start)
-  const endedAt = toMs(iso, end)
-  const check = (at: number) =>
-    manualSessionError({
-      startedAt,
-      endedAt,
-      sessions,
-      activeStartedAt: activeTimer?.startedAt,
-      now: at,
-    })
-  const error = check(now)
-  const minutes = error ? 0 : Math.round((endedAt - startedAt) / 60_000)
+  const minutes = Number(hours) * 60 + Number(mins)
+  const span = manualSpan({ iso, minutes, now })
+  const labelMissing = target === NEW && !newLabel.trim()
+  const error = 'error' in span ? span.error : null
 
+  const labels = recentLabels(sessions)
   const active = projects.filter((p) => !p.archived)
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     const at = Date.now()
-    if (check(at)) {
+    const latest = manualSpan({ iso, minutes, now: at })
+    if ('error' in latest || labelMissing) {
       setNow(at)
       return
     }
-    const s = addManualSession({ startedAt, endedAt, ...decode(target) })
+    const binding = target === NEW ? { label: newLabel } : decode(target)
+    addManualSession({ ...latest, ...binding, note })
     onClose()
-    toast({ message: `已补记 ${fmtMinutes(Math.round((s.endedAt - s.startedAt) / 60_000))}专注` })
+    toast({ message: `已补记 ${fmtDuration(minutes)}专注` })
   }
 
   return (
@@ -119,56 +112,82 @@ function Form({ initialDate, onClose }: { initialDate: string; onClose: () => vo
           />
         </div>
         <div>
-          <Label htmlFor="manual-start">开始</Label>
-          <Input
-            id="manual-start"
-            type="time"
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-            className="mono"
-          />
+          <Label>小时</Label>
+          <Select value={hours} onValueChange={setHours}>
+            <SelectTrigger className="w-full mono" aria-label="小时">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" className="max-h-72">
+              {HOURS.map((h) => (
+                <SelectItem key={h} value={String(h)} className="mono">
+                  {String(h)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <Label htmlFor="manual-end">结束</Label>
-          <Input
-            id="manual-end"
-            type="time"
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-            className="mono"
-          />
+          <Label>分钟</Label>
+          <Select value={mins} onValueChange={setMins}>
+            <SelectTrigger className="w-full mono" aria-label="分钟">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" className="max-h-72">
+              {MINUTES.map((m) => (
+                <SelectItem key={m} value={String(m)} className="mono">
+                  {String(m).padStart(2, '0')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       <div>
-        <Label>任务</Label>
+        <Label>事项</Label>
         <Select value={target} onValueChange={setTarget}>
-          <SelectTrigger className="w-full" aria-label="关联任务">
+          <SelectTrigger className="w-full" aria-label="事项">
             <SelectValue />
           </SelectTrigger>
           <SelectContent position="popper" className="max-h-80">
             <SelectItem value={FREE}>自由专注</SelectItem>
-            {active.map((p) => (
-              <SelectGroup key={p.id}>
-                <SelectItem value={`p:${p.id}`} className="font-medium">
-                  <span
-                    aria-hidden
-                    className="size-1.5 rounded-full"
-                    style={{ background: p.color }}
-                  />
-                  {p.title || '未命名项目'}
-                </SelectItem>
-                {p.todos
-                  .filter((t) => !t.done && t.title.trim())
-                  .map((t) => (
-                    <SelectItem key={t.id} value={`t:${p.id}:${t.id}`} className="pl-[22px]">
-                      {t.title}
-                    </SelectItem>
-                  ))}
-              </SelectGroup>
+            {labels.map((l) => (
+              <SelectItem key={l} value={`l:${l}`}>
+                {l}
+              </SelectItem>
             ))}
+            <SelectItem value={NEW}>新事项</SelectItem>
+            {active.length > 0 ? <SelectSeparator /> : null}
+            {active.map((p) => [
+              <SelectItem key={p.id} value={`p:${p.id}`} className="font-medium">
+                <span aria-hidden className="size-1.5 rounded-full" style={{ background: p.color }} />
+                {p.title || '未命名项目'}
+              </SelectItem>,
+              ...p.todos
+                .filter((t) => !t.done && t.title.trim())
+                .map((t) => (
+                  <SelectItem key={t.id} value={`t:${p.id}:${t.id}`} className="pl-[22px]">
+                    {t.title}
+                  </SelectItem>
+                )),
+            ])}
           </SelectContent>
         </Select>
+        {target === NEW ? (
+          <Input
+            autoFocus
+            aria-label="新事项名称"
+            placeholder="例如：英语"
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            className="mt-2"
+          />
+        ) : null}
+      </div>
+
+      <div>
+        <Label htmlFor="manual-note">备注</Label>
+        <Textarea id="manual-note" value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
 
       <div className="flex items-center justify-end gap-2 pt-2">
@@ -180,8 +199,8 @@ function Form({ initialDate, onClose }: { initialDate: string; onClose: () => vo
         <Button type="button" onClick={onClose}>
           取消
         </Button>
-        <Button type="submit" variant="primary" disabled={!!error}>
-          {error ? '记录' : `记录 ${fmtMinutes(minutes)}`}
+        <Button type="submit" variant="primary" disabled={!!error || labelMissing}>
+          {error || minutes < 1 ? '记录' : `记录 ${fmtDuration(minutes)}`}
         </Button>
       </div>
     </form>

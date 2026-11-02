@@ -158,4 +158,7 @@ test('normalizeSession keeps manual only when it is exactly true', () => {
   assert.equal(normalizeSession({ ...base, manual: true })?.manual, true)
   assert.equal('manual' in (normalizeSession({ ...base, manual: 'yes' }) ?? {}), false)
   assert.equal('manual' in (normalizeSession(base) ?? {}), false)
+  const withText = normalizeSession({ ...base, label: ' 英语 ', note: '  ' })
+  assert.equal(withText?.label, '英语')
+  assert.equal('note' in (withText ?? {}), false)
 })

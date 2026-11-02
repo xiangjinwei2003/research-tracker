@@ -251,4 +251,22 @@ test('addManualSession snapshots the todo, marks manual, and keeps newest-first 
     ['new', s.id, 'old'],
   )
   assert.throws(() => useStore.getState().addManualSession({ startedAt: 10 * M, endedAt: 10 * M }))
+
+  const free = useStore.getState().addManualSession({
+    startedAt: 600 * M,
+    endedAt: 630 * M,
+    label: ' 英语 ',
+    note: ' 背单词 ',
+  })
+  assert.equal(free.label, '英语')
+  assert.equal(free.note, '背单词')
+  assert.equal(free.projectId, undefined)
+  // 绑定项目时不保存自定义事项名。
+  const bound = useStore.getState().addManualSession({
+    startedAt: 700 * M,
+    endedAt: 730 * M,
+    projectId: pid,
+    label: '英语',
+  })
+  assert.equal('label' in bound, false)
 })

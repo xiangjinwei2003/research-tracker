@@ -35,7 +35,9 @@ export function resolveSession(
 ): ResolvedSession {
   const live = session.projectId ? projectById.get(session.projectId) : undefined
   const title = (live ? live.title : session.projectTitle || '').trim()
-  const projectTitle = session.projectId ? title || '未命名项目' : '自由专注'
+  const projectTitle = session.projectId
+    ? title || '未命名项目'
+    : session.label || '自由专注'
   const task = (session.todoTitle || '').trim()
   return {
     session,
@@ -81,7 +83,8 @@ export interface ProjectShare {
 export function projectShare(resolved: ResolvedSession[]): ProjectShare[] {
   const map = new Map<string, ProjectShare>()
   for (const r of resolved) {
-    const key = r.session.projectId ?? '__free'
+    const key =
+      r.session.projectId ?? (r.session.label ? `label:${r.session.label}` : '__free')
     const hit = map.get(key)
     if (hit) hit.minutes += r.minutes
     else map.set(key, { key, name: r.projectTitle, color: r.color, minutes: r.minutes })
@@ -237,26 +240,35 @@ export function buildPeriodStats(args: {
 }
 
 /**
- * 补记一段专注前的检查。返回给用户看的错误文字，通过时返回 null。
- * 规则：结束晚于开始且至少 1 分钟，结束不晚于现在，不与已有记录或正在进行的倒计时重叠。
+ * 补记只填日期和时长。今天的补记以现在为结束时刻往前推；过去的日子从当天 0 点开始。
+ * 时长超出可用范围、日期在未来或无效时返回给用户看的错误文字。
  */
-export function manualSessionError(args: {
-  startedAt: number
-  endedAt: number
-  sessions: FocusSession[]
-  activeStartedAt?: number
+export function manualSpan(args: {
+  iso: string
+  minutes: number
   now: number
-}): string | null {
-  const { startedAt, endedAt, sessions, activeStartedAt, now } = args
-  if (!Number.isFinite(startedAt) || !Number.isFinite(endedAt)) return '请填写开始和结束时间'
-  if (endedAt <= startedAt) return '结束时间需晚于开始时间'
-  if (endedAt - startedAt < 60_000) return '时长不足 1 分钟'
-  if (endedAt > now) return '结束时间晚于现在'
-  const hit = sessions.find((s) => s.startedAt < endedAt && startedAt < s.endedAt)
-  if (hit) {
-    const hm = (ms: number) => format(new Date(ms), 'HH:mm')
-    return `与已有记录 ${hm(hit.startedAt)}–${hm(hit.endedAt)} 重叠`
+}): { startedAt: number; endedAt: number } | { error: string } {
+  const { iso, minutes, now } = args
+  const day = parse(iso)
+  if (!day) return { error: '请选择日期' }
+  if (!(minutes >= 1)) return { error: '请选择时长' }
+  const dayStart = day.getTime()
+  const nextDay = addDays(day, 1).getTime()
+  const span = minutes * 60_000
+  if (dayStart > now) return { error: '不能补记未来的日子' }
+  if (now < nextDay) {
+    if (now - span < dayStart) return { error: '超过今天已经过去的时长' }
+    return { startedAt: now - span, endedAt: now }
   }
-  if (activeStartedAt != null && activeStartedAt < endedAt) return '与正在进行的专注重叠'
-  return null
+  if (dayStart + span > nextDay) return { error: '超过一天的时长' }
+  return { startedAt: dayStart, endedAt: dayStart + span }
+}
+
+/** 用过的自定义事项名，最近用过的在前，去重。 */
+export function recentLabels(sessions: FocusSession[]): string[] {
+  const seen = new Set<string>()
+  for (const s of [...sessions].sort((a, b) => b.startedAt - a.startedAt)) {
+    if (!s.projectId && s.label) seen.add(s.label)
+  }
+  return [...seen]
 }

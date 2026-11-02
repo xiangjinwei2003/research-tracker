@@ -71,14 +71,17 @@ interface Store extends AppState {
   /** Discard the running countdown without recording anything. */
   cancelTimer: () => void
   /**
-   * 补记一段没有经过倒计时的专注。调用方先用 manualSessionError 检查；
+   * 补记一段没有经过倒计时的专注。区间由 manualSpan 算出；
    * 这里只拒绝结构上不成立的区间（抛错）。按开始时间插入，保持新的在前。
+   * 有 projectId 时忽略 label。
    */
   addManualSession: (opts: {
     startedAt: number
     endedAt: number
     projectId?: string
     todoId?: string
+    label?: string
+    note?: string
   }) => FocusSession
   /** Returns the undo token, or '' if the session id wasn't found. */
   removeSession: (id: string) => string
@@ -215,7 +218,7 @@ export const useStore = create<Store>()(
         set({ activeTimer: null })
       },
 
-      addManualSession: ({ startedAt, endedAt, projectId, todoId }) => {
+      addManualSession: ({ startedAt, endedAt, projectId, todoId, label, note }) => {
         if (!(endedAt - startedAt >= 60_000)) {
           throw new Error(`addManualSession: invalid span ${startedAt}..${endedAt}`)
         }
@@ -236,6 +239,8 @@ export const useStore = create<Store>()(
           todoTitle: todo?.title,
           color: project?.color,
         }
+        if (!project && label?.trim()) session.label = label.trim()
+        if (note?.trim()) session.note = note.trim()
         set((s) => {
           const at = s.sessions.findIndex((x) => x.startedAt < startedAt)
           const next = [...s.sessions]

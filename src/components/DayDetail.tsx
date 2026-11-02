@@ -64,11 +64,13 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, onAdd, classNam
                 className="group flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-xl px-2 py-1.5 text-sm hover:bg-hover"
               >
                 <span className="w-24 shrink-0 mono text-sm text-muted-foreground">
-                  {fmtHM(r.session.startedAt)}–{fmtHM(r.session.endedAt)}
+                  {r.session.manual
+                    ? '补记'
+                    : `${fmtHM(r.session.startedAt)}–${fmtHM(r.session.endedAt)}`}
                 </span>
                 <span className="w-24 shrink-0 whitespace-nowrap mono text-sm text-muted-foreground">
                   {fmtMinutes(r.minutes)}
-                  {r.session.manual ? ' 补记' : r.session.completed ? '' : ' 提前结束'}
+                  {r.session.completed ? '' : ' 提前结束'}
                 </span>
                 <span className="order-last min-w-0 basis-full truncate text-secondary-foreground sm:order-none sm:basis-0 sm:flex-1">
                   <span
@@ -81,6 +83,11 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, onAdd, classNam
                     <span className="ml-2 text-muted-foreground">{r.projectTitle}</span>
                   ) : null}
                 </span>
+                {r.session.note ? (
+                  <span className="order-last basis-full whitespace-pre-wrap pl-[14px] text-sm text-muted-foreground sm:pl-[calc(12rem+1.5rem+14px)]">
+                    {r.session.note}
+                  </span>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => onRemove(r)}

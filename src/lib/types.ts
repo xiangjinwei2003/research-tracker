@@ -171,8 +171,12 @@ export interface FocusSession {
   endedAt: number
   /** True when the countdown ran to 0 (vs ended early). 补记的记录为 true。 */
   completed: boolean
-  /** 事后手动补记，没有经过倒计时。Absent = 计时器记录。 */
+  /** 事后手动补记，没有经过倒计时，开始与结束时刻只用于归到某一天。Absent = 计时器记录。 */
   manual?: true
+  /** 不属于任何项目的自定义事项（如「英语」），只出现在专注记录里。有 projectId 时不使用。 */
+  label?: string
+  /** 备注。 */
+  note?: string
   /** Binding to a todo/project; absent = 自由专注. */
   projectId?: string
   todoId?: string
