@@ -70,6 +70,16 @@ interface Store extends AppState {
   completeTimer: (opts?: { early?: boolean }) => FocusSession | null
   /** Discard the running countdown without recording anything. */
   cancelTimer: () => void
+  /**
+   * 补记一段没有经过倒计时的专注。调用方先用 manualSessionError 检查；
+   * 这里只拒绝结构上不成立的区间（抛错）。按开始时间插入，保持新的在前。
+   */
+  addManualSession: (opts: {
+    startedAt: number
+    endedAt: number
+    projectId?: string
+    todoId?: string
+  }) => FocusSession
   /** Returns the undo token, or '' if the session id wasn't found. */
   removeSession: (id: string) => string
 
@@ -203,6 +213,36 @@ export const useStore = create<Store>()(
 
       cancelTimer: () => {
         set({ activeTimer: null })
+      },
+
+      addManualSession: ({ startedAt, endedAt, projectId, todoId }) => {
+        if (!(endedAt - startedAt >= 60_000)) {
+          throw new Error(`addManualSession: invalid span ${startedAt}..${endedAt}`)
+        }
+        const project = projectId
+          ? get().projects.find((p) => p.id === projectId)
+          : undefined
+        const todo = todoId ? project?.todos.find((t) => t.id === todoId) : undefined
+        const session: FocusSession = {
+          id: uid(),
+          plannedMin: Math.round((endedAt - startedAt) / 60_000),
+          startedAt,
+          endedAt,
+          completed: true,
+          manual: true,
+          projectId: project?.id,
+          todoId: todo?.id,
+          projectTitle: project?.title,
+          todoTitle: todo?.title,
+          color: project?.color,
+        }
+        set((s) => {
+          const at = s.sessions.findIndex((x) => x.startedAt < startedAt)
+          const next = [...s.sessions]
+          next.splice(at === -1 ? next.length : at, 0, session)
+          return { sessions: next }
+        })
+        return session
       },
 
       removeSession: (id) => {

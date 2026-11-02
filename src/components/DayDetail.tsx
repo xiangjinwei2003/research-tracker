@@ -1,5 +1,5 @@
 import { format } from 'date-fns'
-import { Clock3, Trash2 } from 'lucide-react'
+import { Clock3, Plus, Trash2 } from 'lucide-react'
 import { fmtHM, fmtMinutes } from '@/lib/date'
 import { cn } from '@/lib/cn'
 import type { ResolvedSession } from '@/lib/focus'
@@ -14,11 +14,13 @@ interface Props {
   /** That day's sessions, earliest first. */
   rows: ResolvedSession[]
   onRemove: (r: ResolvedSession) => void
+  /** 补记这一天的专注；未来的日子不显示入口。 */
+  onAdd: () => void
   className?: string
 }
 
 /** 选中那天：日期、当日合计，下面是逐条专注记录（时间、时长、任务）。 */
-export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Props) {
+export function DayDetail({ date, iso, todayIso, rows, onRemove, onAdd, className }: Props) {
   const isToday = iso === todayIso
   const minutes = rows.reduce((acc, r) => acc + r.minutes, 0)
 
@@ -32,11 +34,24 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
       aria-label="当日详情"
       className={className}
       aside={
-        rows.length > 0 ? (
-          <span className="text-sm text-muted-foreground">
-            <span className="mono font-semibold text-foreground">{fmtMinutes(minutes)}</span>，{rows.length} 次
-          </span>
-        ) : null
+        <>
+          {rows.length > 0 ? (
+            <span className="text-sm text-muted-foreground">
+              <span className="mono font-semibold text-foreground">{fmtMinutes(minutes)}</span>，{rows.length} 次
+            </span>
+          ) : null}
+          {iso <= todayIso ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              aria-label="补记专注"
+              title="补记专注"
+              className="-my-1 -mr-1.5 ml-2 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Plus size={16} />
+            </button>
+          ) : null}
+        </>
       }
     >
       {rows.length > 0 ? (
@@ -53,7 +68,7 @@ export function DayDetail({ date, iso, todayIso, rows, onRemove, className }: Pr
                 </span>
                 <span className="w-24 shrink-0 whitespace-nowrap mono text-sm text-muted-foreground">
                   {fmtMinutes(r.minutes)}
-                  {r.session.completed ? '' : ' 提前结束'}
+                  {r.session.manual ? ' 补记' : r.session.completed ? '' : ' 提前结束'}
                 </span>
                 <span className="order-last min-w-0 basis-full truncate text-secondary-foreground sm:order-none sm:basis-0 sm:flex-1">
                   <span

@@ -169,8 +169,10 @@ export interface FocusSession {
   /** Epoch ms. */
   startedAt: number
   endedAt: number
-  /** True when the countdown ran to 0 (vs ended early). */
+  /** True when the countdown ran to 0 (vs ended early). 补记的记录为 true。 */
   completed: boolean
+  /** 事后手动补记，没有经过倒计时。Absent = 计时器记录。 */
+  manual?: true
   /** Binding to a todo/project; absent = 自由专注. */
   projectId?: string
   todoId?: string

@@ -152,3 +152,10 @@ test('normalizeProject keeps known tags in canonical order and drops the rest', 
   assert.deepEqual(p.tags, ['waiting', 'casual'])
   assert.equal('tags' in normalizeProject({ title: 'y', tags: ['bogus'] }), false)
 })
+
+test('normalizeSession keeps manual only when it is exactly true', () => {
+  const base = { id: 'm', plannedMin: 30, startedAt: 1_000_000, endedAt: 2_800_000, completed: true }
+  assert.equal(normalizeSession({ ...base, manual: true })?.manual, true)
+  assert.equal('manual' in (normalizeSession({ ...base, manual: 'yes' }) ?? {}), false)
+  assert.equal('manual' in (normalizeSession(base) ?? {}), false)
+})

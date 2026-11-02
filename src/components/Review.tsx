@@ -20,6 +20,7 @@ import { DayDetail } from './DayDetail'
 import { HeatmapCard, ProjectShareCard } from './FocusStats'
 import { Widget, WidgetNumber } from './Widget'
 import { PageHeader } from './PageHeader'
+import { ManualSessionDialog } from './ManualSessionDialog'
 
 /** Trailing window of the contribution heatmap, in weeks (~4 months). */
 const HEATMAP_WEEKS = 16
@@ -40,6 +41,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
   const [scope, setScope] = useState<Scope>('week')
   // Any day inside the period being viewed; nav moves it by week or month.
   const [anchor, setAnchor] = useState<Date>(() => new Date())
+  const [manualDate, setManualDate] = useState<string | null>(null)
 
   const now = new Date()
   const todayIso = today()
@@ -101,7 +103,11 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
     stats.prevMinutes > 0
       ? Math.round(((stats.minutes - stats.prevMinutes) / stats.prevMinutes) * 100)
       : 0
-  const completedCount = stats.resolved.filter((r) => r.session.completed).length
+  const manualCount = stats.resolved.filter((r) => r.session.manual).length
+  const completedCount = stats.resolved.filter(
+    (r) => r.session.completed && !r.session.manual,
+  ).length
+  const earlyCount = stats.count - completedCount - manualCount
   const total = splitMinutes(stats.minutes)
   const best = stats.best ? splitMinutes(stats.best.minutes) : null
   const prevWord = isWeek ? '较上周' : '较上月'
@@ -215,7 +221,8 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
             <WidgetNumber className="mt-5" value={stats.count} unit="次" />
             <p className="mt-2 text-sm text-muted-foreground">
               完整 {completedCount} 次
-              {stats.count > completedCount ? `，提前结束 ${stats.count - completedCount} 次` : ''}
+              {earlyCount > 0 ? `，提前结束 ${earlyCount} 次` : ''}
+              {manualCount > 0 ? `，补记 ${manualCount} 次` : ''}
             </p>
           </Widget>
           <Widget title="连续专注" icon={Flame} tint="text-warn">
@@ -257,12 +264,14 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
             todayIso={todayIso}
             rows={selectedRows}
             onRemove={onRemove}
+            onAdd={() => setManualDate(selectedIso)}
           />
 
           <ProjectShareCard className="col-span-2" stats={stats} centerLabel={periodWord} />
           <HeatmapCard className="col-span-2" heat={heat} allTime={allTime} />
         </div>
       )}
+      <ManualSessionDialog date={manualDate} onClose={() => setManualDate(null)} />
     </main>
   )
 }

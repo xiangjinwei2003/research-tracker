@@ -235,3 +235,28 @@ export function buildPeriodStats(args: {
     share: projectShare(resolved),
   }
 }
+
+/**
+ * 补记一段专注前的检查。返回给用户看的错误文字，通过时返回 null。
+ * 规则：结束晚于开始且至少 1 分钟，结束不晚于现在，不与已有记录或正在进行的倒计时重叠。
+ */
+export function manualSessionError(args: {
+  startedAt: number
+  endedAt: number
+  sessions: FocusSession[]
+  activeStartedAt?: number
+  now: number
+}): string | null {
+  const { startedAt, endedAt, sessions, activeStartedAt, now } = args
+  if (!Number.isFinite(startedAt) || !Number.isFinite(endedAt)) return '请填写开始和结束时间'
+  if (endedAt <= startedAt) return '结束时间需晚于开始时间'
+  if (endedAt - startedAt < 60_000) return '时长不足 1 分钟'
+  if (endedAt > now) return '结束时间晚于现在'
+  const hit = sessions.find((s) => s.startedAt < endedAt && startedAt < s.endedAt)
+  if (hit) {
+    const hm = (ms: number) => format(new Date(ms), 'HH:mm')
+    return `与已有记录 ${hm(hit.startedAt)}–${hm(hit.endedAt)} 重叠`
+  }
+  if (activeStartedAt != null && activeStartedAt < endedAt) return '与正在进行的专注重叠'
+  return null
+}

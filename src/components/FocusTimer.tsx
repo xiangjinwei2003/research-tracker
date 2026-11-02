@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, BellOff, Check, Timer, X } from 'lucide-react'
+import { Bell, BellOff, Check, History, Timer, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
+import { today } from '@/lib/date'
+import { ManualSessionDialog } from './ManualSessionDialog'
 import { cn } from '@/lib/cn'
 import {
   notifyFocusDone,
@@ -45,6 +47,7 @@ export function FocusTimer() {
 
   const [now, setNow] = useState(() => Date.now())
   const [remindOn, setRemindOn] = useState(reminderEnabled)
+  const [manualDate, setManualDate] = useState<string | null>(null)
   // One completion per countdown, even though the tick effect fires often.
   const firedRef = useRef(false)
 
@@ -142,6 +145,7 @@ export function FocusTimer() {
 
   if (!activeTimer) {
     return (
+      <>
       <DropdownMenu>
         <DropdownMenuTrigger
           className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover data-[state=open]:text-foreground"
@@ -157,6 +161,9 @@ export function FocusTimer() {
           <DropdownMenuItem onSelect={() => begin(60)}>
             <Timer /> 1 小时
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setManualDate(today())}>
+            <History /> 补记专注
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => void toggleRemind()}>
             {remindOn ? <Bell /> : <BellOff />}
@@ -164,6 +171,8 @@ export function FocusTimer() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ManualSessionDialog date={manualDate} onClose={() => setManualDate(null)} />
+      </>
     )
   }
 

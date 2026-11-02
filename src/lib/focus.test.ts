@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { resolveSession, streakDays, sessionMinutes } from './focus.ts'
+import { manualSessionError, resolveSession, streakDays, sessionMinutes } from './focus.ts'
 import type { FocusSession } from './types.ts'
 
 function sess(id: string, startedAt: number): FocusSession {
@@ -94,4 +94,21 @@ test('sessionMinutes floors at 1', () => {
     }),
     1,
   )
+})
+
+test('manualSessionError rejects reversed, short, future and overlapping spans', () => {
+  const M = 60_000
+  const base = { sessions: [sess('a', 100 * M)], now: 1000 * M }
+  assert.equal(manualSessionError({ ...base, startedAt: 10 * M, endedAt: 5 * M }), '结束时间需晚于开始时间')
+  assert.equal(manualSessionError({ ...base, startedAt: 10 * M, endedAt: 10 * M + 30_000 }), '时长不足 1 分钟')
+  assert.equal(manualSessionError({ ...base, startedAt: 990 * M, endedAt: 1001 * M }), '结束时间晚于现在')
+  assert.match(manualSessionError({ ...base, startedAt: 120 * M, endedAt: 140 * M }) ?? '', /重叠/)
+  // 首尾相接不算重叠。
+  assert.equal(manualSessionError({ ...base, startedAt: 130 * M, endedAt: 160 * M }), null)
+  assert.equal(manualSessionError({ ...base, startedAt: 70 * M, endedAt: 100 * M }), null)
+  assert.equal(
+    manualSessionError({ ...base, startedAt: 500 * M, endedAt: 600 * M, activeStartedAt: 550 * M }),
+    '与正在进行的专注重叠',
+  )
+  assert.equal(manualSessionError({ ...base, startedAt: NaN, endedAt: 600 * M }), '请填写开始和结束时间')
 })

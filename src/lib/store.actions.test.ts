@@ -224,3 +224,31 @@ test('moveTodo moves a todo to the end of another project and remaps an unknown 
   assert.deepEqual(pb.todos.map((x) => x.title), ['y', 'x'])
   assert.equal(pb.todos[1].stage, pb.stage)
 })
+
+test('addManualSession snapshots the todo, marks manual, and keeps newest-first order', () => {
+  const M = 60_000
+  const pid = add('补记项目')
+  const tid = useStore.getState().addTodo(pid, { title: '写方法节' })
+  useStore.setState({
+    sessions: [
+      { id: 'new', plannedMin: 30, startedAt: 500 * M, endedAt: 530 * M, completed: true },
+      { id: 'old', plannedMin: 30, startedAt: 100 * M, endedAt: 130 * M, completed: true },
+    ],
+  })
+  const s = useStore.getState().addManualSession({
+    startedAt: 300 * M,
+    endedAt: 345 * M,
+    projectId: pid,
+    todoId: tid,
+  })
+  assert.equal(s.manual, true)
+  assert.equal(s.completed, true)
+  assert.equal(s.plannedMin, 45)
+  assert.equal(s.projectTitle, '补记项目')
+  assert.equal(s.todoTitle, '写方法节')
+  assert.deepEqual(
+    useStore.getState().sessions.map((x: { id: string }) => x.id),
+    ['new', s.id, 'old'],
+  )
+  assert.throws(() => useStore.getState().addManualSession({ startedAt: 10 * M, endedAt: 10 * M }))
+})

@@ -179,6 +179,7 @@ export function normalizeSession(raw: unknown): FocusSession | null {
     endedAt,
     completed: !!s.completed,
   }
+  if (s.manual === true) session.manual = true
   if (typeof s.projectId === 'string') session.projectId = s.projectId
   if (typeof s.todoId === 'string') session.todoId = s.todoId
   if (typeof s.projectTitle === 'string') session.projectTitle = s.projectTitle
