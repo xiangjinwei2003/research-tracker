@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
-import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns'
-import { BarChart3, ChevronLeft, ChevronRight, Flame, Target, Timer, Trophy } from 'lucide-react'
+import { addDays, addMonths, addWeeks, differenceInCalendarDays, format, startOfMonth } from 'date-fns'
+import { ChevronLeft, ChevronRight, Timer } from 'lucide-react'
 import { useStore } from '@/lib/store'
-import { weekStart, parse, splitMinutes, today } from '@/lib/date'
+import { fmtMinutes, weekStart, parse, splitMinutes, today } from '@/lib/date'
 import {
-  allTimeSummary,
   buildPeriodStats,
   dayKey,
   heatmapWeeks,
@@ -17,7 +16,7 @@ import type { Project } from '@/lib/types'
 import { Button } from './ui/Button'
 import { FocusBars } from './FocusBars'
 import { DayDetail } from './DayDetail'
-import { HeatmapCard, ProjectShareCard } from './FocusStats'
+import { AllocationCard, HourCard, RhythmCard } from './FocusStats'
 import { Widget, WidgetNumber } from './Widget'
 import { PageHeader } from './PageHeader'
 import { ManualSessionDialog } from './ManualSessionDialog'
@@ -28,9 +27,9 @@ const HEATMAP_WEEKS = 16
 type Scope = 'week' | 'month'
 
 /**
- * 时间回顾 — per-day focus bars for the viewed period (click a bar to drill into
- * that day), the selected day's detail, then the aggregate stats. Weeks start
- * Monday app-wide; 周/月 switches every section at once.
+ * 专注回顾。顶部是本期总时长和按项目堆叠的逐日柱状图（点柱子选日），
+ * 下面左侧是按项目和任务的时间分配，右侧是选中那天的记录，再往下是时段分布、
+ * 连续天数与热力图。一周从周一开始；周和月的切换作用于除连续天数外的所有卡片。
  */
 export function Review({ onGoBoard }: { onGoBoard: () => void }) {
   const projects = useStore((s) => s.projects)
@@ -54,6 +53,11 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
   const endMs = end.getTime()
   const prevStartMs = prevStart.getTime()
   const isCurrentPeriod = now >= start && now < end
+  // 本期还没过完时，与上一期相同天数比较（本周已过 2 天就比上周一、周二），整期对整期会偏低。
+  const prevEnd = isCurrentPeriod
+    ? addDays(prevStart, differenceInCalendarDays(now, start) + 1)
+    : start
+  const prevEndMs = prevEnd.getTime()
 
   const projectById = useMemo(() => {
     const m = new Map<string, Project>()
@@ -69,19 +73,19 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
         start,
         end,
         prevStart,
-        prevEnd: start,
+        prevEnd,
+        now,
       }),
-    // The ms bounds pin `start`/`end`/`prevStart`; those Date objects are new
+    // The ms bounds pin `start`/`end`/`prevStart`/`prevEnd`; those Date objects are new
     // every render and would defeat the memo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sessions, projectById, startMs, endMs, prevStartMs],
+    [sessions, projectById, startMs, endMs, prevStartMs, prevEndMs, todayIso],
   )
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const streak = useMemo(() => streakDays(sessions, now), [sessions, todayIso])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const heat = useMemo(() => heatmapWeeks(sessions, HEATMAP_WEEKS, now), [sessions, todayIso])
-  const allTime = useMemo(() => allTimeSummary(sessions), [sessions])
 
   /** Today when it's in view, else the period's best day, else its first day. */
   const defaultIso = () => {
@@ -103,14 +107,13 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
     stats.prevMinutes > 0
       ? Math.round(((stats.minutes - stats.prevMinutes) / stats.prevMinutes) * 100)
       : 0
-  const manualCount = stats.resolved.filter((r) => r.session.manual).length
-  const completedCount = stats.resolved.filter(
-    (r) => r.session.completed && !r.session.manual,
-  ).length
-  const earlyCount = stats.count - completedCount - manualCount
   const total = splitMinutes(stats.minutes)
-  const best = stats.best ? splitMinutes(stats.best.minutes) : null
-  const prevWord = isWeek ? '较上周' : '较上月'
+  const prevWord = (isWeek ? '较上周' : '较上月') + (isCurrentPeriod ? '同期' : '')
+  const summary = [
+    stats.prevMinutes > 0 ? `${prevWord} ${pct > 0 ? '+' : ''}${pct}%` : null,
+    stats.elapsedDays > 0 ? `日均 ${fmtMinutes(Math.round(stats.minutes / stats.elapsedDays))}` : null,
+    `${stats.count} 次`,
+  ].filter(Boolean)
   const selectedDay = stats.days.find((d) => d.iso === selectedIso)
   const selectedDate = selectedDay?.date ?? parse(selectedIso) ?? now
   const selectedRows: ResolvedSession[] = stats.resolved.filter(
@@ -208,45 +211,13 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          <Widget title="专注时长" icon={Timer} tint="text-success">
-            <WidgetNumber className="mt-5" value={total.value} unit={total.unit} />
-            <p className="mt-2 text-sm text-muted-foreground">
-              {stats.prevMinutes > 0
-                ? `${prevWord} ${pct > 0 ? '+' : ''}${pct}%`
-                : `${periodWord}累计`}
-            </p>
-          </Widget>
-          <Widget title="专注次数" icon={Target} tint="text-ring">
-            <WidgetNumber className="mt-5" value={stats.count} unit="次" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              完整 {completedCount} 次
-              {earlyCount > 0 ? `，提前结束 ${earlyCount} 次` : ''}
-              {manualCount > 0 ? `，补记 ${manualCount} 次` : ''}
-            </p>
-          </Widget>
-          <Widget title="连续专注" icon={Flame} tint="text-warn">
-            <WidgetNumber className="mt-5" value={streak.current} unit="天" />
-            <p className="mt-2 text-sm text-muted-foreground">最长 {streak.longest} 天</p>
-          </Widget>
-          <Widget title="最佳一天" icon={Trophy} tint="text-today">
-            <WidgetNumber
-              className="mt-5"
-              value={best ? best.value : '0'}
-              unit={best ? best.unit : '分钟'}
-            />
-            <p className="mt-2 text-sm text-muted-foreground">
-              {stats.best ? format(stats.best.date, 'M月d日') : `${periodWord}暂无`}
-            </p>
-          </Widget>
-
-          <Widget
-            title="每日专注"
-            icon={BarChart3}
-            tint="text-accent-foreground"
-            className="col-span-2 lg:col-span-4"
-          >
-            <div className="mt-3">
+        // 宽屏两列：时间分配在左，当日记录在右，紧挨柱状图便于点选后查看；
+        // 窄屏单列时当日记录排在柱状图正下方。
+        <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+          <Widget title={`${periodWord}专注`} icon={Timer} tint="text-success" className="lg:col-span-2">
+            <WidgetNumber className="mt-4" value={total.value} unit={total.unit} />
+            <p className="mt-2 text-sm text-muted-foreground">{summary.join('，')}</p>
+            <div className="mt-5">
               <FocusBars
                 days={stats.days}
                 selectedIso={selectedIso}
@@ -258,7 +229,7 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
           </Widget>
 
           <DayDetail
-            className="col-span-2 lg:col-span-4"
+            className="lg:col-start-2 lg:row-start-2"
             date={selectedDate}
             iso={selectedIso}
             todayIso={todayIso}
@@ -266,9 +237,9 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
             onRemove={onRemove}
             onAdd={() => setManualDate(selectedIso)}
           />
-
-          <ProjectShareCard className="col-span-2" stats={stats} centerLabel={periodWord} />
-          <HeatmapCard className="col-span-2" heat={heat} allTime={allTime} />
+          <AllocationCard className="lg:col-start-1 lg:row-start-2" stats={stats} />
+          <HourCard stats={stats} />
+          <RhythmCard streak={streak} heat={heat} />
         </div>
       )}
       <ManualSessionDialog date={manualDate} onClose={() => setManualDate(null)} />

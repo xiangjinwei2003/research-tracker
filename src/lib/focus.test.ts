@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { manualSpan, projectShare, recentLabels, resolveSession, streakDays, sessionMinutes } from './focus.ts'
+import { hourProfile, manualSpan, projectShare, recentLabels, resolveSession, streakDays, sessionMinutes } from './focus.ts'
 import type { FocusSession } from './types.ts'
 
 function sess(id: string, startedAt: number): FocusSession {
@@ -128,4 +128,36 @@ test('custom labels resolve as their own item and their own share row', () => {
     [['英语', 60], ['健身', 30]],
   )
   assert.deepEqual(recentLabels([a, b, c]), ['健身', '英语'])
+})
+
+test('projectShare 按任务汇总，只有未关联任务时不列任务', () => {
+  const t0 = new Date(2026, 10, 2, 9).getTime()
+  const p = (id: string, todoId?: string, todoTitle?: string): FocusSession => ({
+    ...sess(id, t0),
+    projectId: 'p1',
+    projectTitle: '论文',
+    todoId,
+    todoTitle,
+  })
+  const q: FocusSession = { ...sess('q', t0), projectId: 'p2', projectTitle: '综述' }
+  const share = projectShare(
+    [p('a', 't1', '问卷分析'), p('b', 't1', '问卷分析'), p('c', 't2', '写引言'), p('d'), q].map((s) =>
+      resolveSession(s, new Map()),
+    ),
+  )
+  assert.deepEqual(
+    share[0].tasks.map((t) => [t.title, t.minutes]),
+    [['问卷分析', 60], ['写引言', 30], ['未关联任务', 30]],
+  )
+  assert.deepEqual(share[1].tasks, [])
+})
+
+test('hourProfile 跨整点拆分，补记不计入', () => {
+  const start = new Date(2026, 10, 2, 9, 40).getTime()
+  const a: FocusSession = { ...sess('a', start), endedAt: start + 40 * 60_000 }
+  const m: FocusSession = { ...sess('m', start), manual: true }
+  const hours = hourProfile([a, m].map((s) => resolveSession(s, new Map())))
+  assert.equal(hours[9], 20)
+  assert.equal(hours[10], 20)
+  assert.equal(hours.reduce((x, y) => x + y, 0), 40)
 })

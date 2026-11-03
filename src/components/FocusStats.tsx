@@ -1,92 +1,54 @@
 import { format } from 'date-fns'
-import { CalendarDays, PieChart } from 'lucide-react'
-import { fmtMinutes, splitMinutes } from '@/lib/date'
+import { Clock, Flame, ListTree } from 'lucide-react'
+import { fmtMinutes } from '@/lib/date'
 import { cn } from '@/lib/cn'
 import type { HeatWeek, PeriodStats } from '@/lib/focus'
-import { Widget } from './Widget'
+import { Widget, WidgetNumber } from './Widget'
 
 const WEEKDAY_CN = ['一', '二', '三', '四', '五', '六', '日'] as const
+/** 时段分布下方保留标注的整点。 */
+const HOUR_TICKS = [0, 6, 12, 18]
 
-/** 项目占比：环图加图例。 */
-export function ProjectShareCard({
-  stats,
-  centerLabel,
-  className,
-}: {
-  stats: PeriodStats
-  /** 环图中心的说明，例如「本周」。 */
-  centerLabel: string
-  className?: string
-}) {
-  const total = splitMinutes(stats.minutes)
-
-  /* 环图几何：每段记录占比和累计起点。 */
-  const R = 52
-  const C = 2 * Math.PI * R
-  const gap = stats.share.length > 1 ? C * 0.02 : 0
-  const segments: {
-    key: string
-    name: string
-    color?: string
-    minutes: number
-    frac: number
-    offset: number
-  }[] = []
-  let acc = 0
-  for (const s of stats.share) {
-    const frac = stats.minutes > 0 ? s.minutes / stats.minutes : 0
-    segments.push({ ...s, frac, offset: acc })
-    acc += frac
-  }
-
+/** 时间分配：每个项目或事项的时长与占比，项目下按任务汇总。 */
+export function AllocationCard({ stats, className }: { stats: PeriodStats; className?: string }) {
   return (
-    <Widget title="项目占比" icon={PieChart} tint="text-purple-11" className={className}>
+    <Widget title="时间分配" icon={ListTree} tint="text-purple-11" className={className}>
       {stats.minutes > 0 ? (
-        <div className="mt-4 flex flex-1 items-center gap-5">
-          <div className="relative shrink-0">
-            <svg width={128} height={128} viewBox="0 0 128 128" className="-rotate-90">
-              {segments.map((s) => (
-                <circle
-                  key={s.key}
-                  cx={64}
-                  cy={64}
-                  r={R}
-                  fill="none"
-                  stroke={s.color || 'var(--muted-foreground)'}
-                  strokeWidth={12}
-                  strokeLinecap={segments.length > 1 ? 'butt' : 'round'}
-                  strokeDasharray={`${Math.max(0, C * s.frac - gap)} ${C}`}
-                  strokeDashoffset={-C * s.offset}
-                />
-              ))}
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="num-rounded text-title font-semibold leading-none text-foreground">
-                {total.value}
-                <span className="ml-0.5 text-xs font-medium text-muted-foreground">
-                  {total.unit}
-                </span>
-              </span>
-              <span className="mt-1 text-xs text-muted-foreground">{centerLabel}</span>
-            </div>
-          </div>
-          <ul className="min-w-0 flex-1 space-y-2">
-            {segments.map((s) => (
-              <li key={s.key} className="flex items-center gap-2 text-sm">
-                <span
-                  aria-hidden
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ background: s.color || 'var(--muted-foreground)' }}
-                />
-                <span className="min-w-0 flex-1 truncate text-secondary-foreground">{s.name}</span>
-                <span className="shrink-0 mono text-muted-foreground">{fmtMinutes(s.minutes)}</span>
-                <span className="w-9 shrink-0 text-right mono text-muted-foreground">
-                  {Math.round(s.frac * 100)}%
-                </span>
+        <ul className="mt-4 space-y-5">
+          {stats.share.map((g) => {
+            const frac = g.minutes / stats.minutes
+            const color = g.color || 'var(--muted-foreground)'
+            return (
+              <li key={g.key}>
+                <div className="flex items-center gap-2.5 text-sm">
+                  <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: color }} />
+                  <span className="min-w-0 flex-1 truncate font-medium text-foreground">{g.name}</span>
+                  <span className="shrink-0 mono text-foreground">{fmtMinutes(g.minutes)}</span>
+                  <span className="w-9 shrink-0 text-right mono text-muted-foreground">
+                    {Math.round(frac * 100)}%
+                  </span>
+                </div>
+                <div className="ml-[18px] mt-2 h-1 overflow-hidden rounded-full bg-selected">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${Math.max(1, frac * 100)}%`, background: color }}
+                  />
+                </div>
+                {g.tasks.length > 0 ? (
+                  <ul className="ml-[18px] mt-2 space-y-1">
+                    {g.tasks.map((t) => (
+                      <li key={t.key} className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                        <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                        <span className="shrink-0 mono">{fmtMinutes(t.minutes)}</span>
+                        <span aria-hidden className="w-9 shrink-0" />
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
-            ))}
-          </ul>
-        </div>
+            )
+          })}
+        </ul>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">该时段没有专注记录</p>
       )}
@@ -94,19 +56,64 @@ export function ProjectShareCard({
   )
 }
 
-/** 近 16 周热力图，下方是累计数据。 */
-export function HeatmapCard({
+/** 时段分布：一天 24 小时里每个小时的专注分钟数，补记不计入。 */
+export function HourCard({ stats, className }: { stats: PeriodStats; className?: string }) {
+  const max = Math.max(...stats.hours)
+  return (
+    <Widget title="时段分布" icon={Clock} tint="text-ring" className={className}>
+      {max > 0 ? (
+        <div className="mt-4">
+          <div
+            role="img"
+            aria-label="每小时专注时长"
+            className="flex h-24 items-end gap-[3px]"
+          >
+            {stats.hours.map((m, h) => (
+              <span
+                key={h}
+                title={`${h} 点到 ${h + 1} 点：${m > 0 ? fmtMinutes(m) : '无记录'}`}
+                className={cn('min-w-0 flex-1 rounded-[3px]', m > 0 ? 'bg-indigo-9' : 'bg-selected')}
+                style={{ height: m > 0 ? `${Math.max(6, (m / max) * 100)}%` : '2px' }}
+              />
+            ))}
+          </div>
+          <div className="mt-2 flex text-xs leading-none text-muted-foreground">
+            {stats.hours.map((_, h) => (
+              <span key={h} className="min-w-0 flex-1 whitespace-nowrap">
+                {HOUR_TICKS.includes(h) ? `${h}:00` : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-muted-foreground">
+          {stats.count > 0 ? '该时段只有补记，没有开始时刻' : '该时段没有专注记录'}
+        </p>
+      )}
+    </Widget>
+  )
+}
+
+/** 连续专注天数，下方是近 16 周热力图。两者都按全部记录计算，不随周月切换。 */
+export function RhythmCard({
+  streak,
   heat,
-  allTime,
   className,
 }: {
+  streak: { current: number; longest: number }
   heat: HeatWeek[]
-  allTime: { minutes: number; count: number; days: number }
   className?: string
 }) {
   return (
-    <Widget title="近 16 周" icon={CalendarDays} tint="text-ring" className={className}>
-      <div className="mt-4 max-w-full overflow-x-auto">
+    <Widget
+      title="连续专注"
+      icon={Flame}
+      tint="text-warn"
+      className={className}
+      aside={<span className="text-sm text-muted-foreground">最长 {streak.longest} 天</span>}
+    >
+      <WidgetNumber className="mt-4" value={streak.current} unit="天" />
+      <div className="mt-5 max-w-full overflow-x-auto overflow-y-hidden">
         <div className="inline-flex gap-1">
           <div className="mr-1 flex flex-col gap-1 pt-4.5">
             {WEEKDAY_CN.map((w, i) => (
@@ -151,9 +158,6 @@ export function HeatmapCard({
           ))}
         </div>
       </div>
-      <p className="mt-auto pt-4 text-sm text-muted-foreground">
-        累计专注 <span className="mono text-foreground">{fmtMinutes(allTime.minutes)}</span>，{allTime.count} 次，覆盖 {allTime.days} 天
-      </p>
     </Widget>
   )
 }

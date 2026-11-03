@@ -17,7 +17,7 @@ interface Props {
 }
 
 /**
- * Per-day focus totals as a bar chart that doubles as the day picker: clicking
+ * Per-day focus totals as a stacked bar chart (one colour per project) that doubles as the day picker: clicking
  * (or arrowing to) a bar drives the day detail below it. Empty days stay
  * clickable — "nothing here" is an answer too.
  */
@@ -83,14 +83,26 @@ export function FocusBars({ days, selectedIso, onSelect, todayIso, scope }: Prop
             </span>
             <span className="flex w-full flex-1 items-end justify-center">
               {d.minutes > 0 ? (
+                // 按项目颜色堆叠：时长最多的分组在底部，各天顺序一致。
                 <span
                   style={{ height: `${pct}%` }}
                   className={cn(
-                    'w-full transition-colors',
+                    'flex w-full flex-col-reverse gap-[2px] overflow-hidden',
                     isWeek ? 'max-w-12 rounded-[10px]' : 'max-w-[9px] rounded-full',
-                    selected ? 'bg-indigo-10' : 'bg-indigo-9 group-hover:bg-indigo-10',
                   )}
-                />
+                >
+                  {d.segments.map((seg) => (
+                    <span
+                      key={seg.key}
+                      className="w-full shrink-0"
+                      style={{
+                        flexGrow: seg.minutes,
+                        flexBasis: 0,
+                        background: seg.color || 'var(--muted-foreground)',
+                      }}
+                    />
+                  ))}
+                </span>
               ) : (
                 <span
                   className={cn(

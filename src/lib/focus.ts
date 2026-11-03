@@ -48,28 +48,67 @@ export function resolveSession(
   }
 }
 
+/** 时间分配的分组：项目、自定义事项（如「英语」）、自由专注各为一组。 */
+export function groupKey(s: FocusSession): string {
+  return s.projectId ?? (s.label ? `label:${s.label}` : '__free')
+}
+
+/** 一天里某个分组的时长，用于堆叠柱。 */
+export interface DaySegment {
+  key: string
+  color?: string
+  minutes: number
+}
+
 export interface DayTotal {
   date: Date
   iso: string
   minutes: number
   count: number
+  /** 按分组拆分的时长，顺序与本期时间分配一致（时长最多的分组在前）。 */
+  segments: DaySegment[]
 }
 
-/** One entry per calendar day in [start, end), totalled from `resolved`. */
-export function dayTotals(resolved: ResolvedSession[], start: Date, end: Date): DayTotal[] {
+/**
+ * One entry per calendar day in [start, end), totalled from `resolved`.
+ * `order` lists every group key in `resolved`, most-first; segments follow it
+ * so a project keeps the same position in every day's stacked bar.
+ */
+export function dayTotals(
+  resolved: ResolvedSession[],
+  start: Date,
+  end: Date,
+  order: string[],
+): DayTotal[] {
   const days: DayTotal[] = []
   for (let d = start; d < end; d = addDays(d, 1)) {
-    days.push({ date: d, iso: format(d, 'yyyy-MM-dd'), minutes: 0, count: 0 })
+    days.push({ date: d, iso: format(d, 'yyyy-MM-dd'), minutes: 0, count: 0, segments: [] })
   }
   const idx = new Map(days.map((d, i) => [d.iso, i]))
   for (const r of resolved) {
     const i = idx.get(dayKey(r.session.startedAt))
-    if (i != null) {
-      days[i].minutes += r.minutes
-      days[i].count += 1
-    }
+    if (i == null) continue
+    const day = days[i]
+    day.minutes += r.minutes
+    day.count += 1
+    const key = groupKey(r.session)
+    const seg = day.segments.find((s) => s.key === key)
+    if (seg) seg.minutes += r.minutes
+    else day.segments.push({ key, color: r.color, minutes: r.minutes })
+  }
+  const rank = new Map(order.map((k, i) => [k, i]))
+  for (const d of days) {
+    d.segments.sort((a, b) => rank.get(a.key)! - rank.get(b.key)!)
   }
   return days
+}
+
+/** 某个任务在本期的累计时长。 */
+export interface TaskShare {
+  key: string
+  /** 任务标题；分组内没有关联任务的记录合为「未关联任务」。 */
+  title: string
+  minutes: number
 }
 
 export interface ProjectShare {
@@ -77,19 +116,58 @@ export interface ProjectShare {
   name: string
   color?: string
   minutes: number
+  /** 按任务汇总，时长多的在前。只有自定义事项或自由专注的分组为空。 */
+  tasks: TaskShare[]
 }
 
 /** Minutes per project over `resolved`, biggest first (自由专注 as its own row). */
 export function projectShare(resolved: ResolvedSession[]): ProjectShare[] {
   const map = new Map<string, ProjectShare>()
+  const taskMaps = new Map<string, Map<string, TaskShare>>()
   for (const r of resolved) {
-    const key =
-      r.session.projectId ?? (r.session.label ? `label:${r.session.label}` : '__free')
+    const key = groupKey(r.session)
     const hit = map.get(key)
     if (hit) hit.minutes += r.minutes
-    else map.set(key, { key, name: r.projectTitle, color: r.color, minutes: r.minutes })
+    else map.set(key, { key, name: r.projectTitle, color: r.color, minutes: r.minutes, tasks: [] })
+
+    if (!r.session.projectId) continue
+    const title = (r.session.todoTitle || '').trim()
+    const taskKey = r.session.todoId ?? (title ? `title:${title}` : '__none')
+    let tasks = taskMaps.get(key)
+    if (!tasks) taskMaps.set(key, (tasks = new Map()))
+    const t = tasks.get(taskKey)
+    if (t) t.minutes += r.minutes
+    else tasks.set(taskKey, { key: taskKey, title: title || '未关联任务', minutes: r.minutes })
+  }
+  for (const [key, tasks] of taskMaps) {
+    // 「未关联任务」固定排在最后。只有它一项时不列出任务，分组那一行已经说明了全部。
+    const list = [...tasks.values()].sort(
+      (a, b) => Number(a.key === '__none') - Number(b.key === '__none') || b.minutes - a.minutes,
+    )
+    map.get(key)!.tasks = list.length === 1 && list[0].key === '__none' ? [] : list
   }
   return [...map.values()].sort((a, b) => b.minutes - a.minutes)
+}
+
+/**
+ * 一天 24 小时里每个小时的专注分钟数。补记没有真实的开始时刻，不计入。
+ * 跨越整点的记录按实际重叠拆到各个小时。
+ */
+export function hourProfile(resolved: ResolvedSession[]): number[] {
+  const hours = new Array<number>(24).fill(0)
+  for (const r of resolved) {
+    if (r.session.manual) continue
+    let t = r.session.startedAt
+    const end = r.session.endedAt
+    while (t < end) {
+      const d = new Date(t)
+      const nextHour = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() + 1).getTime()
+      const sliceEnd = Math.min(end, nextHour)
+      hours[d.getHours()] += (sliceEnd - t) / 60_000
+      t = sliceEnd
+    }
+  }
+  return hours.map((m) => Math.round(m))
 }
 
 
@@ -164,20 +242,6 @@ export function heatmapWeeks(sessions: FocusSession[], weeks: number, now: Date)
   })
 }
 
-export function allTimeSummary(sessions: FocusSession[]): {
-  minutes: number
-  count: number
-  days: number
-} {
-  let minutes = 0
-  for (const s of sessions) minutes += sessionMinutes(s)
-  return {
-    minutes,
-    count: sessions.length,
-    days: new Set(sessions.map((s) => dayKey(s.startedAt))).size,
-  }
-}
-
 export interface PeriodStats {
   /** Sessions inside the period, earliest first. */
   resolved: ResolvedSession[]
@@ -185,10 +249,14 @@ export interface PeriodStats {
   days: DayTotal[]
   minutes: number
   count: number
-  /** Same metric over the preceding period of equal shape — powers the 环比. */
+  /** Minutes in [prevStart, prevEnd) — the 环比 baseline (同期 while the period is in progress). */
   prevMinutes: number
   best: DayTotal | null
   share: ProjectShare[]
+  /** 一天 24 小时的时段分布，见 hourProfile。 */
+  hours: number[]
+  /** 计算日均用的天数：本期已经过去的天数（含今天），过去的时段为全部天数。 */
+  elapsedDays: number
 }
 
 /**
@@ -202,8 +270,9 @@ export function buildPeriodStats(args: {
   end: Date
   prevStart: Date
   prevEnd: Date
+  now: Date
 }): PeriodStats {
-  const { sessions, projectById, start, end, prevStart, prevEnd } = args
+  const { sessions, projectById, start, end, prevStart, prevEnd, now } = args
   const startMs = start.getTime()
   const endMs = end.getTime()
 
@@ -222,7 +291,13 @@ export function buildPeriodStats(args: {
     if (s.startedAt >= prevStartMs && s.startedAt < prevEndMs) prevMinutes += sessionMinutes(s)
   }
 
-  const days = dayTotals(resolved, start, end)
+  const share = projectShare(resolved)
+  const days = dayTotals(
+    resolved,
+    start,
+    end,
+    share.map((s) => s.key),
+  )
   const best = days.reduce<DayTotal | null>(
     (a, b) => (b.minutes > 0 && (!a || b.minutes > a.minutes) ? b : a),
     null,
@@ -235,7 +310,9 @@ export function buildPeriodStats(args: {
     count: resolved.length,
     prevMinutes,
     best,
-    share: projectShare(resolved),
+    share,
+    hours: hourProfile(resolved),
+    elapsedDays: days.filter((d) => d.date <= now).length,
   }
 }
 
