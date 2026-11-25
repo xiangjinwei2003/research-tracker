@@ -174,3 +174,12 @@ test('清空与导入都带上笔记，撤销后笔记回来', () => {
   undo(t2)
   assert.equal(useStore.getState().notes[0].text, '保留我')
 })
+
+test('markNoteSent：发送记录按时间追加', () => {
+  const { addNote, markNoteSent } = useStore.getState()
+  const id = addNote({ date: '2026-11-25', text: '整理实验记录' })
+  markNoteSent(id, { at: 1764030000000, folder: '/work/icu-2', prompt: '第一次' })
+  markNoteSent(id, { at: 1764033600000, folder: '/work/icu-2', prompt: '第二次' })
+  const sent = useStore.getState().notes.find((n: { id: string }) => n.id === id).sent
+  assert.deepEqual(sent.map((x: { prompt: string }) => x.prompt), ['第一次', '第二次'])
+})

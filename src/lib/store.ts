@@ -8,6 +8,7 @@ import type {
   ActiveTimer,
   ProjectTag,
   NoteEntry,
+  NoteSent,
 } from './types'
 import { NOTE_MAX_LEVEL, PROJECT_COLOR_PRESETS, PROJECT_TAG_ORDER } from './types'
 import { insertionIndex, notesOfDay } from './notes'
@@ -141,6 +142,8 @@ interface Store extends AppState {
   mergeNoteUp: (id: string) => { id: string; caret: number } | null
   /** 删除一条笔记。`undoable` 时返回撤销令牌（菜单里的删除），否则返回 ''（退格删空行）。 */
   removeNote: (id: string, opts?: { undoable?: boolean }) => string
+  /** 记下一次发送到 Claude Code。 */
+  markNoteSent: (id: string, sent: NoteSent) => void
 
   /** Returns the undo token. */
   replaceState: (state: AppState) => string
@@ -590,6 +593,14 @@ export const useStore = create<Store>()(
         const entry = makeUndo({ kind: 'note-removed', note, index }, '已删除笔记')
         set((s) => ({ notes: s.notes.filter((n) => n.id !== id), undoStack: pushUndo(s, entry) }))
         return entry.token
+      },
+
+      markNoteSent: (id, sent) => {
+        set((s) => ({
+          notes: s.notes.map((n) =>
+            n.id === id ? { ...n, sent: [...(n.sent ?? []), sent], updatedAt: stamp() } : n,
+          ),
+        }))
       },
 
       replaceState: (next) => {

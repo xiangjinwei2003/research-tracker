@@ -10,6 +10,7 @@ import {
 } from './fileStore'
 import { claudeRuntime } from './runtime'
 import { setDesktop } from './desktop'
+import { setSample } from './sample'
 
 /**
  * 桌面版的启动流程：拿到 desktop 能力 → 确认文件权限 → 打开数据文件 → 水合 store。
@@ -41,6 +42,8 @@ export function reasonOf(err: unknown): string {
 export async function startBoot(): Promise<BootPhase> {
   const claude = claudeRuntime()
   if (!claude) return { kind: 'failed', reason: '当前页面不在 Claude 的 Artifact 环境中' }
+  // sample 不影响启动：拿不到时界面里不显示 AI 整理。
+  void claude.use('sample').then(setSample, () => setSample(null))
   const desktop = await claude.use('desktop')
   if (!desktop?.fs) {
     const state = desktop

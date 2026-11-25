@@ -1,7 +1,9 @@
 import { memo, useCallback, useRef, useState, type KeyboardEvent } from 'react'
-import { Ellipsis, Link2, Trash2, X } from 'lucide-react'
+import { Ellipsis, Link2, SendHorizontal, Trash2, X } from 'lucide-react'
+import { format, isToday } from 'date-fns'
 import { useStore } from '@/lib/store'
 import type { NoteEntry } from '@/lib/types'
+import { folderName } from '@/lib/claudeLink'
 import { cn } from '@/lib/cn'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import {
@@ -19,6 +21,7 @@ export interface NoteRowHandlers {
   onKey: (entry: NoteEntry, e: KeyboardEvent<HTMLTextAreaElement>, ghost: boolean) => void
   onLink: (entry: NoteEntry, link: NoteLink | null) => void
   onDelete: (entry: NoteEntry) => void
+  onCompose: (entry: NoteEntry) => void
 }
 
 interface Props {
@@ -61,6 +64,8 @@ export const NoteRow = memo(function NoteRow({ entry, ghost, compact, placeholde
   const current: NoteLink | undefined = entry.projectId
     ? { projectId: entry.projectId, todoId: entry.todoId }
     : undefined
+  const sent = entry.sent ?? []
+  const lastSent = sent[sent.length - 1]
 
   return (
     <li
@@ -107,9 +112,33 @@ export const NoteRow = memo(function NoteRow({ entry, ghost, compact, placeholde
             </button>
           </div>
         ) : null}
+        {lastSent ? (
+          <div
+            className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+            title={lastSent.prompt}
+          >
+            <SendHorizontal size={11} className="shrink-0" />
+            <span className="shrink-0 tabular-nums">
+              已发送 {format(lastSent.at, isToday(lastSent.at) ? 'HH:mm' : 'M月d日 HH:mm')}
+            </span>
+            {lastSent.folder ? <span className="truncate">{folderName(lastSent.folder)}</span> : null}
+            {sent.length > 1 ? <span className="shrink-0">共 {sent.length} 次</span> : null}
+          </div>
+        ) : null}
       </div>
       {ghost ? null : (
         <div className="-my-0.5 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
+          {entry.text.trim() ? (
+            <button
+              type="button"
+              onClick={() => handlers.onCompose(entry)}
+              className={ICON_BUTTON}
+              aria-label="转为提示词"
+              title="转为提示词（⌘↩）"
+            >
+              <SendHorizontal size={15} />
+            </button>
+          ) : null}
           <Popover open={linkOpen} onOpenChange={setLinkOpen}>
             <PopoverTrigger className={ICON_BUTTON} aria-label="关联任务" title="关联任务">
               <Link2 size={15} />

@@ -6,6 +6,7 @@ import { toast } from '@/lib/toast'
 import type { NoteEntry } from '@/lib/types'
 import { cn } from '@/lib/cn'
 import { NoteRow, type NoteRowHandlers } from './NoteRow'
+import { PromptComposer } from './PromptComposer'
 import { takeTodayNoteFocus } from './focus'
 
 interface Props {
@@ -40,6 +41,7 @@ const plainKey = (e: KeyboardEvent) => !e.metaKey && !e.ctrlKey && !e.altKey
 export function NotesView({ days, today, compact = false, focusTick = 0 }: Props) {
   const notes = useStore((s) => s.notes)
   const [ghostSeed] = useState(uid)
+  const [composing, setComposing] = useState<string | null>(null)
   const refs = useRef(new Map<string, HTMLTextAreaElement>())
   const pending = useRef<FocusRequest | null>(null)
   const view = useRef({ days, today })
@@ -109,6 +111,13 @@ export function NotesView({ days, today, compact = false, focusTick = 0 }: Props
         const state = useStore.getState()
         const note = state.notes.find((n) => n.id === entry.id)
         const { selectionStart: start, selectionEnd: end, value } = el
+
+        // ⌘↩（Windows 上 Ctrl+Enter）：转为提示词。
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
+          e.preventDefault()
+          if (note?.text.trim()) setComposing(note.id)
+          return
+        }
 
         if (e.key === 'Enter' && !e.shiftKey && plainKey(e)) {
           e.preventDefault()
@@ -185,6 +194,8 @@ export function NotesView({ days, today, compact = false, focusTick = 0 }: Props
         const token = removeNote(entry.id, { undoable: true })
         if (token) toast({ message: '已删除笔记', action: { label: '撤销', onClick: () => undo(token) } })
       },
+
+      onCompose: (entry) => setComposing(entry.id),
     }
   }, [ghostSeed])
 
@@ -225,6 +236,7 @@ export function NotesView({ days, today, compact = false, focusTick = 0 }: Props
           </ul>
         </section>
       ))}
+      {composing ? <PromptComposer noteId={composing} onClose={() => setComposing(null)} /> : null}
     </div>
   )
 }

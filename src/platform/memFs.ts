@@ -36,16 +36,20 @@ export class MemFs implements DataFs {
 
   async readdir(path: string): Promise<{ name: string; isFile: boolean; isDirectory: boolean; isSymbolicLink: boolean }[]> {
     const prefix = `${path}/`
-    const names = [...this.files.keys()]
-      .filter((k) => k.startsWith(prefix) && !k.slice(prefix.length).includes('/'))
-      .map((k) => k.slice(prefix.length))
-    if (!names.length && !this.dirs.has(path)) throw new Error(`ENOENT: ${path}`)
-    return names.map((name) => ({ name, isFile: true, isDirectory: false, isSymbolicLink: false }))
+    const child = (k: string) => k.startsWith(prefix) && !k.slice(prefix.length).includes('/')
+    const files = [...this.files.keys()].filter(child).map((k) => k.slice(prefix.length))
+    const dirs = [...this.dirs].filter(child).map((k) => k.slice(prefix.length))
+    if (!files.length && !dirs.length && !this.dirs.has(path)) throw new Error(`ENOENT: ${path}`)
+    return [
+      ...files.map((name) => ({ name, isFile: true, isDirectory: false, isSymbolicLink: false })),
+      ...dirs.map((name) => ({ name, isFile: false, isDirectory: true, isSymbolicLink: false })),
+    ]
   }
 
-  async stat(path: string): Promise<{ mtimeMs: number }> {
+  async stat(path: string): Promise<{ mtimeMs: number; isFile: boolean; isDirectory: boolean }> {
+    if (this.dirs.has(path)) return { mtimeMs: 0, isFile: false, isDirectory: true }
     if (!this.files.has(path)) throw new Error(`ENOENT: ${path}`)
-    return { mtimeMs: this.mtimes.get(path) ?? 0 }
+    return { mtimeMs: this.mtimes.get(path) ?? 0, isFile: true, isDirectory: false }
   }
 
   async mkdir(path: string): Promise<void> {

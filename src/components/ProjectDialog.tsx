@@ -35,6 +35,8 @@ import { Collapsible } from './ui/Collapsible'
 import { PriorityButton } from './PriorityButton'
 import { Checkbox } from './Checkbox'
 import { DateButton } from './DateButton'
+import { FolderField } from './FolderField'
+import { folderName, isAbsoluteFolder } from '@/lib/claudeLink'
 import { cn } from '@/lib/cn'
 
 interface Props {
@@ -171,6 +173,16 @@ export function ProjectDialog({ projectId, onClose }: Props) {
             value={project.notes}
             onChange={(e) => updateProject(project.id, { notes: e.target.value })}
           />
+        </Collapsible>
+
+        <Collapsible title="本机目录" summary={project.folder ? folderName(project.folder) : '未设置'}>
+          <FolderField
+            id="project-folder"
+            value={project.folder ?? ''}
+            invalid={!!project.folder && !project.folder.startsWith('~') && !isAbsoluteFolder(project.folder)}
+            onChange={(value) => updateProject(project.id, { folder: value.trim() ? value : undefined })}
+          />
+          <p className="mt-1.5 text-xs text-muted-foreground">笔记发送到 Claude Code 时，新会话在这个目录里工作。</p>
         </Collapsible>
       </div>
 
