@@ -20,6 +20,7 @@ import { getDesktop } from "@/platform/desktop";
 import { currentSettings } from "@/platform/settings";
 import { QUICK_NOTE_EVENT } from "@/platform/quickNote";
 import { startDesktopIntegration, takeNotices } from "@/platform/desktopIntegration";
+import { bumpSessionsTick, resolvePendingSessions } from "@/platform/claudeSessions";
 import { isBareShortcut, overlayIsOpen } from "@/lib/keyboard";
 import { legacyMemoText } from "@/lib/notes";
 import { today } from "@/lib/date";
@@ -98,6 +99,21 @@ export default function App() {
       },
       (err: unknown) => toast({ message: `桌面功能没有全部启动：${err instanceof Error ? err.message : String(err)}` }),
     );
+    // 从笔记发出的提示词配到 Claude Code 会话：打开时找一次，之后每次回到窗口（多半是从 Claude 回来）再找，
+    // 并刷新笔记上显示的会话信息。会话记录是 Claude 应用的内部文件，读取失败时只提示一次。
+    let warned = false;
+    const refreshSessions = () => {
+      resolvePendingSessions()
+        .then(bumpSessionsTick)
+        .catch((err: unknown) => {
+          if (warned) return;
+          warned = true;
+          toast({ message: `读取 Claude Code 会话记录失败：${err instanceof Error ? err.message : String(err)}` });
+        });
+    };
+    refreshSessions();
+    window.addEventListener("focus", refreshSessions);
+    return () => window.removeEventListener("focus", refreshSessions);
   }, []);
 
   // Global Cmd/Ctrl+Z to undo last destructive action.

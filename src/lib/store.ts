@@ -149,6 +149,8 @@ interface Store extends AppState {
   removeNote: (id: string, opts?: { undoable?: boolean }) => string
   /** 记下一次发送到 Claude Code。 */
   markNoteSent: (id: string, sent: NoteSent) => void
+  /** 发送记录配到了桌面端的 Claude Code 会话：按笔记 id 与发送时刻找到那条记录，写入会话 id。 */
+  setSentSession: (noteId: string, at: number, sessionId: string) => void
   /** 保存一次分析，放在最前，只保留最近 ANALYSIS_KEEP 条。 */
   addAnalysis: (record: AnalysisRecord) => void
 
@@ -617,6 +619,16 @@ export const useStore = create<Store>()(
         set((s) => ({
           notes: s.notes.map((n) =>
             n.id === id ? { ...n, sent: [...(n.sent ?? []), sent], updatedAt: stamp() } : n,
+          ),
+        }))
+      },
+
+      setSentSession: (noteId, at, sessionId) => {
+        set((s) => ({
+          notes: s.notes.map((n) =>
+            n.id === noteId && n.sent?.some((x) => x.at === at)
+              ? { ...n, sent: n.sent.map((x) => (x.at === at ? { ...x, sessionId } : x)) }
+              : n,
           ),
         }))
       },

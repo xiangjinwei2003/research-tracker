@@ -1,10 +1,9 @@
 import { memo, useCallback, useRef, useState, type KeyboardEvent } from 'react'
 import { Ellipsis, Link2, SendHorizontal, Trash2, X } from 'lucide-react'
-import { format, isToday } from 'date-fns'
 import { useStore } from '@/lib/store'
 import type { NoteEntry } from '@/lib/types'
-import { folderName } from '@/lib/claudeLink'
 import { cn } from '@/lib/cn'
+import { SentLine } from './SentLine'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import {
   DropdownMenu,
@@ -65,7 +64,6 @@ export const NoteRow = memo(function NoteRow({ entry, ghost, compact, placeholde
     ? { projectId: entry.projectId, todoId: entry.todoId }
     : undefined
   const sent = entry.sent ?? []
-  const lastSent = sent[sent.length - 1]
 
   return (
     <li
@@ -112,19 +110,7 @@ export const NoteRow = memo(function NoteRow({ entry, ghost, compact, placeholde
             </button>
           </div>
         ) : null}
-        {lastSent ? (
-          <div
-            className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
-            title={lastSent.prompt}
-          >
-            <SendHorizontal size={11} className="shrink-0" />
-            <span className="shrink-0 tabular-nums">
-              已发送 {format(lastSent.at, isToday(lastSent.at) ? 'HH:mm' : 'M月d日 HH:mm')}
-            </span>
-            {lastSent.folder ? <span className="truncate">{folderName(lastSent.folder)}</span> : null}
-            {sent.length > 1 ? <span className="shrink-0">共 {sent.length} 次</span> : null}
-          </div>
-        ) : null}
+        {sent.length ? <SentLine sent={sent} /> : null}
       </div>
       {ghost ? null : (
         <div className="-my-0.5 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
