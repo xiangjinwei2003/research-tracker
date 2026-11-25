@@ -9,8 +9,9 @@ import type {
   ProjectTag,
   NoteEntry,
   NoteSent,
+  AnalysisRecord,
 } from './types'
-import { NOTE_MAX_LEVEL, PROJECT_COLOR_PRESETS, PROJECT_TAG_ORDER } from './types'
+import { ANALYSIS_KEEP, NOTE_MAX_LEVEL, PROJECT_COLOR_PRESETS, PROJECT_TAG_ORDER } from './types'
 import { insertionIndex, notesOfDay } from './notes'
 import { uid } from './id'
 import { today } from './date'
@@ -144,6 +145,8 @@ interface Store extends AppState {
   removeNote: (id: string, opts?: { undoable?: boolean }) => string
   /** 记下一次发送到 Claude Code。 */
   markNoteSent: (id: string, sent: NoteSent) => void
+  /** 保存一次分析，放在最前，只保留最近 ANALYSIS_KEEP 条。 */
+  addAnalysis: (record: AnalysisRecord) => void
 
   /** Returns the undo token. */
   replaceState: (state: AppState) => string
@@ -195,6 +198,7 @@ export const useStore = create<Store>()(
       projects: [],
       sessions: [],
       notes: [],
+      analyses: [],
       activeTimer: null,
       version: SCHEMA_VERSION,
       undoStack: [],
@@ -603,11 +607,16 @@ export const useStore = create<Store>()(
         }))
       },
 
+      addAnalysis: (record) => {
+        set((s) => ({ analyses: [record, ...s.analyses].slice(0, ANALYSIS_KEEP) }))
+      },
+
       replaceState: (next) => {
         const prev = {
           projects: get().projects,
           sessions: get().sessions,
           notes: get().notes,
+          analyses: get().analyses,
           version: get().version,
         }
         const entry = makeUndo({ kind: 'replace-state', prev }, '已替换全部数据')
@@ -617,6 +626,7 @@ export const useStore = create<Store>()(
           projects: next.projects,
           sessions: next.sessions,
           notes: next.notes,
+          analyses: next.analyses,
           version: next.version,
           undoStack: pushUndo(s, entry),
         }))
@@ -628,6 +638,7 @@ export const useStore = create<Store>()(
           projects: get().projects,
           sessions: get().sessions,
           notes: get().notes,
+          analyses: get().analyses,
           version: get().version,
         }
         const entry = makeUndo(
@@ -639,6 +650,7 @@ export const useStore = create<Store>()(
           projects: [],
           sessions: [],
           notes: [],
+          analyses: [],
           activeTimer: null,
           version: SCHEMA_VERSION,
           undoStack: pushUndo(s, entry),
@@ -695,6 +707,7 @@ export const useStore = create<Store>()(
                 projects: entry.prev.projects,
                 sessions: entry.prev.sessions,
                 notes: entry.prev.notes,
+                analyses: entry.prev.analyses,
                 version: entry.prev.version,
                 undoStack: rest,
               }
@@ -704,6 +717,7 @@ export const useStore = create<Store>()(
                 projects: entry.prev.projects,
                 sessions: entry.prev.sessions,
                 notes: entry.prev.notes,
+                analyses: entry.prev.analyses,
                 version: entry.prev.version,
                 activeTimer: entry.prevTimer,
                 undoStack: rest,
@@ -747,6 +761,7 @@ function persistedPart(s: Store): Persisted {
     projects: s.projects,
     sessions: s.sessions,
     notes: s.notes,
+    analyses: s.analyses,
     activeTimer: s.activeTimer,
     version: s.version,
   }
@@ -779,6 +794,7 @@ function hydratePersisted(persisted: unknown, fromVersion: number) {
     projects: fromVersion < 6 ? respreadAutoColors(state.projects) : state.projects,
     sessions: state.sessions,
     notes: state.notes,
+    analyses: state.analyses,
     activeTimer: normalizeActiveTimer(raw?.activeTimer),
     version: SCHEMA_VERSION,
   }

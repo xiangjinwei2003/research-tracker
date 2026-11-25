@@ -109,6 +109,7 @@ export async function createData(desktop: ClaudeDesktop, state: AppState | null)
       projects: state?.projects ?? [],
       sessions: state?.sessions ?? [],
       notes: state?.notes ?? [],
+      analyses: state?.analyses ?? [],
       activeTimer: null,
       version: SCHEMA_VERSION,
     },

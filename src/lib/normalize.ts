@@ -9,6 +9,7 @@ import type {
   ActiveTimer,
   NoteEntry,
   NoteSent,
+  AnalysisRecord,
 } from './types'
 import {
   defaultStages,
@@ -16,11 +17,12 @@ import {
   LEGACY_PROJECT_COLOR_PRESETS,
   PROJECT_TAG_ORDER,
   NOTE_MAX_LEVEL,
+  ANALYSIS_KEEP,
 } from './types'
 import { uid } from './id'
 import { today } from './date'
 
-export const SCHEMA_VERSION = 8
+export const SCHEMA_VERSION = 9
 
 const COLOR_FN = /^(oklch|oklab|lab|lch|rgb|rgba|hsl|hsla|hwb|color)\(/i
 const COLOR_BAD = /url\s*\(|image\s*\(|image-set\s*\(|-moz-binding/i
@@ -260,15 +262,66 @@ export function normalizeNotes(raw: unknown): NoteEntry[] {
   return raw.map(normalizeNote).filter((n): n is NoteEntry => n !== null)
 }
 
+function strOf(v: unknown): string {
+  return typeof v === 'string' ? v : ''
+}
+
+function hoursOf(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null
+}
+
+/** 保存的分析：结构不完整的整条丢弃，最多保留 ANALYSIS_KEEP 条。 */
+export function normalizeAnalyses(raw: unknown): AnalysisRecord[] {
+  if (!Array.isArray(raw)) return []
+  const out: AnalysisRecord[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const a = item as Record<string, unknown>
+    const r = (a.result && typeof a.result === 'object' ? a.result : null) as Record<string, unknown> | null
+    if (!r || typeof r.summary !== 'string' || !Array.isArray(r.plan)) continue
+    const src = (a.sources && typeof a.sources === 'object' ? a.sources : {}) as Record<string, unknown>
+    out.push({
+      id: asStr(a.id, '') || uid(),
+      createdAt: asStr(a.createdAt, stamp()),
+      weekStart: asStr(a.weekStart, ''),
+      tier: asStr(a.tier, ''),
+      sources: {
+        review: typeof src.review === 'string' ? src.review : null,
+        scan: src.scan === 'ok' ? 'ok' : 'failed',
+        ...(typeof src.scanNote === 'string' && src.scanNote ? { scanNote: src.scanNote } : {}),
+      },
+      result: {
+        summary: r.summary,
+        plan: r.plan
+          .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
+          .map((x) => ({
+            item: strOf(x.item),
+            plannedHours: hoursOf(x.plannedHours),
+            actualHours: hoursOf(x.actualHours),
+            status: strOf(x.status),
+            note: strOf(x.note),
+          })),
+        issues: (Array.isArray(r.issues) ? r.issues : [])
+          .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
+          .map((x) => ({ phenomenon: strOf(x.phenomenon), impact: strOf(x.impact), suggestion: strOf(x.suggestion) })),
+        questions: (Array.isArray(r.questions) ? r.questions : []).filter((q): q is string => typeof q === 'string'),
+      },
+    })
+    if (out.length === ANALYSIS_KEEP) break
+  }
+  return out
+}
+
 export function normalizeState(raw: unknown): AppState {
   const s = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : undefined
   if (!s || !Array.isArray(s.projects)) {
-    return { projects: [], sessions: [], notes: [], version: SCHEMA_VERSION }
+    return { projects: [], sessions: [], notes: [], analyses: [], version: SCHEMA_VERSION }
   }
   return {
     projects: withDefaultColors(s.projects.map(normalizeProject)),
     sessions: normalizeSessions(s.sessions),
     notes: normalizeNotes(s.notes),
+    analyses: normalizeAnalyses(s.analyses),
     version: typeof s.version === 'number' ? s.version : SCHEMA_VERSION,
   }
 }
@@ -295,6 +348,7 @@ export function importJSON(text: string): AppState {
     projects: withDefaultColors(inner.projects.map(normalizeProject)),
     sessions: normalizeSessions(inner.sessions),
     notes: normalizeNotes(inner.notes),
+    analyses: normalizeAnalyses(inner.analyses),
     version: typeof inner.version === 'number' ? inner.version : SCHEMA_VERSION,
   }
 }

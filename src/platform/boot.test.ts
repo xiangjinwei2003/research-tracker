@@ -49,38 +49,38 @@ test('从备份导入：建文件后水合，水合前的内存状态被文件�
   const fs = new MemFs()
   // 模拟水合前误触发的状态：不能进入文件。
   useStore.setState({ sessions: [{ id: 's0', plannedMin: 30, startedAt: 1, endedAt: 2, completed: true }] })
-  const phase = await createData(fakeDesktop(fs), importJSON(exported('icu-2')))
+  const phase = await createData(fakeDesktop(fs), importJSON(exported('proj-a')))
   assert.equal(phase.kind, 'ready')
   assert.deepEqual(
     useStore.getState().projects.map((p) => p.title),
-    ['icu-2'],
+    ['proj-a'],
   )
   assert.deepEqual(useStore.getState().sessions, [])
 
-  useStore.getState().addTodo('p1', { title: '写 Method 一节', priority: 'high' })
+  useStore.getState().addTodo('p1', { title: '写方法部分', priority: 'high' })
   await fileBackend()!.flush()
   const file = saved(fs)
   assert.equal(file.version, SCHEMA_VERSION)
   assert.deepEqual(
     file.state.projects[0].todos.map((t) => t.title),
-    ['整理访谈', '写 Method 一节'],
+    ['整理访谈', '写方法部分'],
   )
 })
 
 test('旧版本的数据文件：水合时迁移，并按当前版本补写一次', async () => {
   const fs = new MemFs()
-  const old = JSON.parse(exported('rem-photo-web', 5))
+  const old = JSON.parse(exported('旧版本的项目', 5))
   fs.files.set(DATA_FILE, JSON.stringify({ state: { ...old, activeTimer: null }, version: 5 }))
   const phase = await openData(fakeDesktop(fs))
   assert.equal(phase.kind, 'ready')
   await fileBackend()!.flush()
   assert.equal(saved(fs).version, SCHEMA_VERSION)
-  assert.equal(saved(fs).state.projects[0].title, 'rem-photo-web')
+  assert.equal(saved(fs).state.projects[0].title, '旧版本的项目')
 })
 
 test('水合时出错：停在 failed，文件保持原样', async () => {
   const fs = new MemFs()
-  const original = JSON.stringify({ state: { ...JSON.parse(exported('xiangkuang', 3)), activeTimer: null }, version: 3 })
+  const original = JSON.stringify({ state: { ...JSON.parse(exported('另一个项目', 3)), activeTimer: null }, version: 3 })
   fs.files.set(DATA_FILE, original)
   const migrate = useStore.persist.getOptions().migrate
   useStore.persist.setOptions({

@@ -234,12 +234,45 @@ export interface NoteEntry {
   sent?: NoteSent[]
 }
 
+/** 按申请计划分析的结果，结构对应导师周报的三节。 */
+export interface AnalysisResult {
+  summary: string
+  plan: {
+    item: string
+    plannedHours: number | null
+    actualHours: number | null
+    /** 完成、部分完成、未做、扫描看不到；模型给了别的值时为「未确认」。 */
+    status: string
+    note: string
+  }[]
+  issues: { phenomenon: string; impact: string; suggestion: string }[]
+  questions: string[]
+}
+
+/** 保存下来的一次分析。 */
+export interface AnalysisRecord {
+  id: string
+  createdAt: string
+  /** 被分析那一周的周一，YYYY-MM-DD。 */
+  weekStart: string
+  /** 实际回答的模型档位。 */
+  tier: string
+  /** 依据：周报文件名，改动扫描是否成功。 */
+  sources: { review: string | null; scan: 'ok' | 'failed'; scanNote?: string }
+  result: AnalysisResult
+}
+
+/** 最多保存的分析条数，新的在前。 */
+export const ANALYSIS_KEEP = 20
+
 export interface AppState {
   projects: Project[]
   /** Recorded focus sessions, newest first. */
   sessions: FocusSession[]
   /** 每日笔记，Schema 8 起。 */
   notes: NoteEntry[]
+  /** 按申请计划分析的结果，新的在前，Schema 9 起。 */
+  analyses: AnalysisRecord[]
   /** Schema version, for future migrations */
   version: number
 }

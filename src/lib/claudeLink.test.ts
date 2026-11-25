@@ -12,7 +12,7 @@ import {
 import type { NoteEntry } from './types.ts'
 
 test('深链接：桌面应用按 URL 解析后得到原样的提示词和目录', () => {
-  const prompt = '整理 icu-2 的实验记录 & 写 Method #1\n第二行：a+b=c，100% 完成'
+  const prompt = '整理 proj-a 的实验记录 & 写 Method #1\n第二行：a+b=c，100% 完成'
   const folder = '/Users/me/Documents/Projects/todo web'
   const url = claudeCodeNewUrl({ prompt, folder })
   const parsed = new URL(url)
@@ -29,16 +29,16 @@ test('深链接：超过 14336 个字符或目录不是绝对路径时报错', (
   assert.doesNotThrow(() => claudeCodeNewUrl({ prompt: '字'.repeat(CLAUDE_PROMPT_MAX) }))
   assert.throws(() => claudeCodeNewUrl({ prompt: '字'.repeat(CLAUDE_PROMPT_MAX + 1) }), /超过 14336/)
   assert.throws(() => claudeCodeNewUrl({ prompt: 'x', folder: '~/Documents' }), /绝对路径/)
-  assert.throws(() => claudeCodeNewUrl({ prompt: 'x', folder: 'Projects/icu-2' }), /绝对路径/)
+  assert.throws(() => claudeCodeNewUrl({ prompt: 'x', folder: 'Projects/proj-a' }), /绝对路径/)
 })
 
 test('绝对路径判断与目录名', () => {
   assert.equal(isAbsoluteFolder('/Users/me'), true)
   assert.equal(isAbsoluteFolder('C:\\Users\\me'), true)
   assert.equal(isAbsoluteFolder('~/Documents'), false)
-  assert.equal(isAbsoluteFolder('icu-2'), false)
+  assert.equal(isAbsoluteFolder('proj-a'), false)
   assert.equal(folderName('/Users/me/Documents/Projects/todo web/'), 'todo web')
-  assert.equal(folderName('C:\\work\\icu-2'), 'icu-2')
+  assert.equal(folderName('C:\\work\\proj-a'), 'proj-a')
 })
 
 const note = (text: string, level = 0): NoteEntry => ({
@@ -62,15 +62,15 @@ test('草稿：子条目按相对缩进排列，每级两个空格，不加列�
 test('AI 整理的输入：有什么上下文写什么，最后是笔记', () => {
   const full = buildPolishInput({
     note: '把实验记录整理成表',
-    projectTitle: 'icu-2',
-    folder: '/Users/me/icu-2',
-    todoTitle: '写 Method 一节',
+    projectTitle: 'proj-a',
+    folder: '/Users/me/proj-a',
+    todoTitle: '写方法部分',
     todoDue: '2026-11-30',
     todoNotes: '  先写参与者  ',
   })
-  assert.match(full, /项目：icu-2/)
-  assert.match(full, /工作目录：\/Users\/me\/icu-2/)
-  assert.match(full, /相关任务：写 Method 一节（截止 11月30日）/)
+  assert.match(full, /项目：proj-a/)
+  assert.match(full, /工作目录：\/Users\/me\/proj-a/)
+  assert.match(full, /相关任务：写方法部分（截止 11月30日）/)
   assert.match(full, /任务备注：先写参与者\n/)
   assert.ok(full.endsWith('笔记：\n把实验记录整理成表'))
   assert.match(full, /不增加笔记里没有的需求/)

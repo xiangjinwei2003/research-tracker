@@ -117,8 +117,8 @@ test('Schema 8：v7 数据没有 notes 时补空数组；doneAt 只在已完成�
     projects: [
       {
         id: 'p1',
-        title: 'icu-2',
-        folder: '  /Users/me/icu-2 ',
+        title: 'proj-a',
+        folder: '  /Users/me/proj-a ',
         todos: [
           { id: 't1', title: '已完成', done: true, doneAt: '2026-11-24T10:00:00.000Z' },
           { id: 't2', title: '未完成但带了 doneAt', done: false, doneAt: '2026-11-24T10:00:00.000Z' },
@@ -127,10 +127,10 @@ test('Schema 8：v7 数据没有 notes 时补空数组；doneAt 只在已完成�
     ],
   })
   assert.deepEqual(state.notes, [])
-  assert.equal(state.projects[0].folder, '/Users/me/icu-2')
+  assert.equal(state.projects[0].folder, '/Users/me/proj-a')
   assert.equal(state.projects[0].todos[0].doneAt, '2026-11-24T10:00:00.000Z')
   assert.equal(state.projects[0].todos[1].doneAt, undefined)
-  assert.equal(SCHEMA_VERSION, 8)
+  assert.ok(SCHEMA_VERSION >= 8)
 })
 
 test('导出再导入，笔记原样保留', () => {

@@ -82,6 +82,7 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
           projects: useStore.getState().projects,
           sessions: useStore.getState().sessions,
           notes: useStore.getState().notes,
+          analyses: useStore.getState().analyses,
           version: useStore.getState().version,
         });
     const base = `${dumpRaw ? "research-tracker-unreadable" : "research-tracker"}-${new Date().toISOString().slice(0, 10)}`;

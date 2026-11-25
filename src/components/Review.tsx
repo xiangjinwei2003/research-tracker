@@ -20,6 +20,7 @@ import { AllocationCard, HourCard, RhythmCard } from './FocusStats'
 import { Widget, WidgetNumber } from './Widget'
 import { PageHeader } from './PageHeader'
 import { ManualSessionDialog } from './ManualSessionDialog'
+import { PlanAnalysis } from './PlanAnalysis'
 
 /** Trailing window of the contribution heatmap, in weeks (~4 months). */
 const HEATMAP_WEEKS = 16
@@ -199,6 +200,9 @@ export function Review({ onGoBoard }: { onGoBoard: () => void }) {
           }
         />
       </div>
+
+      {/* 只在桌面版出现；网页版不渲染任何内容。 */}
+      <PlanAnalysis className="mb-3 sm:mb-4" />
 
       {sessions.length === 0 ? (
         <div className="mt-12 flex flex-col items-center py-6 text-center">

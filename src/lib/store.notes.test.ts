@@ -35,7 +35,7 @@ const v7 = {
     projects: [
       {
         id: 'p1',
-        title: 'icu-2',
+        title: 'proj-a',
         description: '',
         color: 'oklch(0.72 0.15 264)',
         stage: 'data',
@@ -43,8 +43,8 @@ const v7 = {
         startDate: '2026-05-01',
         collaborators: [],
         todos: [
-          { id: 't1', title: '主持模拟实验', endDate: '2026-11-20', done: true, stage: 'data', priority: 'high' },
-          { id: 't2', title: '写 Method 一节', endDate: '', done: false, stage: 'writing', priority: 'normal' },
+          { id: 't1', title: '整理访谈记录', endDate: '2026-11-20', done: true, stage: 'data', priority: 'high' },
+          { id: 't2', title: '写方法部分', endDate: '', done: false, stage: 'writing', priority: 'normal' },
         ],
         notes: '项目备注保留',
         archived: false,
@@ -53,7 +53,7 @@ const v7 = {
       },
     ],
     sessions: [
-      { id: 's1', plannedMin: 60, startedAt: 1763600000000, endedAt: 1763603600000, completed: true, projectId: 'p1', todoId: 't1', projectTitle: 'icu-2', todoTitle: '主持模拟实验' },
+      { id: 's1', plannedMin: 60, startedAt: 1763600000000, endedAt: 1763603600000, completed: true, projectId: 'p1', todoId: 't1', projectTitle: 'proj-a', todoTitle: '整理访谈记录' },
     ],
     activeTimer: null,
     version: 7,
@@ -70,7 +70,7 @@ test('v7 数据迁移到 Schema 8：项目、待办、专注记录不变，notes
   assert.equal(s.projects[0].notes, '项目备注保留')
   assert.deepEqual(
     s.projects[0].todos.map((t: { title: string; done: boolean }) => [t.title, t.done]),
-    [['主持模拟实验', true], ['写 Method 一节', false]],
+    [['整理访谈记录', true], ['写方法部分', false]],
   )
   assert.equal(s.sessions.length, 1)
   assert.deepEqual(s.notes, [])
@@ -178,8 +178,29 @@ test('清空与导入都带上笔记，撤销后笔记回来', () => {
 test('markNoteSent：发送记录按时间追加', () => {
   const { addNote, markNoteSent } = useStore.getState()
   const id = addNote({ date: '2026-11-25', text: '整理实验记录' })
-  markNoteSent(id, { at: 1764030000000, folder: '/work/icu-2', prompt: '第一次' })
-  markNoteSent(id, { at: 1764033600000, folder: '/work/icu-2', prompt: '第二次' })
+  markNoteSent(id, { at: 1764030000000, folder: '/work/proj-a', prompt: '第一次' })
+  markNoteSent(id, { at: 1764033600000, folder: '/work/proj-a', prompt: '第二次' })
   const sent = useStore.getState().notes.find((n: { id: string }) => n.id === id).sent
   assert.deepEqual(sent.map((x: { prompt: string }) => x.prompt), ['第一次', '第二次'])
+})
+
+test('addAnalysis：新的在最前，只保留 20 条；清空后可撤销', () => {
+  const { addAnalysis, clearAll, undo } = useStore.getState()
+  useStore.setState({ analyses: [] })
+  const record = (id: string) => ({
+    id,
+    createdAt: '2026-11-25T16:00:00.000Z',
+    weekStart: '2026-11-23',
+    tier: 'default',
+    sources: { review: null, scan: 'ok' as const },
+    result: { summary: id, plan: [], issues: [], questions: [] },
+  })
+  for (let i = 0; i < 22; i++) addAnalysis(record(`a${i}`))
+  const ids = useStore.getState().analyses.map((a: { id: string }) => a.id)
+  assert.equal(ids.length, 20)
+  assert.equal(ids[0], 'a21')
+  const token = clearAll()
+  assert.deepEqual(useStore.getState().analyses, [])
+  undo(token)
+  assert.equal(useStore.getState().analyses.length, 20)
 })
