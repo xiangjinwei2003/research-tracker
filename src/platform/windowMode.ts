@@ -44,6 +44,21 @@ function reloadGuardTripped(): boolean {
   }
 }
 
+/** setOptions 整体替换之前的选项，所以按两边键的并集比较；从隐藏标题栏改回系统标题栏时键会减少。 */
+export function sameOptions(a: ClaudeDesktop.WindowOptions, b: ClaudeDesktop.WindowOptions): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof ClaudeDesktop.WindowOptions>
+  return [...keys].every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]))
+}
+
+/** 实际生效的选项里只看我们设置的那些键（平台可能附带别的键）。 */
+function pick(applied: ClaudeDesktop.WindowOptions, wanted: ClaudeDesktop.WindowOptions): ClaudeDesktop.WindowOptions {
+  const out: Record<string, unknown> = {}
+  for (const k of Object.keys(wanted) as (keyof ClaudeDesktop.WindowOptions)[]) {
+    if (applied[k] !== undefined) out[k] = applied[k]
+  }
+  return out as ClaudeDesktop.WindowOptions
+}
+
 export interface ApplyResult {
   reloading: boolean
   error?: string
@@ -54,11 +69,8 @@ export async function applyWindowOptions(desktop: ClaudeDesktop, settings: Deskt
   const mode = settings.windowMode ?? 'full'
   const options = windowOptions(mode, !!settings.systemTitleBar)
   try {
-    const { applied } = await desktop.window.getOptions()
-    const same = (Object.keys(options) as (keyof ClaudeDesktop.WindowOptions)[]).every(
-      (k) => JSON.stringify(applied[k]) === JSON.stringify(options[k]),
-    )
-    if (!same) {
+    const saved = await desktop.window.getOptions()
+    if (!sameOptions(saved.options, options) || !sameOptions(pick(saved.applied, options), options)) {
       if (reloadGuardTripped()) return { reloading: false, error: '窗口选项没有生效，已停止重试' }
       const res = await desktop.window.setOptions(options)
       if (res.reloading) return { reloading: true }

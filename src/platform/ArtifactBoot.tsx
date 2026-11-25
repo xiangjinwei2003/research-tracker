@@ -74,7 +74,9 @@ function BootScreen({ phase, onPhase }: { phase: BootPhase; onPhase: (p: BootPha
     if (busy) return
     setBusy(true)
     setError(null)
-    step()
+    // 放进 then 里执行：step 同步抛出的错误也变成拒绝，下面的 catch 与 finally 照常执行。
+    Promise.resolve()
+      .then(step)
       .then(onPhase)
       .catch((err) => setError(reasonOf(err)))
       .finally(() => setBusy(false))

@@ -40,9 +40,14 @@ export function DesktopSettingsDialog({ open, onOpenChange }: Props) {
   useEffect(() => {
     if (!open || !desktop) return
     let alive = true
-    desktop.permissions.state().then((p) => {
-      if (alive) setPerms(p)
-    })
+    desktop.permissions.state().then(
+      (p) => {
+        if (alive) setPerms(p)
+      },
+      (err: unknown) => {
+        if (alive) setError(`没有读到权限状态：${reasonOf(err)}`)
+      },
+    )
     return () => {
       alive = false
     }
@@ -58,7 +63,7 @@ export function DesktopSettingsDialog({ open, onOpenChange }: Props) {
       .catch((err) => setError(reasonOf(err)))
       .finally(() => {
         setSettings(currentSettings())
-        void desktop.permissions.state().then(setPerms)
+        desktop.permissions.state().then(setPerms, () => undefined)
         setBusy(false)
       })
   }
@@ -116,8 +121,9 @@ export function DesktopSettingsDialog({ open, onOpenChange }: Props) {
   }
   const setTitleBar = async (system: boolean) => {
     const next = await updateSettings({ systemTitleBar: system ? true : undefined })
-    // 窗口会重建并重新加载页面。
-    await applyWindowOptions(desktop, next)
+    // 窗口会重建并重新加载页面；没有生效时报出原因。
+    const res = await applyWindowOptions(desktop, next)
+    if (res.error) throw new Error(`标题栏没有切换：${res.error}`)
   }
 
   return (

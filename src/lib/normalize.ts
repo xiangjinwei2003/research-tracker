@@ -257,9 +257,18 @@ export function normalizeNote(raw: unknown): NoteEntry | null {
   return note
 }
 
+/** 重复的 id 换成新 id（手工改过的文件可能出现），否则同 id 的两条会被一起改写、一起删除。 */
 export function normalizeNotes(raw: unknown): NoteEntry[] {
   if (!Array.isArray(raw)) return []
-  return raw.map(normalizeNote).filter((n): n is NoteEntry => n !== null)
+  const seen = new Set<string>()
+  return raw
+    .map(normalizeNote)
+    .filter((n): n is NoteEntry => n !== null)
+    .map((n) => {
+      const note = seen.has(n.id) ? { ...n, id: uid() } : n
+      seen.add(note.id)
+      return note
+    })
 }
 
 function strOf(v: unknown): string {

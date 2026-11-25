@@ -2,6 +2,14 @@
 
 ## 改动记录
 
+2026年11月25日，回答「我想主要是吸取他的这个 就是笔记管理……你提取我的需求，然后进行综合的规划和整理，开启循环，进行项目的改造升级」（规划见 `docs/tasks/2026-11-25_桌面应用改造.md`）。
+开头一段原句「项目数据存在你自己的浏览器里（localStorage），没有账号。唯一的网络请求来自可选的「订阅到苹果日历」……」改为分别说明网页版与桌面版的数据位置；英文简介同步改写。
+功能节新增「笔记」「转为提示词」「AI 整理」「按申请计划分析」「桌面集成」五条；其它节新增快捷键一条。
+快速开始节新增「桌面版构建」：`npm run build:artifact`。
+数据与隐私节网页版部分：键名 `research-tracker-v1` 改为 `research-tracker-v2`，写明旧键的复制规则与换键原因，新增多标签页版本不一致时的处理。数据与隐私节拆成网页版与桌面版两部分，新增：桌面版的数据文件与备份、本机设置文件、AI 调用使用自己的 Claude 账号、分析读取的文件与运行的只读扫描脚本、桌面版日历同步用 curl 发到生产域名。
+新增「桌面版」一节：安装、权限、首次运行、离线说明。
+技术栈节目录树补上 `src/platform/` 与 `scripts/artifact-page.mjs`。
+
 2026年10月7日，回答「给 Research Tracker 加「苹果日历订阅」功能：苹果日历订阅一个网址，定时看到我在这个应用里的待办」以及「删除服务端的旧快照 优化存储逻辑，免费档也要求持续的流畅的运行」。
 开头原句「项目数据存在你自己的浏览器里（localStorage），没有账号。唯一的网络请求来自可选的「订阅到苹果日历」，默认关闭；开启后，有到期日且未完成的待办标题会上传到部署方的 Vercel 存储，详见「数据与隐私」。」改为说明项目数据仍在本机，唯一的网络请求来自默认关闭的苹果日历订阅。英文简介同步改写。
 功能节新增「苹果日历订阅」一条。
@@ -32,9 +40,14 @@
 
 给研究者用的**科研项目任务清单**：同时推进多个论文项目时，把各项目的待办、截止日期和专注记录放在一处。
 
-项目数据存在你自己的浏览器里（localStorage），没有账号。唯一的网络请求来自可选的「订阅到苹果日历」，默认关闭；开启后，有到期日且未完成的待办标题会上传到部署方的 Vercel 存储，详见「数据与隐私」。
+同一份代码有两种用法：
 
-> A local-first task list for academics juggling several papers at once: todos grouped by project, due dates, and focus sessions. No account; project data stays in your browser's localStorage. An optional, off by default Apple Calendar subscription uploads titles and due dates of open todos to a small Vercel Function backed by Upstash Redis. UI is in Chinese.
+1. 网页版：项目数据存在浏览器的 localStorage，没有账号。
+2. 桌面版：在 Claude 桌面应用里把本应用的 Artifact 安装为应用（Install as app），数据存在本机文件 `~/Documents/Research Tracker/research-tracker.json`。桌面版多出 AI 整理提示词、按申请计划分析、全局快捷键、菜单栏计时与置顶笔记小窗，AI 调用计入你自己的 Claude 套餐用量。
+
+两种用法里，网络请求都只来自可选的「订阅到苹果日历」（默认关闭）和桌面版的 AI 调用，详见「数据与隐私」。
+
+> A local-first task list for academics juggling several papers at once: todos grouped by project, due dates, focus sessions and daily notes that can be turned into Claude Code prompts. The web build keeps data in localStorage. The desktop build runs as a claude.ai Artifact installed as a desktop app, stores data in a local file and uses the viewer's own Claude plan for AI features. An optional, off by default Apple Calendar subscription uploads titles and due dates of open todos to a small Vercel Function backed by Upstash Redis. UI is in Chinese.
 
 ---
 
@@ -44,6 +57,11 @@
 - **日历** —— 整屏月视图（Apple Calendar 式），把所有 todo 的截止日期铺开；支持拖动事项直接改截止日期。
 - **回顾** —— 专注计时（番茄钟）记录与统计，按项目/事项汇总投入时间。
 - **归档**：收起已完成或搁置的项目，不占任务列表。
+- **笔记**：每天一页，今天在最上面，往下是更早有内容的日期。Enter 新建一条，Shift+Enter 换行，Tab 缩进，空行退格删除。每条可以关联项目或任务。宽窗口可以把今天的笔记固定在右侧，按 M 记一条。
+- **转为提示词**：笔记行上的发送按钮或 ⌘↩，把这条笔记连同子条目整理成提示词，通过 `claude://code/new` 在 Claude 桌面应用里新建一个 Claude Code 会话，提示词预填在输入框里，工作目录取关联项目的「本机目录」。
+- **AI 整理（桌面版）**：在提示词编辑框里用 Claude 的 quick 档把随手笔记整理成结构清楚的提示词，可以恢复原文。桌面版还可以把提示词写成项目里的 `docs/tasks/日期_标题.md`，新会话只收到文件路径。
+- **按申请计划分析（桌面版）**：专注回顾页顶部。读取你选定的申请计划目录里的 `当前状态.md`、`AGENTS.md`、最新一份 `reviews/` 周报，运行该目录的 `scripts/scan.sh 7`，结合本周与上周的专注、到期与完成的任务，用 Claude 的 default 档给出对照安排、问题和需要回答的问题。结果保存在数据里。
+- **桌面集成（桌面版）**：「数据管理 › 桌面应用设置」里开启全局快捷键 ⌃⌥N 记一条笔记、菜单栏显示专注倒计时、置顶笔记小窗；专注结束时发系统通知。
 - **苹果日历订阅**：日历页标题右侧「订阅到苹果日历」。开启后生成一个 `webcal://` 地址，苹果日历订阅它即可看到有到期日、未完成的待办（全天事件，标题为「[项目名] 标题」）。单向只读，日历里改不回来。苹果日历定时拉取：Mac 可设每 5 分钟，iPhone 由系统决定，改动会在几分钟内出现，不是即时的。
 
 其它：
@@ -52,6 +70,7 @@
 - 首页四个数字来自现有本地数据。专注的按日分布在专注回顾。
 - 只有深色界面。
 - 全局 `Cmd/Ctrl + Z` 撤销，删除操作都可从通知里点「撤销」。
+- 单键快捷键：1 到 5 切换分区，N 新建任务，/ 搜索，M 记一条笔记；在笔记里 ⌘↩ 转为提示词。
 - JSON 导出 / 导入 —— 这是**唯一的备份与跨设备迁移手段**，见下方「数据与隐私」。
 
 ## 快速开始
@@ -76,15 +95,45 @@ npm run build
 
 产物在 `dist/`，是纯静态文件，丢到任意静态托管（Vercel / Netlify / GitHub Pages / 自己的 nginx）即可。
 
+桌面版构建：
+
+```bash
+npm run build:artifact
+```
+
+产物是 `dist-artifact/research-tracker.html`，所有脚本、样式和图标都内联在这一个文件里，格式符合 claude.ai Artifact 的要求（不含 doctype、head、body，开头是 `<title>` 与桌面应用的权限清单）。把它发布成 Artifact，再在 Claude 桌面应用里安装为应用，见下方「桌面版」。
+
 ## 数据与隐私
 
-- 所有数据存在浏览器的 **localStorage**，键名 `research-tracker-v1`。
+网页版：
+
+- 所有数据存在浏览器的 **localStorage**，键名 `research-tracker-v2`。2026年11月25日之前用的是 `research-tracker-v1`：新代码第一次打开时把它原样复制到 v2，之后只写 v2，v1 留给还开着的旧标签页，内容不删。换键的原因是旧标签页收到新版本写入后会按旧规则迁移并写回，去掉笔记等新字段。
+- 一个标签页读到比自己新的版本写入的数据时，停止写入并提示刷新；收到更旧版本写入的数据时不采用，把当前数据写回。
 - 没有遥测和第三方请求。不开启苹果日历订阅时，应用不发任何网络请求，断网可用。
 - 开启苹果日历订阅后，浏览器把未归档项目里有到期日、未完成的待办上传到 `/api/calendar/<id>`，每条只含待办 id、标题、到期日、是否完成、项目名和项目 id。备注、优先级、专注记录不上传。数据存在部署方 Vercel 项目连接的 Upstash Redis 里。
 - 订阅地址里的 id 是 256 位随机令牌，知道地址的人都能读到这份日历。写入用另一个 256 位密钥，服务端只存它的 SHA256 哈希。id 和密钥存在独立的 localStorage 键 `research-tracker.calendar-sync`，不进 JSON 导出。
 - 关闭同步或「重新生成地址」会删除服务端数据。服务端数据在最后一次读取或写入后 180 天自动过期。
 - 因此也意味着：**localStorage 按 origin 隔离**（协议、主机、端口），不是按路径。换浏览器、换设备、清缓存、或换一个部署域名访问，数据都不会跟过去。GitHub Pages 的项目站（`https://USER.github.io/repo/`）与该账号下其他 Pages 站点同源，那些页面的脚本也能读取这个键。请用独立 origin（Vercel / Netlify 项目域名，或自定义域名）。
 - 请定期用「导出 JSON」做备份。这是目前唯一的备份/迁移路径，跨设备同步是有意不做的。
+
+桌面版：
+
+- 数据存在 `~/Documents/Research Tracker/research-tracker.json`。读到文件、载入完成之前不写入；每次写入先写临时文件再改名；每天第一次写入前把旧文件复制到 `backups/`，保留 30 份。文件读不出时不写入，启动页显示原因，可以改名保留原文件后重新开始。
+- 同一目录里还有 `settings.json`（申请计划目录、窗口模式、快捷键与菜单栏的开关）和 `calendar-sync.json`（日历订阅的 id 与写入密钥）。这两个文件不进导出。
+- AI 整理与按申请计划分析通过 Claude 的 sample 能力，用你自己的 Claude 账号调用，计入你的套餐用量；每次打开后的第一次调用会请你允许。发给 Claude 的内容：整理时是这条笔记和关联任务的名称、截止日、备注；分析时是申请计划目录里的上述文件、扫描结果、本周与上周的专注与任务。
+- 按申请计划分析只读申请计划目录里的文件，不写入；扫描脚本是该目录自带的 `scripts/scan.sh`，只列出最近 7 天改动的文件和提交记录。
+- 桌面版的页面不能访问网络，日历订阅用子进程运行 `/usr/bin/curl`，发到部署的生产域名。写入密钥放在请求期间的临时配置文件里交给 curl，不出现在命令行参数中。
+- 「转为提示词」写成任务文件时，只在你填的工作目录下的 `docs/tasks/` 新建文件，不覆盖已有文件。
+
+## 桌面版
+
+1. 构建 `npm run build:artifact`，把 `dist-artifact/research-tracker.html` 发布成 Artifact（能力：desktop 与 sample）。
+2. 在 Claude 桌面应用里打开这个 Artifact，选 Install as app。应用的窗口、图标和名称（Research Tracker）独立于 Claude。
+3. 第一次打开时允许读写本机文件（full-access）。这项权限只能授予本人组织里、没有外部人员写过的 Artifact；每发布一个新版本，下一次用到时会重新询问。
+4. 首次运行页会列出下载文件夹里网页版导出的 `research-tracker-日期.json`，点它导入；也可以选别的文件，或从空白开始。
+5. 全局快捷键、菜单栏、置顶小窗、系统通知各自需要一项权限，都在用到时由点击请求，被拒绝时在「桌面应用设置」里点「权限设置」重新打开。
+
+桌面应用需要联网并登录 Claude 才能打开，离线时用网页版。
 
 ## 苹果日历订阅的部署
 
@@ -104,8 +153,13 @@ npm run build
 Vite 8 · React 19 · TypeScript · Tailwind CSS 4 · shadcn/ui (Radix) · zustand (persist) · date-fns · sonner
 
 ```
+scripts/
+  artifact-page.mjs 把单文件构建改成 Artifact 页面格式
 src/
+  platform/         桌面版：运行环境判定、本机文件存储、启动页、desktop 与 sample 能力的封装
+    types/          claude.ai Artifact 运行时 0.2.99 的类型定义（原样复制）
   components/       视图与业务组件
+    notes/          每日笔记与提示词编辑框
     ui/             shadcn/ui 原语（vendored）
   lib/
     store.ts        zustand store + localStorage 持久化 + schema migration

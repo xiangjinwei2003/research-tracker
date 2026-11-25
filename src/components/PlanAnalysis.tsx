@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { ChevronDown, GraduationCap, Square } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { uid } from '@/lib/id'
@@ -38,6 +38,12 @@ const STATUS_TONE: Record<string, string> = {
 }
 
 const hoursText = (h: number | null) => (h === null ? '未知' : `${h} 小时`)
+
+/** 保存的时间可能被手工改过；不是合法日期时显示「时间未知」，不让 format 抛错。 */
+function fmtTime(iso: string): string {
+  const d = new Date(iso)
+  return isValid(d) ? format(d, 'M月d日 HH:mm') : '时间未知'
+}
 
 /**
  * 按 PhD 申请计划分析本周（只在桌面版出现）：读取申请计划目录里的当前状态、导师规则、最新周报和改动扫描，
@@ -166,7 +172,7 @@ export function PlanAnalysis({ className }: { className?: string }) {
               <DropdownMenuContent align="end">
                 {analyses.map((a) => (
                   <DropdownMenuItem key={a.id} onSelect={() => setViewId(a.id)}>
-                    {format(new Date(a.createdAt), 'M月d日 HH:mm')}
+                    {fmtTime(a.createdAt)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -308,7 +314,7 @@ function AnalysisView({ record }: { record: AnalysisRecord }) {
       ) : null}
 
       <p className="text-xs text-muted-foreground">
-        {format(new Date(record.createdAt), 'M月d日 HH:mm')} 生成，依据：{basis.join('、')}
+        {fmtTime(record.createdAt)} 生成，依据：{basis.join('、')}
         {sources.scan === 'failed' ? `；改动扫描失败：${sources.scanNote ?? '原因未查明'}` : ''}
       </p>
     </div>

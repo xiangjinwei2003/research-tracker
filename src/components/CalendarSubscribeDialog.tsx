@@ -5,6 +5,8 @@ import { Button, buttonVariants } from './ui/Button'
 import { Input, Label } from './ui/Input'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
+import { getDesktop } from '@/platform/desktop'
+import { openSchemeUrl } from '@/platform/claudeCode'
 import {
   disableSync,
   enableSync,
@@ -114,7 +116,21 @@ export function CalendarSubscribeDialog({ open, onOpenChange }: Props) {
               </Button>
             </div>
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              {enabled ? (
+              {enabled && getDesktop() ? (
+                // 桌面版的页面里 webcal:// 链接不可靠，用 open 交给日历 App。
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-2.5"
+                  onClick={() =>
+                    void openSchemeUrl(url).catch((err: unknown) =>
+                      toast({ message: `没有打开日历：${err instanceof Error ? err.message : String(err)}` }),
+                    )
+                  }
+                >
+                  在日历中打开
+                </Button>
+              ) : enabled ? (
                 <a href={url} className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), '-ml-2.5')}>
                   在日历中打开
                 </a>

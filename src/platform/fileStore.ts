@@ -51,10 +51,16 @@ export class FileBackend {
   private backedUpDay: string | null = null
   private readonly fs: DataFs
   private readonly now: () => Date
+  private readonly onBackupError: (err: unknown) => void
 
-  constructor(fs: DataFs, now: () => Date = () => new Date()) {
+  constructor(
+    fs: DataFs,
+    now: () => Date = () => new Date(),
+    onBackupError: (err: unknown) => void = (err) => console.warn('[research-tracker] 今天的备份没有写成。', err),
+  ) {
     this.fs = fs
     this.now = now
+    this.onBackupError = onBackupError
   }
 
   /** 读取并校验数据文件。成功后内容留给 takeOpened()，写入仍然关闭。 */
@@ -133,8 +139,14 @@ export class FileBackend {
       while (this.pending) {
         const value = this.pending
         this.pending = null
+        // 备份失败单独报告，不挡住这次写入；当天不再重试备份。
         try {
           await this.backupOncePerDay()
+        } catch (err) {
+          this.backedUpDay = format(this.now(), 'yyyy-MM-dd')
+          this.onBackupError(err)
+        }
+        try {
           await this.writeAtomically(value)
           markPersistHealth('ok')
         } catch (err) {

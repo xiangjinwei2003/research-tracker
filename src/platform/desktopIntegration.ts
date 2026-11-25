@@ -28,6 +28,9 @@ function applicationMenu(desktop: ClaudeDesktop): ClaudeDesktop.MenuItem[] {
     {
       label: '窗口',
       submenu: [
+        { role: 'minimize' },
+        { role: 'close' },
+        { type: 'separator' },
         {
           label: compact ? '回到完整窗口' : '置顶笔记小窗',
           click: () => {

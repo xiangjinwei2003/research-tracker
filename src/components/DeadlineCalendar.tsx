@@ -21,7 +21,6 @@ import { PageHeader } from './PageHeader'
 import { Button } from './ui/Button'
 import { cn } from '@/lib/cn'
 import { CalendarSubscribeDialog } from './CalendarSubscribeDialog'
-import { IN_ARTIFACT } from '@/platform/runtime'
 import { TaskDialog, type TaskTarget } from './TaskDialog'
 
 /** 美式排法：周日是一周的第一列（与 Apple Calendar 默认一致）。 */
@@ -167,13 +166,10 @@ export function DeadlineCalendar({ onEdit }: Props) {
           subtitle={subtitle}
           actions={
             <>
-              {/* 桌面版的页面不能访问网络，苹果日历订阅在 P6 改为子进程上传后再开放。 */}
-              {IN_ARTIFACT ? null : (
-                <Button variant="ghost" size="sm" className="mr-2" onClick={() => setSubscribeOpen(true)}>
-                  <CalendarPlus />
-                  订阅到苹果日历
-                </Button>
-              )}
+              <Button variant="ghost" size="sm" className="mr-2" onClick={() => setSubscribeOpen(true)}>
+                <CalendarPlus />
+                订阅到苹果日历
+              </Button>
 
               <button
                 type="button"

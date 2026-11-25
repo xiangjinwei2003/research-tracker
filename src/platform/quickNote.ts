@@ -12,10 +12,18 @@ export function requestQuickNote(): void {
   window.dispatchEvent(new CustomEvent(QUICK_NOTE_EVENT))
 }
 
+/** 先把窗口拿到前面再记笔记；拿不到前面（例如全屏中）时照常记。 */
+export function showThenNote(desktop: ClaudeDesktop): void {
+  desktop.window
+    .show()
+    .catch((err: unknown) => console.warn('[research-tracker] 窗口没有拿到前面。', err))
+    .finally(requestQuickNote)
+}
+
 /** 注册全局快捷键。按下时先把窗口拿到前面（快捷键按下后窗口才能拿到键盘），再派发事件。 */
 export async function enableQuickNoteShortcut(desktop: ClaudeDesktop): Promise<boolean> {
   return desktop.globalShortcut.register(QUICK_NOTE_ACCELERATOR, () => {
-    void desktop.window.show().finally(requestQuickNote)
+    showThenNote(desktop)
   })
 }
 

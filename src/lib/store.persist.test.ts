@@ -39,9 +39,9 @@ const readme = readFileSync(join(here, '..', '..', 'README.md'), 'utf8')
 test('README 数据与隐私 names the persist key', () => {
   assert.match(
     readme,
-    /所有数据存在浏览器的 \*\*localStorage\*\*，键名 `research-tracker-v1`/,
+    /所有数据存在浏览器的 \*\*localStorage\*\*，键名 `research-tracker-v2`/,
   )
-  assert.equal(PERSIST_NAME, 'research-tracker-v1')
+  assert.equal(PERSIST_NAME, 'research-tracker-v2')
 })
 
 test('hydrate reads a seeded persist envelope', async () => {

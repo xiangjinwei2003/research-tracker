@@ -204,3 +204,33 @@ test('addAnalysis：新的在最前，只保留 20 条；清空后可撤销', ()
   undo(token)
   assert.equal(useStore.getState().analyses.length, 20)
 })
+
+test('删除今天第一条后，在同一个预留 id 上新建，再撤销删除：恢复的笔记换成新 id，不出现重复', () => {
+  const { addNote, removeNote, undo } = useStore.getState()
+  addNote({ date: '2026-11-25', id: 'ghost-day', text: '第一条' })
+  const token = removeNote('ghost-day', { undoable: true })
+  addNote({ date: '2026-11-25', id: 'ghost-day', text: '重新写的' })
+  undo(token)
+  const ids = useStore.getState().notes.map((n: { id: string }) => n.id)
+  assert.equal(new Set(ids).size, ids.length)
+  assert.deepEqual(
+    useStore.getState().notes.map((n: { text: string }) => n.text).sort(),
+    ['第一条', '重新写的'],
+  )
+})
+
+test('合并时发送记录并入上一条；上一条没有关联时接过关联；两条关联不同时不合并', () => {
+  const { addNote, mergeNoteUp, markNoteSent, updateNote } = useStore.getState()
+  const a = addNote({ date: '2026-11-25', text: '上一条' })
+  const b = addNote({ date: '2026-11-25', text: '这一条', projectId: 'p1', todoId: 't2' })
+  markNoteSent(b, { at: 2, folder: '/w', prompt: 'p' })
+  assert.ok(mergeNoteUp(b))
+  const merged = useStore.getState().notes.find((n: { id: string }) => n.id === a)
+  assert.equal(merged.text, '上一条这一条')
+  assert.deepEqual([merged.projectId, merged.todoId], ['p1', 't2'])
+  assert.equal(merged.sent.length, 1)
+  const c = addNote({ date: '2026-11-25', text: '关联到别的任务', projectId: 'p1', todoId: 't1' })
+  assert.equal(mergeNoteUp(c), null)
+  updateNote(c, { projectId: 'p1', todoId: 't2' })
+  assert.ok(mergeNoteUp(c))
+})

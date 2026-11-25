@@ -5,7 +5,9 @@ import {
   getPersistHealth,
   unlockPersistWrites,
   readRawPersistItem,
+  markPersistHealth,
   PERSIST_NAME,
+  LEGACY_PERSIST_NAME,
 } from './persist.ts'
 
 const mem = new Map<string, string>()
@@ -46,8 +48,31 @@ const envelope = {
   version: 7,
 }
 
-test('PERSIST_NAME is the v1 key', () => {
-  assert.equal(PERSIST_NAME, 'research-tracker-v1')
+test('存储键是 v2，旧键 v1 只读', () => {
+  assert.equal(PERSIST_NAME, 'research-tracker-v2')
+  assert.equal(LEGACY_PERSIST_NAME, 'research-tracker-v1')
+})
+
+test('新键为空时读旧键，并原样复制到新键；旧键保持不动，之后只写新键', () => {
+  const legacy = JSON.stringify(envelope)
+  mem.set(LEGACY_PERSIST_NAME, legacy)
+  const storage = createDebouncedLocalStorage(0)
+  assert.deepEqual(storage.getItem(PERSIST_NAME), envelope)
+  assert.equal(mem.get(PERSIST_NAME), legacy)
+  storage.setItem(PERSIST_NAME, { ...envelope, version: 9 })
+  storage.flushNow()
+  assert.equal(JSON.parse(mem.get(PERSIST_NAME)!).version, 9)
+  assert.equal(mem.get(LEGACY_PERSIST_NAME), legacy)
+  assert.equal(readRawPersistItem(), mem.get(PERSIST_NAME))
+})
+
+test('数据比代码新（outdated）时停止写入', () => {
+  mem.set(PERSIST_NAME, JSON.stringify(envelope))
+  const storage = createDebouncedLocalStorage(0)
+  markPersistHealth('outdated')
+  storage.setItem(PERSIST_NAME, { ...envelope, version: 1 })
+  storage.flushNow()
+  assert.equal(JSON.parse(mem.get(PERSIST_NAME)!).version, 7)
 })
 
 test('getItem throws on corrupt JSON and blocks later writes', () => {

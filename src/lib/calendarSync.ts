@@ -2,14 +2,17 @@ import { create } from 'zustand'
 import { useStore } from './store'
 import { toast } from './toast'
 import { buildSnapshot } from './calendarSnapshot'
+import { getDesktop } from '../platform/desktop'
+import { curlRequest, readCalendarFile, writeCalendarFile, type HttpResult } from '../platform/calendarDesktop'
 
 /**
  * Apple Calendar subscription: uploads a snapshot of todos to
  * /api/calendar/:id whenever `projects` changes (debounced), and the server
  * renders /api/calendar/:id.ics for Calendar to poll.
  *
- * Token and write key live in their own localStorage key, outside the project
- * schema and the JSON export.
+ * Token and write key live outside the project schema and the JSON export:
+ * 网页版在单独的 localStorage 键里，桌面版在数据目录的 calendar-sync.json。
+ * 网页版用同源 fetch 上传，桌面版的页面不能访问网络，用 curl 上传到生产域名（见 platform/calendarDesktop.ts）。
  */
 
 export const CALENDAR_SYNC_KEY = 'research-tracker.calendar-sync'
@@ -48,18 +51,46 @@ interface SyncState {
 }
 
 export const useCalendarSync = create<SyncState>(() => ({
-  settings: readSettings(),
+  settings: null,
   phase: 'off',
   error: null,
 }))
 
-function readSettings(): Settings | null {
-  let raw: string | null
-  try {
-    raw = localStorage.getItem(CALENDAR_SYNC_KEY)
-  } catch {
-    return null
-  }
+/** 订阅设置的存储与请求的发送，网页版与桌面版各一套。 */
+interface CalendarBackend {
+  load(): Promise<string | null>
+  save(text: string): Promise<void>
+  request(method: 'PUT' | 'DELETE', s: Settings, body?: string): Promise<HttpResult>
+}
+
+const webBackend: CalendarBackend = {
+  load: async () => localStorage.getItem(CALENDAR_SYNC_KEY),
+  save: async (text) => localStorage.setItem(CALENDAR_SYNC_KEY, text),
+  request: async (method, s, body) => {
+    const res = await fetch(`/api/calendar/${s.id}`, {
+      method,
+      headers: {
+        authorization: `Bearer ${s.key}`,
+        ...(body ? { 'content-type': 'application/json' } : {}),
+      },
+      body,
+    })
+    return { status: res.status, text: await res.text() }
+  },
+}
+
+const desktopBackend: CalendarBackend = {
+  load: readCalendarFile,
+  save: writeCalendarFile,
+  request: (method, s, body) => curlRequest(method, s.id, s.key, body),
+}
+
+function backend(): CalendarBackend {
+  return getDesktop() ? desktopBackend : webBackend
+}
+
+/** 只认完整的设置；缺少 id 或 key 时当作没有设置。 */
+export function parseCalendarSettings(raw: string | null): Settings | null {
   if (!raw) return null
   try {
     const s = JSON.parse(raw) as Partial<Settings>
@@ -79,11 +110,11 @@ function readSettings(): Settings | null {
 
 function saveSettings(s: Settings): void {
   useCalendarSync.setState({ settings: s })
-  try {
-    localStorage.setItem(CALENDAR_SYNC_KEY, JSON.stringify(s))
-  } catch (err) {
-    toast({ message: `订阅设置无法写入本机存储：${err instanceof Error ? err.message : String(err)}` })
-  }
+  backend()
+    .save(JSON.stringify(s))
+    .catch((err: unknown) => {
+      toast({ message: `订阅设置没有保存：${err instanceof Error ? err.message : String(err)}` })
+    })
 }
 
 /** 32 random bytes as base64url (43 characters, 256 bits). */
@@ -98,39 +129,46 @@ export function webcalUrl(icsUrl: string): string {
   return icsUrl.replace(/^https?:/, 'webcal:')
 }
 
-type Outcome = { kind: 'ok'; icsUrl?: string } | { kind: 'unconfigured'; message: string } | { kind: 'error'; message: string }
+export type Outcome =
+  | { kind: 'ok'; icsUrl?: string }
+  | { kind: 'unconfigured'; message: string }
+  | { kind: 'error'; message: string }
+
+/** HTTP 结果换成同步状态。网页版与桌面版共用。 */
+export function outcomeOf(method: 'PUT' | 'DELETE', res: HttpResult): Outcome {
+  const json = (): Record<string, unknown> => {
+    try {
+      const v = JSON.parse(res.text) as unknown
+      return v && typeof v === 'object' ? (v as Record<string, unknown>) : {}
+    } catch {
+      // 不是 JSON（例如平台的 404 页面），下面只报状态码。
+      return {}
+    }
+  }
+  if (res.status >= 200 && res.status < 300) {
+    if (method === 'DELETE') return { kind: 'ok' }
+    const url = json().url
+    if (typeof url !== 'string') return { kind: 'error', message: '服务端响应缺少订阅地址' }
+    return { kind: 'ok', icsUrl: url }
+  }
+  const info = json()
+  const error = typeof info.error === 'string' ? info.error : undefined
+  const message = typeof info.message === 'string' ? info.message : undefined
+  if (res.status === 503 && error === 'storage-not-configured') {
+    return { kind: 'unconfigured', message: message ?? '服务端没有配置存储' }
+  }
+  const detail = message ?? error
+  return { kind: 'error', message: `HTTP ${res.status}${detail ? `：${detail}` : ''}` }
+}
 
 async function call(method: 'PUT' | 'DELETE', s: Settings, body?: string): Promise<Outcome> {
-  let res: Response
+  let res: HttpResult
   try {
-    res = await fetch(`/api/calendar/${s.id}`, {
-      method,
-      headers: {
-        authorization: `Bearer ${s.key}`,
-        ...(body ? { 'content-type': 'application/json' } : {}),
-      },
-      body,
-    })
+    res = await backend().request(method, s, body)
   } catch (err) {
     return { kind: 'error', message: `网络错误：${err instanceof Error ? err.message : String(err)}` }
   }
-  if (res.ok) {
-    if (method === 'DELETE') return { kind: 'ok' }
-    const data = (await res.json()) as { url?: unknown }
-    if (typeof data.url !== 'string') return { kind: 'error', message: '服务端响应缺少订阅地址' }
-    return { kind: 'ok', icsUrl: data.url }
-  }
-  let info: { error?: string; message?: string } = {}
-  try {
-    info = (await res.json()) as typeof info
-  } catch {
-    // Non JSON body (for example a platform 404 page); the status code is reported below.
-  }
-  if (res.status === 503 && info.error === 'storage-not-configured') {
-    return { kind: 'unconfigured', message: info.message ?? '服务端没有配置存储' }
-  }
-  const detail = info.message ?? info.error ?? res.statusText
-  return { kind: 'error', message: `HTTP ${res.status}${detail ? `：${detail}` : ''}` }
+  return outcomeOf(method, res)
 }
 
 /** True once a failure toast was shown; reset by the next success. */
@@ -252,13 +290,26 @@ export async function regenerate(): Promise<void> {
 
 let started = false
 
-/** Call once at app start. Subscribes to project changes and syncs once if enabled. */
+/**
+ * Call once at app start (after the desktop boot, so the right backend is chosen).
+ * 读取订阅设置，订阅项目改动，开启时同步一次。设置读不出时报错并保持关闭。
+ */
 export function startCalendarSync(): void {
   if (started) return
   started = true
   useStore.subscribe((state, prev) => {
     if (state.projects !== prev.projects) schedule()
   })
-  const s = useCalendarSync.getState().settings
-  if (s?.enabled) void syncNow(s.lastSyncAt === null || Date.now() - s.lastSyncAt > FORCE_AFTER_MS)
+  backend()
+    .load()
+    .then(
+      (raw) => {
+        const s = parseCalendarSettings(raw)
+        useCalendarSync.setState({ settings: s })
+        if (s?.enabled) void syncNow(s.lastSyncAt === null || Date.now() - s.lastSyncAt > FORCE_AFTER_MS)
+      },
+      (err: unknown) => {
+        useCalendarSync.setState({ phase: 'error', error: `订阅设置读不出：${err instanceof Error ? err.message : String(err)}` })
+      },
+    )
 }

@@ -102,12 +102,12 @@ export function NotesView({ days, today, compact = false, focusTick = 0 }: Props
 
       onKey: (entry, e) => {
         const el = e.currentTarget
+        // 输入法组字期间的按键（Esc 取消候选、Enter、Tab、退格）交给输入法。
+        if (e.nativeEvent.isComposing || e.keyCode === 229) return
         if (e.key === 'Escape') {
           el.blur()
           return
         }
-        // 输入法组字期间的 Enter、Tab、退格交给输入法。
-        if (e.nativeEvent.isComposing || e.keyCode === 229) return
         const state = useStore.getState()
         const note = state.notes.find((n) => n.id === entry.id)
         const { selectionStart: start, selectionEnd: end, value } = el
@@ -150,6 +150,8 @@ export function NotesView({ days, today, compact = false, focusTick = 0 }: Props
           if (!note) return
           if (value === '') {
             e.preventDefault()
+            // 空行还带着关联或发送记录时不删，用菜单里的删除（可以撤销）。
+            if (note.projectId || note.sent?.length) return
             const ids = visibleIds()
             const at = ids.indexOf(note.id)
             const target = at > 0 ? { id: ids[at - 1], caret: 'end' as const } : ids[at + 1] ? { id: ids[at + 1], caret: 0 } : null

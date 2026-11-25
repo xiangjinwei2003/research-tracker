@@ -169,3 +169,21 @@ test('写入失败：状态变为 write-failed，保留改动，retry 后写入�
   assert.equal(getPersistHealth(), 'ok')
   assert.equal(readTitle(fs), '新内容')
 })
+
+test('备份失败不挡住写入：报告一次，当天不再重试备份', async () => {
+  const fs = new MemFs()
+  fs.files.set(DATA_FILE, JSON.stringify(envelope('旧')))
+  const errors: unknown[] = []
+  const backend = new FileBackend(fs, () => new Date('2026-11-25T09:00:00'), (err) => errors.push(err))
+  await backend.open()
+  backend.markReady()
+  fs.copyFile = async () => {
+    throw new Error('EACCES: backups')
+  }
+  backend.write(value('新'))
+  await backend.flush()
+  backend.write(value('更新'))
+  await backend.flush()
+  assert.equal(readTitle(fs), '更新')
+  assert.equal(errors.length, 1)
+})

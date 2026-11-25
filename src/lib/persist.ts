@@ -1,14 +1,24 @@
 import type { PersistStorage, StorageValue } from 'zustand/middleware'
 import type { ActiveTimer, AppState } from './types'
 
-/** localStorage key for zustand persist. */
-export const PERSIST_NAME = 'research-tracker-v1'
+/**
+ * localStorage key for zustand persist.
+ * 2026年11月25日起改用 v2：部署前打开的旧标签页还在运行旧代码，收到新版本写入的
+ * storage 事件后会按旧规则迁移并写回，去掉笔记等新字段，两边来回覆盖。换键后旧标签页
+ * 只读写 v1，与新代码分开。第一次读取时把 v1 的内容原样复制到 v2，v1 保持不动。
+ */
+export const PERSIST_NAME = 'research-tracker-v2'
+export const LEGACY_PERSIST_NAME = 'research-tracker-v1'
 
 export type Persisted = Pick<AppState, 'projects' | 'sessions' | 'notes' | 'analyses' | 'version'> & {
   activeTimer: ActiveTimer | null
 }
 
-export type PersistHealth = 'ok' | 'unreadable' | 'write-failed'
+/**
+ * unreadable：存储读不出，停止写入。outdated：数据由更新版本的代码写入，这个页面的代码较旧，
+ * 停止写入以免去掉新字段，提示刷新。write-failed：写入失败，下次改动再试。
+ */
+export type PersistHealth = 'ok' | 'unreadable' | 'outdated' | 'write-failed'
 
 let health: PersistHealth = 'ok'
 const listeners = new Set<(h: PersistHealth) => void>()
@@ -75,10 +85,15 @@ export function asEnvelope(parsed: unknown): StorageValue<Persisted> | null {
 
 export function readRawPersistItem(): string | null {
   try {
-    return localStorage.getItem(PERSIST_NAME)
+    return localStorage.getItem(PERSIST_NAME) ?? localStorage.getItem(LEGACY_PERSIST_NAME)
   } catch {
     return null
   }
+}
+
+/** 写入被暂停：读不出，或数据比代码新。 */
+function writesBlocked(): boolean {
+  return health === 'unreadable' || health === 'outdated'
 }
 
 /**
@@ -98,7 +113,7 @@ export function createDebouncedLocalStorage(
       clearTimeout(timer)
       timer = null
     }
-    if (health === 'unreadable') return
+    if (writesBlocked()) return
     for (const [name, value] of pending) {
       try {
         localStorage.setItem(name, JSON.stringify(value))
@@ -127,6 +142,11 @@ export function createDebouncedLocalStorage(
       let str: string | null
       try {
         str = localStorage.getItem(name)
+        // 新键还没有内容时读旧键，并立即原样复制到新键，之后的迁移与写入都只动新键。
+        if (!str && name === PERSIST_NAME) {
+          str = localStorage.getItem(LEGACY_PERSIST_NAME)
+          if (str) localStorage.setItem(PERSIST_NAME, str)
+        }
       } catch (err) {
         setHealth('unreadable')
         throw err
@@ -153,7 +173,7 @@ export function createDebouncedLocalStorage(
       return envelope
     },
     setItem: (name, value) => {
-      if (health === 'unreadable') return
+      if (writesBlocked()) return
       pending.set(name, value)
       if (timer !== null) clearTimeout(timer)
       timer = setTimeout(flush, delayMs)

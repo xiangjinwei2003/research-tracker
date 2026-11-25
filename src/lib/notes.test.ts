@@ -138,3 +138,11 @@ test('导出再导入，笔记原样保留', () => {
   const text = exportJSON({ projects: [], sessions: [], notes, version: SCHEMA_VERSION })
   assert.deepEqual(importJSON(text).notes, notes)
 })
+
+test('导入时重复的笔记 id 换成新 id', async () => {
+  const { normalizeNotes } = await import('./normalize.ts')
+  const list = normalizeNotes([note('same', '2026-11-25', 'a'), note('same', '2026-11-25', 'b')])
+  assert.equal(list.length, 2)
+  assert.notEqual(list[0].id, list[1].id)
+  assert.equal(list[0].id, 'same')
+})

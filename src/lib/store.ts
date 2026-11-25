@@ -27,6 +27,7 @@ import {
 import {
   PERSIST_NAME,
   createDebouncedLocalStorage,
+  markPersistHealth,
   unlockPersistWrites,
   type Persisted,
 } from './persist'
@@ -139,7 +140,10 @@ interface Store extends AppState {
   ) => void
   /** Enter：在 `at` 处把文字拆成两条，后半段成为紧随其后的同级新条目。返回新条目的 id。 */
   splitNote: (id: string, at: number) => string
-  /** 行首退格：并入同一天的上一条。返回上一条的 id 和拼接处的光标位置；没有上一条时返回 null。 */
+  /**
+   * 行首退格：并入同一天的上一条，发送记录一并并入；上一条没有关联时接过这一条的关联。
+   * 返回上一条的 id 和拼接处的光标位置；没有上一条，或两条关联到不同的项目或任务时返回 null，不合并。
+   */
   mergeNoteUp: (id: string) => { id: string; caret: number } | null
   /** 删除一条笔记。`undoable` 时返回撤销令牌（菜单里的删除），否则返回 ''（退格删空行）。 */
   removeNote: (id: string, opts?: { undoable?: boolean }) => string
@@ -577,11 +581,21 @@ export const useStore = create<Store>()(
         const at = day.findIndex((n) => n.id === id)
         if (at <= 0) return null
         const prev = day[at - 1]
+        const conflict =
+          !!note.projectId &&
+          !!prev.projectId &&
+          (note.projectId !== prev.projectId || (note.todoId ?? '') !== (prev.todoId ?? ''))
+        if (conflict) return null
         const caret = prev.text.length
+        const merged: NoteEntry = { ...prev, text: prev.text + note.text, updatedAt: stamp() }
+        if (!prev.projectId && note.projectId) {
+          merged.projectId = note.projectId
+          if (note.todoId) merged.todoId = note.todoId
+        }
+        const sent = [...(prev.sent ?? []), ...(note.sent ?? [])].sort((a, b) => a.at - b.at)
+        if (sent.length) merged.sent = sent
         set((s) => ({
-          notes: s.notes
-            .filter((n) => n.id !== id)
-            .map((n) => (n.id === prev.id ? { ...n, text: prev.text + note.text, updatedAt: stamp() } : n)),
+          notes: s.notes.filter((n) => n.id !== id).map((n) => (n.id === prev.id ? merged : n)),
         }))
         return { id: prev.id, caret }
       },
@@ -698,8 +712,13 @@ export const useStore = create<Store>()(
               return { sessions: next, undoStack: rest }
             }
             case 'note-removed': {
+              // 删除后同一个 id 可能已被新笔记占用（今天第一条用预留 id 建立），恢复时换一个 id，
+              // 否则两条同 id 的笔记会被一起改写、一起删除。
+              const restored = s.notes.some((n) => n.id === entry.note.id)
+                ? { ...entry.note, id: uid() }
+                : entry.note
               const next = [...s.notes]
-              next.splice(Math.min(entry.index, next.length), 0, entry.note)
+              next.splice(Math.min(entry.index, next.length), 0, restored)
               return { notes: next, undoStack: rest }
             }
             case 'replace-state': {
@@ -751,8 +770,27 @@ export const useStore = create<Store>()(
 // 网页版在别的标签页改了数据时重新读取。桌面版只有一个窗口，数据在文件里。
 if (typeof window !== 'undefined' && !IN_ARTIFACT) {
   window.addEventListener('storage', (e) => {
-    if (e.key === PERSIST_NAME) void useStore.persist.rehydrate()
+    if (e.key === PERSIST_NAME) onStorageWrite(e.newValue)
   })
+}
+
+/**
+ * 别的标签页写入了数据。版本比当前代码旧时不采用（会去掉新字段），把当前状态写回，
+ * 那个旧标签页读到更新的版本后会停止写入；版本相同或更新时重新读取。
+ */
+export function onStorageWrite(newValue: string | null): void {
+  let version: unknown
+  try {
+    version = newValue ? (JSON.parse(newValue) as { version?: unknown }).version : undefined
+  } catch {
+    version = undefined
+  }
+  if (typeof version === 'number' && version < SCHEMA_VERSION) {
+    console.warn(`[research-tracker] 另一个标签页用旧版本（${version}）写入了数据，已保留当前数据并写回。`)
+    useStore.setState({})
+    return
+  }
+  void useStore.persist.rehydrate()
 }
 
 /** 写入存储的部分。函数声明会提升，create() 调用时已可用。 */
@@ -787,6 +825,11 @@ export function persistedSnapshot(): { state: Persisted; version: number } {
 }
 
 function hydratePersisted(persisted: unknown, fromVersion: number) {
+  // 数据由更新版本的代码写入：按旧规则读会去掉新字段，写回就丢数据。停止写入并让水合失败。
+  if (fromVersion > SCHEMA_VERSION) {
+    markPersistHealth('outdated')
+    throw new Error(`[research-tracker] 数据版本 ${fromVersion} 比当前代码的 ${SCHEMA_VERSION} 新，请刷新页面`)
+  }
   const state = normalizeState(persisted)
   const raw =
     persisted && typeof persisted === 'object' ? (persisted as Record<string, unknown>) : null

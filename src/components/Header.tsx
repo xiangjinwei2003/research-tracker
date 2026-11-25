@@ -69,6 +69,12 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
           message:
             "本地数据无法读取，原记录未覆盖。请导出原始记录，或清空后继续。",
         });
+      else if (health === "outdated")
+        toast({
+          message:
+            "数据由更新版本的页面写入，这个页面的版本较旧，改动不会保存。请刷新页面。",
+          durationMs: 30_000,
+        });
       else if (health === "write-failed")
         toast({
           message: IN_ARTIFACT
@@ -103,7 +109,12 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
             message: `已导出到下载文件夹：${name}`,
             action: {
               label: "在访达中显示",
-              onClick: () => void desktop.shell.showItemInFolder(path),
+              onClick: () =>
+                void desktop.shell
+                  .showItemInFolder(path)
+                  .catch((err: unknown) =>
+                    toast({ message: `没有打开访达：${(err as Error).message ?? String(err)}` }),
+                  ),
             },
           });
         })

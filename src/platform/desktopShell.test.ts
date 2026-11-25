@@ -143,3 +143,11 @@ test('全局快捷键：注册 ⌃⌥N，按下时先拿到窗口再派发记笔
   assert.ok(log.includes('show'))
   assert.equal(fired, 1)
 })
+
+test('从隐藏标题栏改回系统标题栏：选项的键减少，也要调用 setOptions', async () => {
+  applied = windowOptions('full', false)
+  reloadOnSet = true
+  const res = await applyWindowOptions(desktop, { systemTitleBar: true })
+  assert.equal(res.reloading, true)
+  assert.ok(log.some((l) => l === `setOptions ${JSON.stringify({ minWidth: 800, minHeight: 520 })}`))
+})

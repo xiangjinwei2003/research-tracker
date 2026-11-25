@@ -1,5 +1,7 @@
 import type { AppState } from '../lib/types'
 import { SCHEMA_VERSION, persistedSnapshot, useStore } from '../lib/store'
+import { getPersistHealth } from '../lib/persist'
+import { toast } from '../lib/toast'
 import {
   DATA_DIR,
   DATA_FILE,
@@ -87,7 +89,9 @@ export async function requestFileAccess(desktop: ClaudeDesktop): Promise<BootPha
 export async function openData(desktop: ClaudeDesktop): Promise<BootPhase> {
   setDesktop(desktop)
   const fs = desktop.fs as DataFs
-  const backend = new FileBackend(fs)
+  const backend = new FileBackend(fs, undefined, (err) =>
+    toast({ message: `今天的数据备份没有写成：${reasonOf(err)}。数据文件照常保存。` }),
+  )
   attachFileBackend(backend)
   const result = await backend.open()
   if (result.kind === 'missing') {
@@ -97,7 +101,13 @@ export async function openData(desktop: ClaudeDesktop): Promise<BootPhase> {
   await useStore.persist.rehydrate()
   // zustand 会吞掉水合中的异常（迁移函数抛错等），只能从 hasHydrated 判断。
   if (!useStore.persist.hasHydrated()) {
-    return { kind: 'failed', reason: '数据文件可以读取，但载入时出错，原文件没有改动' }
+    return {
+      kind: 'failed',
+      reason:
+        getPersistHealth() === 'outdated'
+          ? '数据文件由更新版本的应用写入，这一版不能读取，原文件没有改动'
+          : '数据文件可以读取，但载入时出错，原文件没有改动',
+    }
   }
   backend.markReady()
   if (result.value.version !== SCHEMA_VERSION) backend.write(persistedSnapshot())

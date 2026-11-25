@@ -4,7 +4,7 @@ import { timerLabel } from '@/lib/timer'
 import { primeChime } from '@/lib/reminder'
 import { trayMenu, trayTitle, type TrayActions } from '@/lib/trayMenu'
 import { trayIconPng } from './icons'
-import { requestQuickNote } from './quickNote'
+import { showThenNote } from './quickNote'
 
 let unsubscribe: (() => void) | null = null
 let ticker: ReturnType<typeof setInterval> | null = null
@@ -25,11 +25,9 @@ function actions(desktop: ClaudeDesktop): TrayActions {
       useStore.getState().cancelTimer()
       toast({ message: '已取消专注' })
     },
-    quickNote: () => {
-      void desktop.window.show().finally(requestQuickNote)
-    },
+    quickNote: () => showThenNote(desktop),
     open: () => {
-      void desktop.window.show()
+      desktop.window.show().catch((err: unknown) => console.warn('[research-tracker] 窗口没有拿到前面。', err))
     },
   }
 }
@@ -50,20 +48,16 @@ export async function enableTray(desktop: ClaudeDesktop): Promise<void> {
   stopFollowing()
   const icon = trayIconPng()
   const act = actions(desktop)
-  let lastKey = ''
+  // tray.set 是否保留上次的字段没有写明，所以每次都传完整的选项：图标、标题、提示和菜单。
+  // 空闲时标题传空串，清掉上一次的倒计时。
   const options = (): ClaudeDesktop.TrayOptions => {
     const timer = useStore.getState().activeTimer
-    const key = timer ? `${timer.startedAt}` : 'idle'
-    const title = trayTitle(timer, Date.now())
-    const next: ClaudeDesktop.TrayOptions = {
+    return {
       icon,
+      title: trayTitle(timer, Date.now()) ?? '',
       toolTip: timer ? `专注中：${timerLabel(timer)}` : '没有进行中的专注',
-      ...(title ? { title } : {}),
+      menu: trayMenu(timer, act),
     }
-    // 菜单只在计时开始或结束时变化，每秒只换标题。
-    if (key !== lastKey) next.menu = trayMenu(timer, act)
-    lastKey = key
-    return next
   }
   const render = () => {
     desktop.tray.set(options()).catch((err) => console.warn('[research-tracker] 菜单栏项更新失败。', err))

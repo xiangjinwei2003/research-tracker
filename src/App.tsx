@@ -82,9 +82,9 @@ export default function App() {
     toast({ message: "侧栏便签已移到今天的笔记" });
   }, [addNote]);
 
-  // 苹果日历同步走同源的 Vercel 接口，只在网页版运行。
+  // 苹果日历同步：网页版走同源接口，桌面版用 curl 发到生产域名。
   useEffect(() => {
-    if (!IN_ARTIFACT) startCalendarSync();
+    startCalendarSync();
   }, []);
 
   // 桌面版：图标、应用菜单、恢复全局快捷键与菜单栏项；启动时积下的提示一并显示。
