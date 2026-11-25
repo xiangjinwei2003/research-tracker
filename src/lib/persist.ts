@@ -28,6 +28,11 @@ export function unlockPersistWrites(): void {
   setHealth('ok')
 }
 
+/** 桌面版的文件存储用同一套状态报告读写结果，顶栏据此提示。 */
+export function markPersistHealth(next: PersistHealth): void {
+  setHealth(next)
+}
+
 function setHealth(next: PersistHealth): void {
   if (health === next) return
   health = next
@@ -40,7 +45,7 @@ function defaultDelayMs(): number {
   return env?.NODE_TEST_CONTEXT ? 0 : 400
 }
 
-function asEnvelope(parsed: unknown): StorageValue<Persisted> | null {
+export function asEnvelope(parsed: unknown): StorageValue<Persisted> | null {
   if (!parsed || typeof parsed !== 'object') return null
   const obj = parsed as Record<string, unknown>
   if ('state' in obj && obj.state && typeof obj.state === 'object') {

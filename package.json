@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:artifact": "tsc -b && vite build --mode artifact && node scripts/artifact-page.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "tsx --tsconfig tsconfig.app.json --test --test-concurrency=1 src/**/*.test.ts"
@@ -44,6 +45,7 @@
     "tsx": "^4.19.2",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vite-plugin-singlefile": "^2.3.4"
   }
 }

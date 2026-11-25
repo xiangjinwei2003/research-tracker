@@ -10,6 +10,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStore } from "@/lib/store";
 import { toast } from "@/lib/toast";
 import { startCalendarSync } from "@/lib/calendarSync";
+import { IN_ARTIFACT } from "@/platform/runtime";
 import { isBareShortcut, overlayIsOpen } from "@/lib/keyboard";
 import type { Project } from "@/lib/types";
 
@@ -19,8 +20,9 @@ export default function App() {
 
   const undo = useStore((s) => s.undo);
 
+  // 苹果日历同步走同源的 Vercel 接口，只在网页版运行。
   useEffect(() => {
-    startCalendarSync();
+    if (!IN_ARTIFACT) startCalendarSync();
   }, []);
 
   // Global Cmd/Ctrl+Z to undo last destructive action.

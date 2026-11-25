@@ -138,6 +138,13 @@ body,
   min-height: 100%;
 }
 
+/* 桌面版发布时页面被套进 Artifact 的外壳，外壳的 body 规则写死了 14px system-ui，
+   且不在层里，会压过 Tailwind 的 base 层。这里同样不放进层，让 body 继承 html 的字体，
+   网页版的效果不变。 */
+body {
+  font: inherit;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);

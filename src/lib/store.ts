@@ -24,7 +24,10 @@ import {
   PERSIST_NAME,
   createDebouncedLocalStorage,
   unlockPersistWrites,
+  type Persisted,
 } from './persist'
+import { IN_ARTIFACT } from '../platform/runtime'
+import { fileStorage } from '../platform/fileStore'
 
 export {
   PERSIST_NAME,
@@ -579,13 +582,11 @@ export const useStore = create<Store>()(
     }),
     {
       name: PERSIST_NAME,
-      storage: createDebouncedLocalStorage(),
-      partialize: (s) => ({
-        projects: s.projects,
-        sessions: s.sessions,
-        activeTimer: s.activeTimer,
-        version: s.version,
-      }),
+      // 网页版：localStorage，模块加载时同步水合。桌面版：本机数据文件，
+      // 由启动流程（platform/boot.ts）打开文件后再 rehydrate。
+      storage: IN_ARTIFACT ? fileStorage : createDebouncedLocalStorage(),
+      skipHydration: IN_ARTIFACT,
+      partialize: persistedPart,
       version: SCHEMA_VERSION,
       migrate: (persisted: unknown, fromVersion: number) => hydratePersisted(persisted, fromVersion),
       merge: (persisted, current) => ({
@@ -597,10 +598,26 @@ export const useStore = create<Store>()(
   ),
 )
 
-if (typeof window !== 'undefined') {
+// 网页版在别的标签页改了数据时重新读取。桌面版只有一个窗口，数据在文件里。
+if (typeof window !== 'undefined' && !IN_ARTIFACT) {
   window.addEventListener('storage', (e) => {
     if (e.key === PERSIST_NAME) void useStore.persist.rehydrate()
   })
+}
+
+/** 写入存储的部分。函数声明会提升，create() 调用时已可用。 */
+function persistedPart(s: Store): Persisted {
+  return {
+    projects: s.projects,
+    sessions: s.sessions,
+    activeTimer: s.activeTimer,
+    version: s.version,
+  }
+}
+
+/** 当前状态按存储格式打包，桌面版在迁移后补写一次文件时使用。 */
+export function persistedSnapshot(): { state: Persisted; version: number } {
+  return { state: persistedPart(useStore.getState()), version: SCHEMA_VERSION }
 }
 
 function hydratePersisted(persisted: unknown, fromVersion: number) {

@@ -17,6 +17,11 @@ import {
 } from "@/lib/persist";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/cn";
+import type { AppState } from "@/lib/types";
+import { LOGO_URL } from "@/lib/logo";
+import { IN_ARTIFACT } from "@/platform/runtime";
+import { freePathInDownloads, getDesktop } from "@/platform/desktop";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { FocusTimer } from "./FocusTimer";
 import {
   DropdownMenu,
@@ -65,6 +70,8 @@ export function Header({ tab, onTabChange, children }: Props) {
   const undo = useStore((s) => s.undo);
   const fileRef = useRef<HTMLInputElement>(null);
   const [memo, setMemo] = useState(readMemo);
+  const [pendingImport, setPendingImport] = useState<AppState | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   useEffect(() => {
     const tell = (health: ReturnType<typeof getPersistHealth>) => {
       if (health === "unreadable")
@@ -73,7 +80,11 @@ export function Header({ tab, onTabChange, children }: Props) {
             "本地数据无法读取，原记录未覆盖。请导出原始记录，或清空后继续。",
         });
       else if (health === "write-failed")
-        toast({ message: "本次改动未能写入浏览器存储" });
+        toast({
+          message: IN_ARTIFACT
+            ? "本次改动未能写入数据文件"
+            : "本次改动未能写入浏览器存储",
+        });
     };
     tell(getPersistHealth());
     return subscribePersistHealth(tell);
@@ -89,12 +100,32 @@ export function Header({ tab, onTabChange, children }: Props) {
           sessions: useStore.getState().sessions,
           version: useStore.getState().version,
         });
+    const base = `${dumpRaw ? "research-tracker-unreadable" : "research-tracker"}-${new Date().toISOString().slice(0, 10)}`;
+    const desktop = getDesktop();
+    if (desktop) {
+      // Artifact 里 <a download> 不起作用，桌面版直接写到下载文件夹。
+      void freePathInDownloads(desktop.fs, base, ".json")
+        .then(async ({ path, name }) => {
+          await desktop.fs.writeFile(path, body, "utf8");
+          toast({
+            message: `已导出到下载文件夹：${name}`,
+            action: {
+              label: "在访达中显示",
+              onClick: () => void desktop.shell.showItemInFolder(path),
+            },
+          });
+        })
+        .catch((error: unknown) =>
+          toast({ message: `导出失败：${(error as Error).message}` }),
+        );
+      return;
+    }
     const url = URL.createObjectURL(
       new Blob([body], { type: "application/json" }),
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${dumpRaw ? "research-tracker-unreadable" : "research-tracker"}-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `${base}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast({
@@ -103,21 +134,17 @@ export function Header({ tab, onTabChange, children }: Props) {
   };
   const onImport = async (file: File) => {
     try {
-      const state = importJSON(await file.text());
-      if (
-        !confirm(
-          `导入 ${state.projects.length} 个项目，这将替换当前所有数据。继续？`,
-        )
-      )
-        return;
-      const token = replaceState(state);
-      toast({
-        message: `已导入 ${state.projects.length} 个项目`,
-        action: { label: "撤销", onClick: () => undo(token) },
-      });
+      setPendingImport(importJSON(await file.text()));
     } catch (error) {
       toast({ message: `导入失败：${(error as Error).message}` });
     }
+  };
+  const applyImport = (state: AppState) => {
+    const token = replaceState(state);
+    toast({
+      message: `已导入 ${state.projects.length} 个项目`,
+      action: { label: "撤销", onClick: () => undo(token) },
+    });
   };
   const onClear = () => {
     const state = useStore.getState();
@@ -130,13 +157,14 @@ export function Header({ tab, onTabChange, children }: Props) {
       toast({ message: "当前没有任何数据" });
       return;
     }
-    if (confirm("确认清空全部数据？")) {
-      const token = clearAll();
-      toast({
-        message: "已清空全部数据",
-        action: { label: "撤销", onClick: () => undo(token) },
-      });
-    }
+    setConfirmClear(true);
+  };
+  const applyClear = () => {
+    const token = clearAll();
+    toast({
+      message: "已清空全部数据",
+      action: { label: "撤销", onClick: () => undo(token) },
+    });
   };
 
   const dataMenu = (
@@ -161,7 +189,7 @@ export function Header({ tab, onTabChange, children }: Props) {
     <div className="app-shell">
       <aside className="app-sidebar z-40 bg-sidebar">
         <div className="flex h-12 shrink-0 items-center gap-2.5 px-5 max-[68.74rem]:justify-center max-[68.74rem]:px-0">
-          <img src="/logo-mark.svg" alt="" className="size-6 rounded-md" />
+          <img src={LOGO_URL} alt="" className="size-6 rounded-md" />
           <span className="hidden truncate text-sm font-semibold text-secondary-foreground min-[68.75rem]:block">
             Research Tracker
           </span>
@@ -189,17 +217,20 @@ export function Header({ tab, onTabChange, children }: Props) {
           ))}
         </nav>
         <div className="mt-auto shrink-0 px-3 pb-3 pt-2">
-          <textarea
-            value={memo}
-            onChange={(e) => {
-              setMemo(e.target.value);
-              writeMemo(e.target.value);
-            }}
-            placeholder="便签"
-            aria-label="便签"
-            rows={2}
-            className="mb-2 hidden w-full resize-none rounded-md bg-transparent px-2.5 py-1.5 text-xs leading-5 text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground hover:bg-hover focus:bg-hover focus:text-foreground min-[68.75rem]:block"
-          />
+          {/* 便签存在浏览器存储里；桌面版的 Artifact 存储不可靠，P2 改为每日笔记后移除。 */}
+          {IN_ARTIFACT ? null : (
+            <textarea
+              value={memo}
+              onChange={(e) => {
+                setMemo(e.target.value);
+                writeMemo(e.target.value);
+              }}
+              placeholder="便签"
+              aria-label="便签"
+              rows={2}
+              className="mb-2 hidden w-full resize-none rounded-md bg-transparent px-2.5 py-1.5 text-xs leading-5 text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground hover:bg-hover focus:bg-hover focus:text-foreground min-[68.75rem]:block"
+            />
+          )}
           <div className="flex items-center gap-1 max-[68.74rem]:justify-center">
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -218,7 +249,7 @@ export function Header({ tab, onTabChange, children }: Props) {
         <header className="sticky top-0 z-30 bg-background/85 backdrop-blur-md">
           <div className="flex min-h-12 min-w-0 max-w-full flex-wrap items-center gap-2 px-4 py-1.5 sm:px-6">
             <div className="flex items-center gap-2 md:hidden">
-              <img src="/logo-mark.svg" alt="" className="size-6 rounded-md" />
+              <img src={LOGO_URL} alt="" className="size-6 rounded-md" />
             </div>
             <nav
               className="order-3 flex w-full gap-1 md:hidden"
@@ -272,6 +303,27 @@ export function Header({ tab, onTabChange, children }: Props) {
         </header>
         {children}
       </div>
+      <ConfirmDialog
+        open={pendingImport !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingImport(null);
+        }}
+        title={`导入 ${pendingImport?.projects.length ?? 0} 个项目`}
+        description="导入的数据将替换当前全部数据，可在通知里撤销。"
+        confirmLabel="导入"
+        onConfirm={() => {
+          if (pendingImport) applyImport(pendingImport);
+        }}
+      />
+      <ConfirmDialog
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        title="清空全部数据"
+        description="项目、待办、专注记录与正在进行的计时都会清空，可在通知里撤销。"
+        confirmLabel="清空"
+        destructive
+        onConfirm={applyClear}
+      />
     </div>
   );
 }

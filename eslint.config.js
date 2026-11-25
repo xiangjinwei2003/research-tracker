@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // src/platform/types 是 claude.ai Artifact 运行时的类型定义，原样复制，不做 lint。
+  globalIgnores(['dist', 'dist-artifact', 'src/platform/types']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
