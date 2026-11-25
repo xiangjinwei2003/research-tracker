@@ -39,6 +39,8 @@
   --color-indigo-11: #9eb1ff;
   /* Radix purple dark 11，项目占比卡片的小标题 */
   --color-purple-11: #d19dff;
+  /* Radix cyan dark 11，侧栏「笔记」图标 */
+  --color-cyan-11: #4ccce6;
 }
 
 /* shadcn/ui 语义令牌 → Tailwind 工具类 */
@@ -138,13 +140,8 @@ body,
   min-height: 100%;
 }
 
-/* 桌面版发布时页面被套进 Artifact 的外壳，外壳的 body 规则写死了 14px system-ui，
-   且不在层里，会压过 Tailwind 的 base 层。这里同样不放进层，让 body 继承 html 的字体，
-   网页版的效果不变。 */
-body {
-  font: inherit;
-}
-
+/* 这条 body 规则不在层里，排在 Artifact 外壳的 body 规则（14px system-ui）之后，
+   桌面版发布后同样生效。 */
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -264,6 +261,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .cal-grid > * {
   min-width: 0;
   overflow: hidden;
+}
+
+/* 固定在右侧的今天笔记：只在宽窗口出现，与左侧栏同色。 */
+.notes-pane {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .app-shell:has(> .notes-pane) {
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr) 320px;
+  }
+
+  .notes-pane {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-width: 0;
+  }
 }
 
 .review-split {

@@ -31,3 +31,13 @@ test('bare shortcuts respond only without modifiers, typing or overlays', async 
   assert.equal(isBareShortcut({ ...base, isComposing: true }, false), false)
   assert.equal(isBareShortcut(base, true), false)
 })
+
+test('正在关闭的浮层（data-state="closed"）不算打开', async () => {
+  const { overlayIsOpen, OPEN_OVERLAY_SELECTOR } = await import('./keyboard.ts')
+  const seen: string[] = []
+  assert.equal(overlayIsOpen({ querySelector: (s: string) => (seen.push(s), null) }), false)
+  assert.equal(seen[0], OPEN_OVERLAY_SELECTOR)
+  for (const role of ['dialog', 'menu', 'alertdialog']) {
+    assert.ok(OPEN_OVERLAY_SELECTOR.includes(`[role="${role}"]:not([data-state="closed"])`))
+  }
+})

@@ -7,8 +7,10 @@ import type {
   FocusSession,
   ActiveTimer,
   ProjectTag,
+  NoteEntry,
 } from './types'
-import { PROJECT_COLOR_PRESETS, PROJECT_TAG_ORDER } from './types'
+import { NOTE_MAX_LEVEL, PROJECT_COLOR_PRESETS, PROJECT_TAG_ORDER } from './types'
+import { insertionIndex, notesOfDay } from './notes'
 import { uid } from './id'
 import { today } from './date'
 import {
@@ -43,6 +45,7 @@ type UndoKind =
   | { kind: 'project-archived'; id: string; prevArchived: boolean }
   | { kind: 'todo-removed'; projectId: string; todo: Todo; index: number }
   | { kind: 'session-removed'; session: FocusSession; index: number }
+  | { kind: 'note-removed'; note: NoteEntry; index: number }
   | { kind: 'replace-state'; prev: AppState }
   | { kind: 'clear-all'; prev: AppState; prevTimer: ActiveTimer | null }
 
@@ -112,6 +115,33 @@ interface Store extends AppState {
   moveTodo: (fromProjectId: string, todoId: string, toProjectId: string) => void
   reorderTodos: (projectId: string, ids: string[]) => void
   toggleTodoDone: (projectId: string, todoId: string) => void
+
+  /**
+   * 新建一条笔记，插在 `afterId` 之后（没有时放在这一天的最后）。
+   * 可以指定 id：今天还没有笔记时页面先用一个预留 id 渲染输入框，第一次输入时用同一个 id 建笔记，
+   * 输入框不会重新挂载，输入法的组字不中断。
+   */
+  addNote: (opts: {
+    date: string
+    id?: string
+    afterId?: string
+    text?: string
+    level?: number
+    projectId?: string
+    todoId?: string
+  }) => string
+  /** 改文字、缩进或关联。关联字段传 undefined 表示去掉。 */
+  updateNote: (
+    id: string,
+    patch: Partial<Pick<NoteEntry, 'text' | 'level' | 'projectId' | 'todoId'>>,
+  ) => void
+  /** Enter：在 `at` 处把文字拆成两条，后半段成为紧随其后的同级新条目。返回新条目的 id。 */
+  splitNote: (id: string, at: number) => string
+  /** 行首退格：并入同一天的上一条。返回上一条的 id 和拼接处的光标位置；没有上一条时返回 null。 */
+  mergeNoteUp: (id: string) => { id: string; caret: number } | null
+  /** 删除一条笔记。`undoable` 时返回撤销令牌（菜单里的删除），否则返回 ''（退格删空行）。 */
+  removeNote: (id: string, opts?: { undoable?: boolean }) => string
+
   /** Returns the undo token. */
   replaceState: (state: AppState) => string
   /** Empty projects, sessions, and the running timer. Returns the undo token. */
@@ -161,6 +191,7 @@ export const useStore = create<Store>()(
     (set, get) => ({
       projects: [],
       sessions: [],
+      notes: [],
       activeTimer: null,
       version: SCHEMA_VERSION,
       undoStack: [],
@@ -395,7 +426,7 @@ export const useStore = create<Store>()(
                   ...p,
                   todos: p.todos.map((t) => {
                     if (t.id !== todoId) return t
-                    const next = { ...t, ...patch }
+                    const next = withDoneAt(t, { ...t, ...patch })
                     // 指定优先级即离开待分配组。
                     if (patch.priority && patch.pending === undefined) delete next.pending
                     return next
@@ -470,7 +501,7 @@ export const useStore = create<Store>()(
               : {
                   ...p,
                   todos: p.todos.map((t) =>
-                    t.id === todoId ? { ...t, done: !t.done } : t,
+                    t.id === todoId ? withDoneAt(t, { ...t, done: !t.done }) : t,
                   ),
                   updatedAt: stamp(),
                 },
@@ -478,10 +509,94 @@ export const useStore = create<Store>()(
         }))
       },
 
+      addNote: ({ date, id: wanted, afterId, text, level, projectId, todoId }) => {
+        const id = wanted && !get().notes.some((n) => n.id === wanted) ? wanted : uid()
+        const now = stamp()
+        const note: NoteEntry = {
+          id,
+          date,
+          text: text ?? '',
+          level: clampNoteLevel(level ?? 0),
+          createdAt: now,
+          updatedAt: now,
+        }
+        if (projectId) {
+          note.projectId = projectId
+          if (todoId) note.todoId = todoId
+        }
+        set((s) => {
+          const next = [...s.notes]
+          next.splice(insertionIndex(s.notes, date, afterId), 0, note)
+          return { notes: next }
+        })
+        return id
+      },
+
+      updateNote: (id, patch) => {
+        set((s) => ({
+          notes: s.notes.map((n) => {
+            if (n.id !== id) return n
+            const next: NoteEntry = { ...n, updatedAt: stamp() }
+            if (patch.text !== undefined) next.text = patch.text
+            if (patch.level !== undefined) next.level = clampNoteLevel(patch.level)
+            if ('projectId' in patch) {
+              if (patch.projectId) next.projectId = patch.projectId
+              else delete next.projectId
+              // 换了项目或去掉项目时，原来的任务关联不再成立。
+              if (!patch.projectId || patch.projectId !== n.projectId) delete next.todoId
+            }
+            if ('todoId' in patch) {
+              if (patch.todoId && next.projectId) next.todoId = patch.todoId
+              else delete next.todoId
+            }
+            return next
+          }),
+        }))
+      },
+
+      splitNote: (id, at) => {
+        const note = get().notes.find((n) => n.id === id)
+        if (!note) return ''
+        const head = note.text.slice(0, at)
+        const tail = note.text.slice(at)
+        get().updateNote(id, { text: head })
+        return get().addNote({ date: note.date, afterId: id, text: tail, level: note.level })
+      },
+
+      mergeNoteUp: (id) => {
+        const note = get().notes.find((n) => n.id === id)
+        if (!note) return null
+        const day = notesOfDay(get().notes, note.date)
+        const at = day.findIndex((n) => n.id === id)
+        if (at <= 0) return null
+        const prev = day[at - 1]
+        const caret = prev.text.length
+        set((s) => ({
+          notes: s.notes
+            .filter((n) => n.id !== id)
+            .map((n) => (n.id === prev.id ? { ...n, text: prev.text + note.text, updatedAt: stamp() } : n)),
+        }))
+        return { id: prev.id, caret }
+      },
+
+      removeNote: (id, opts) => {
+        const index = get().notes.findIndex((n) => n.id === id)
+        if (index === -1) return ''
+        const note = get().notes[index]
+        if (!opts?.undoable) {
+          set((s) => ({ notes: s.notes.filter((n) => n.id !== id) }))
+          return ''
+        }
+        const entry = makeUndo({ kind: 'note-removed', note, index }, '已删除笔记')
+        set((s) => ({ notes: s.notes.filter((n) => n.id !== id), undoStack: pushUndo(s, entry) }))
+        return entry.token
+      },
+
       replaceState: (next) => {
         const prev = {
           projects: get().projects,
           sessions: get().sessions,
+          notes: get().notes,
           version: get().version,
         }
         const entry = makeUndo({ kind: 'replace-state', prev }, '已替换全部数据')
@@ -490,6 +605,7 @@ export const useStore = create<Store>()(
         set((s) => ({
           projects: next.projects,
           sessions: next.sessions,
+          notes: next.notes,
           version: next.version,
           undoStack: pushUndo(s, entry),
         }))
@@ -500,6 +616,7 @@ export const useStore = create<Store>()(
         const prev = {
           projects: get().projects,
           sessions: get().sessions,
+          notes: get().notes,
           version: get().version,
         }
         const entry = makeUndo(
@@ -510,6 +627,7 @@ export const useStore = create<Store>()(
         set((s) => ({
           projects: [],
           sessions: [],
+          notes: [],
           activeTimer: null,
           version: SCHEMA_VERSION,
           undoStack: pushUndo(s, entry),
@@ -556,10 +674,16 @@ export const useStore = create<Store>()(
               next.splice(Math.min(entry.index, next.length), 0, entry.session)
               return { sessions: next, undoStack: rest }
             }
+            case 'note-removed': {
+              const next = [...s.notes]
+              next.splice(Math.min(entry.index, next.length), 0, entry.note)
+              return { notes: next, undoStack: rest }
+            }
             case 'replace-state': {
               return {
                 projects: entry.prev.projects,
                 sessions: entry.prev.sessions,
+                notes: entry.prev.notes,
                 version: entry.prev.version,
                 undoStack: rest,
               }
@@ -568,6 +692,7 @@ export const useStore = create<Store>()(
               return {
                 projects: entry.prev.projects,
                 sessions: entry.prev.sessions,
+                notes: entry.prev.notes,
                 version: entry.prev.version,
                 activeTimer: entry.prevTimer,
                 undoStack: rest,
@@ -610,9 +735,24 @@ function persistedPart(s: Store): Persisted {
   return {
     projects: s.projects,
     sessions: s.sessions,
+    notes: s.notes,
     activeTimer: s.activeTimer,
     version: s.version,
   }
+}
+
+/** 勾掉时记下时刻，取消勾选时清除。函数声明，迁移期间也可用。 */
+function withDoneAt(before: Todo, after: Todo): Todo {
+  if (after.done && !before.done) return { ...after, doneAt: new Date().toISOString() }
+  if (!after.done && after.doneAt !== undefined) {
+    const { doneAt: _drop, ...rest } = after
+    return rest
+  }
+  return after
+}
+
+function clampNoteLevel(level: number): number {
+  return Math.min(NOTE_MAX_LEVEL, Math.max(0, Math.trunc(level)))
 }
 
 /** 当前状态按存储格式打包，桌面版在迁移后补写一次文件时使用。 */
@@ -627,6 +767,7 @@ function hydratePersisted(persisted: unknown, fromVersion: number) {
   return {
     projects: fromVersion < 6 ? respreadAutoColors(state.projects) : state.projects,
     sessions: state.sessions,
+    notes: state.notes,
     activeTimer: normalizeActiveTimer(raw?.activeTimer),
     version: SCHEMA_VERSION,
   }

@@ -4,6 +4,7 @@ import {
   CircleCheck,
   Download,
   Ellipsis,
+  NotebookPen,
   Timer,
   Trash2,
   Upload,
@@ -31,45 +32,27 @@ import {
   DropdownMenuTrigger,
 } from "./ui/DropdownMenu";
 
-export type Tab = "dashboard" | "timeline" | "review" | "archived";
+export type Tab = "dashboard" | "notes" | "timeline" | "review" | "archived";
 interface Props {
   tab: Tab;
   onTabChange: (tab: Tab) => void;
   children: ReactNode;
+  /** 主区右侧的一栏（固定的笔记），只在宽窗口显示。 */
+  aside?: ReactNode;
 }
 // 导航图标各有固定颜色，用于区分分区；其余界面保持灰阶。
 const TABS = [
   { id: "dashboard", label: "任务", icon: CircleCheck, tint: "text-ring" },
+  { id: "notes", label: "笔记", icon: NotebookPen, tint: "text-cyan-11" },
   { id: "timeline", label: "日历", icon: CalendarDays, tint: "text-purple-11" },
   { id: "review", label: "专注回顾", icon: Timer, tint: "text-success" },
   { id: "archived", label: "归档", icon: Archive, tint: "text-muted-foreground" },
 ] satisfies { id: Tab; label: string; icon: typeof Archive; tint: string }[];
-const MEMO_KEY = "research-tracker.memo";
-const readMemo = () => {
-  try {
-    return localStorage.getItem(MEMO_KEY) ?? "";
-  } catch {
-    return "";
-  }
-};
-let memoWarned = false;
-const writeMemo = (value: string) => {
-  try {
-    localStorage.setItem(MEMO_KEY, value);
-  } catch {
-    if (!memoWarned) {
-      memoWarned = true;
-      toast({ message: "便签未能写入浏览器存储" });
-    }
-  }
-};
-
-export function Header({ tab, onTabChange, children }: Props) {
+export function Header({ tab, onTabChange, children, aside }: Props) {
   const replaceState = useStore((s) => s.replaceState);
   const clearAll = useStore((s) => s.clearAll);
   const undo = useStore((s) => s.undo);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [memo, setMemo] = useState(readMemo);
   const [pendingImport, setPendingImport] = useState<AppState | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   useEffect(() => {
@@ -98,6 +81,7 @@ export function Header({ tab, onTabChange, children }: Props) {
       : exportJSON({
           projects: useStore.getState().projects,
           sessions: useStore.getState().sessions,
+          notes: useStore.getState().notes,
           version: useStore.getState().version,
         });
     const base = `${dumpRaw ? "research-tracker-unreadable" : "research-tracker"}-${new Date().toISOString().slice(0, 10)}`;
@@ -152,6 +136,7 @@ export function Header({ tab, onTabChange, children }: Props) {
       getPersistHealth() !== "unreadable" &&
       !state.projects.length &&
       !state.sessions.length &&
+      !state.notes.length &&
       !state.activeTimer
     ) {
       toast({ message: "当前没有任何数据" });
@@ -217,20 +202,6 @@ export function Header({ tab, onTabChange, children }: Props) {
           ))}
         </nav>
         <div className="mt-auto shrink-0 px-3 pb-3 pt-2">
-          {/* 便签存在浏览器存储里；桌面版的 Artifact 存储不可靠，P2 改为每日笔记后移除。 */}
-          {IN_ARTIFACT ? null : (
-            <textarea
-              value={memo}
-              onChange={(e) => {
-                setMemo(e.target.value);
-                writeMemo(e.target.value);
-              }}
-              placeholder="便签"
-              aria-label="便签"
-              rows={2}
-              className="mb-2 hidden w-full resize-none rounded-md bg-transparent px-2.5 py-1.5 text-xs leading-5 text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground hover:bg-hover focus:bg-hover focus:text-foreground min-[68.75rem]:block"
-            />
-          )}
           <div className="flex items-center gap-1 max-[68.74rem]:justify-center">
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -303,6 +274,7 @@ export function Header({ tab, onTabChange, children }: Props) {
         </header>
         {children}
       </div>
+      {aside}
       <ConfirmDialog
         open={pendingImport !== null}
         onOpenChange={(open) => {
@@ -319,7 +291,7 @@ export function Header({ tab, onTabChange, children }: Props) {
         open={confirmClear}
         onOpenChange={setConfirmClear}
         title="清空全部数据"
-        description="项目、待办、专注记录与正在进行的计时都会清空，可在通知里撤销。"
+        description="项目、待办、笔记、专注记录与正在进行的计时都会清空，可在通知里撤销。"
         confirmLabel="清空"
         destructive
         onConfirm={applyClear}

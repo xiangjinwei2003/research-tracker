@@ -7,17 +7,20 @@ import type {
   Venue,
   FocusSession,
   ActiveTimer,
+  NoteEntry,
+  NoteSent,
 } from './types'
 import {
   defaultStages,
   PROJECT_COLOR_PRESETS,
   LEGACY_PROJECT_COLOR_PRESETS,
   PROJECT_TAG_ORDER,
+  NOTE_MAX_LEVEL,
 } from './types'
 import { uid } from './id'
 import { today } from './date'
 
-export const SCHEMA_VERSION = 7
+export const SCHEMA_VERSION = 8
 
 const COLOR_FN = /^(oklch|oklab|lab|lch|rgb|rgba|hsl|hsla|hwb|color)\(/i
 const COLOR_BAD = /url\s*\(|image\s*\(|image-set\s*\(|-moz-binding/i
@@ -70,6 +73,7 @@ function normalizeTodo(raw: unknown, validIds: Set<string>, projectStage: string
   if (t.inWeek) todo.inWeek = true
   if (t.pending) todo.pending = true
   if (typeof t.notes === 'string') todo.notes = t.notes
+  if (todo.done && typeof t.doneAt === 'string' && t.doneAt) todo.doneAt = t.doneAt
   return todo
 }
 
@@ -131,6 +135,7 @@ export function normalizeProject(raw: unknown): Project {
     todos,
     notes: asStr(p.notes, ''),
     archived: !!p.archived,
+    ...(typeof p.folder === 'string' && p.folder.trim() ? { folder: p.folder.trim() } : {}),
     createdAt: asStr(p.createdAt, now),
     updatedAt: asStr(p.updatedAt, now),
   }
@@ -213,14 +218,57 @@ export function normalizeSessions(raw: unknown): FocusSession[] {
   return raw.map(normalizeSession).filter((s): s is FocusSession => s !== null)
 }
 
+const NOTE_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+function normalizeNoteSent(raw: unknown): NoteSent | null {
+  if (!raw || typeof raw !== 'object') return null
+  const s = raw as Record<string, unknown>
+  const at = clockMs(s.at)
+  if (!(at > 0) || typeof s.folder !== 'string' || typeof s.prompt !== 'string') return null
+  const sent: NoteSent = { at, folder: s.folder, prompt: s.prompt }
+  if (typeof s.sessionId === 'string' && s.sessionId) sent.sessionId = s.sessionId
+  return sent
+}
+
+/** 只拷贝已知字段；日期不合法时归到今天，缩进夹在 0 到 NOTE_MAX_LEVEL。 */
+export function normalizeNote(raw: unknown): NoteEntry | null {
+  if (!raw || typeof raw !== 'object') return null
+  const n = raw as Record<string, unknown>
+  const now = stamp()
+  const level = typeof n.level === 'number' && Number.isFinite(n.level) ? Math.trunc(n.level) : 0
+  const note: NoteEntry = {
+    id: asStr(n.id, '') || uid(),
+    date: typeof n.date === 'string' && NOTE_DATE.test(n.date) ? n.date : today(),
+    text: asStr(n.text, ''),
+    level: Math.min(NOTE_MAX_LEVEL, Math.max(0, level)),
+    createdAt: asStr(n.createdAt, now),
+    updatedAt: asStr(n.updatedAt, now),
+  }
+  if (typeof n.projectId === 'string' && n.projectId) {
+    note.projectId = n.projectId
+    if (typeof n.todoId === 'string' && n.todoId) note.todoId = n.todoId
+  }
+  const sent = Array.isArray(n.sent)
+    ? n.sent.map(normalizeNoteSent).filter((x): x is NoteSent => x !== null)
+    : []
+  if (sent.length) note.sent = sent
+  return note
+}
+
+export function normalizeNotes(raw: unknown): NoteEntry[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map(normalizeNote).filter((n): n is NoteEntry => n !== null)
+}
+
 export function normalizeState(raw: unknown): AppState {
   const s = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : undefined
   if (!s || !Array.isArray(s.projects)) {
-    return { projects: [], sessions: [], version: SCHEMA_VERSION }
+    return { projects: [], sessions: [], notes: [], version: SCHEMA_VERSION }
   }
   return {
     projects: withDefaultColors(s.projects.map(normalizeProject)),
     sessions: normalizeSessions(s.sessions),
+    notes: normalizeNotes(s.notes),
     version: typeof s.version === 'number' ? s.version : SCHEMA_VERSION,
   }
 }
@@ -246,6 +294,7 @@ export function importJSON(text: string): AppState {
   return {
     projects: withDefaultColors(inner.projects.map(normalizeProject)),
     sessions: normalizeSessions(inner.sessions),
+    notes: normalizeNotes(inner.notes),
     version: typeof inner.version === 'number' ? inner.version : SCHEMA_VERSION,
   }
 }

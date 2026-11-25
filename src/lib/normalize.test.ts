@@ -139,7 +139,7 @@ test('exportJSON round trip keeps known fields and drops unknown ones', () => {
   const back = JSON.parse(exportJSON(state)) as { projects: { extra?: string }[]; sessions: unknown[] }
   assert.equal(back.projects[0].extra, undefined)
   assert.equal(back.sessions.length, 0)
-  assert.equal(SCHEMA_VERSION, 7)
+  assert.equal(SCHEMA_VERSION, 8)
 })
 
 test('normalizeState heals a blob with null projects as empty', () => {

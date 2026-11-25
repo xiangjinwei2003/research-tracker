@@ -11,7 +11,7 @@ export function isSubmitEnter(e: {
 }
 
 /**
- * 单键快捷键（N、/、1 到 4）是否应当响应：没有修饰键、不在输入中、
+ * 单键快捷键（N、/、M、1 到 5）是否应当响应：没有修饰键、不在输入中、
  * 页面上没有打开的对话框或菜单。
  */
 export function isBareShortcut(e: {
@@ -31,7 +31,12 @@ export function isBareShortcut(e: {
   return true
 }
 
+/** 打开中的对话框或菜单。Radix 的浮层关闭后会带着 data-state="closed" 留在页面上播完退场动画，不算打开。 */
+export const OPEN_OVERLAY_SELECTOR = ['dialog', 'menu', 'alertdialog']
+  .map((role) => `[role="${role}"]:not([data-state="closed"])`)
+  .join(', ')
+
 /** 页面上是否有打开的对话框或菜单（Radix 浮层带这些 role）。 */
-export function overlayIsOpen(doc: Document): boolean {
-  return !!doc.querySelector('[role="dialog"], [role="menu"], [role="alertdialog"]')
+export function overlayIsOpen(doc: Pick<Document, 'querySelector'>): boolean {
+  return !!doc.querySelector(OPEN_OVERLAY_SELECTOR)
 }

@@ -4,7 +4,7 @@ import type { ActiveTimer, AppState } from './types'
 /** localStorage key for zustand persist. */
 export const PERSIST_NAME = 'research-tracker-v1'
 
-export type Persisted = Pick<AppState, 'projects' | 'sessions' | 'version'> & {
+export type Persisted = Pick<AppState, 'projects' | 'sessions' | 'notes' | 'version'> & {
   activeTimer: ActiveTimer | null
 }
 
@@ -59,6 +59,7 @@ export function asEnvelope(parsed: unknown): StorageValue<Persisted> | null {
       state: {
         projects: obj.projects,
         sessions: Array.isArray(obj.sessions) ? obj.sessions : [],
+        notes: Array.isArray(obj.notes) ? obj.notes : [],
         activeTimer:
           obj.activeTimer && typeof obj.activeTimer === 'object'
             ? (obj.activeTimer as ActiveTimer)

@@ -107,6 +107,8 @@ export interface Todo {
    */
   inWeek?: boolean
   notes?: string
+  /** 勾掉的时刻（ISO）。取消勾选时清除；Schema 8 之前完成的任务没有这个字段。 */
+  doneAt?: string
 }
 
 export interface Venue {
@@ -157,6 +159,8 @@ export interface Project {
   notes: string
   /** Hidden from main views (kept for history) */
   archived: boolean
+  /** 本机项目目录的绝对路径，发送到 Claude Code 时作工作目录。Absent = 未设置。 */
+  folder?: string
   createdAt: string
   updatedAt: string
 }
@@ -198,10 +202,44 @@ export interface ActiveTimer {
   color?: string
 }
 
+/** 笔记发送到 Claude Code 的一次记录。 */
+export interface NoteSent {
+  /** 发送时刻，epoch ms。 */
+  at: number
+  /** 工作目录（绝对路径）。 */
+  folder: string
+  /** 实际发送的提示词。 */
+  prompt: string
+  /** 对应的 Claude Code 会话 id，找到后写入。 */
+  sessionId?: string
+}
+
+/** 每日笔记的缩进上限：0 到 3 级。 */
+export const NOTE_MAX_LEVEL = 3
+
+/** 每日笔记的一条。同一天的条目按数组里的先后排列。 */
+export interface NoteEntry {
+  id: string
+  /** 所属日期，本地日期 YYYY-MM-DD。 */
+  date: string
+  text: string
+  /** 缩进层级，0 到 NOTE_MAX_LEVEL。 */
+  level: number
+  createdAt: string
+  updatedAt: string
+  /** 关联的项目。有 todoId 时一定有 projectId。 */
+  projectId?: string
+  todoId?: string
+  /** 发送到 Claude Code 的记录，早的在前。 */
+  sent?: NoteSent[]
+}
+
 export interface AppState {
   projects: Project[]
   /** Recorded focus sessions, newest first. */
   sessions: FocusSession[]
+  /** 每日笔记，Schema 8 起。 */
+  notes: NoteEntry[]
   /** Schema version, for future migrations */
   version: number
 }
