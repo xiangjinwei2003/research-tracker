@@ -150,12 +150,20 @@ function BootScreen({ phase, onPhase }: { phase: BootPhase; onPhase: (p: BootPha
         )
       }
       if (phase.state === 'unavailable') {
+        // desktop.d.ts：读写本机文件（full-access）只授予同一组织里发布的 Artifact；
+        // 别的组织的账号打开分享来的应用时这项权限被拒绝，状态一直是 unavailable。
+        // 另一种情况是 Claude 桌面应用当前选中的组织不是打开这个窗口时的组织，切回去就好。
         return (
           <Shell>
-            <Line>暂时无法确认读写文件的权限。Claude 桌面应用切换到其他组织时也会这样。</Line>
+            <Line>
+              这个窗口拿不到读写本机文件的权限。Claude 只把这项权限给同一组织里发布的应用：从别的账号分享来的应用，要用当前账号重新发布一份再安装；Claude 桌面应用切换到了别的组织时，切回原来的组织再打开。
+            </Line>
             <Actions>
-              <Button variant="primary" disabled={busy} onClick={() => run(() => checkFileAccess(desktop))}>
-                重试
+              <Button variant="primary" disabled={busy} onClick={() => run(() => requestFileAccess(desktop))}>
+                {busy ? '正在检查' : '请求权限'}
+              </Button>
+              <Button variant="ghost" disabled={busy} onClick={() => run(() => checkFileAccess(desktop))}>
+                重新检查
               </Button>
             </Actions>
             {errorLine}
