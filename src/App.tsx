@@ -7,6 +7,8 @@ import { Review } from "@/components/Review";
 import { Notes } from "@/components/Notes";
 import { NotesPane } from "@/components/NotesPane";
 import { requestTodayNoteFocus } from "@/components/notes/focus";
+import { CompactNotes } from "@/components/CompactNotes";
+import { useFocusCompletion } from "@/components/useFocusCompletion";
 import { ProjectDialog } from "@/components/ProjectDialog";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +16,10 @@ import { useStore } from "@/lib/store";
 import { toast } from "@/lib/toast";
 import { startCalendarSync } from "@/lib/calendarSync";
 import { IN_ARTIFACT } from "@/platform/runtime";
+import { getDesktop } from "@/platform/desktop";
+import { currentSettings } from "@/platform/settings";
+import { QUICK_NOTE_EVENT } from "@/platform/quickNote";
+import { startDesktopIntegration, takeNotices } from "@/platform/desktopIntegration";
 import { isBareShortcut, overlayIsOpen } from "@/lib/keyboard";
 import { legacyMemoText } from "@/lib/notes";
 import { today } from "@/lib/date";
@@ -36,6 +42,7 @@ function readPinned(): boolean {
 }
 
 export default function App() {
+  useFocusCompletion();
   const [tab, setTab] = useState<Tab>("dashboard");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pinned, setPinned] = useState(readPinned);
@@ -80,6 +87,19 @@ export default function App() {
     if (!IN_ARTIFACT) startCalendarSync();
   }, []);
 
+  // 桌面版：图标、应用菜单、恢复全局快捷键与菜单栏项；启动时积下的提示一并显示。
+  useEffect(() => {
+    const desktop = getDesktop();
+    if (!desktop) return;
+    for (const message of takeNotices()) toast({ message });
+    startDesktopIntegration(desktop).then(
+      (problems) => {
+        for (const message of problems) toast({ message });
+      },
+      (err: unknown) => toast({ message: `桌面功能没有全部启动：${err instanceof Error ? err.message : String(err)}` }),
+    );
+  }, []);
+
   // Global Cmd/Ctrl+Z to undo last destructive action.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -102,17 +122,27 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [undo]);
 
-  // 1 到 5 切换分区，顺序与侧栏一致；M 记一条笔记（右侧栏可见时在栏里，否则打开笔记页）。
+  // 记一条笔记：右侧栏可见时在栏里，否则打开笔记页。M、全局快捷键、菜单栏菜单都走这里。
+  const quickNote = useCallback(() => {
+    requestTodayNoteFocus();
+    const paneVisible = pinned && tab !== "notes" && window.innerWidth >= PANE_MIN_WIDTH;
+    if (!paneVisible) setTab("notes");
+    setNoteFocusTick((n) => n + 1);
+  }, [pinned, tab]);
+
+  useEffect(() => {
+    window.addEventListener(QUICK_NOTE_EVENT, quickNote);
+    return () => window.removeEventListener(QUICK_NOTE_EVENT, quickNote);
+  }, [quickNote]);
+
+  // 1 到 5 切换分区，顺序与侧栏一致；M 记一条笔记。
   useEffect(() => {
     const order: Tab[] = ["dashboard", "notes", "timeline", "review", "archived"];
     const onKey = (e: KeyboardEvent) => {
       if (!isBareShortcut(e, overlayIsOpen(document))) return;
       if (e.key === "m" || e.key === "M") {
         e.preventDefault();
-        requestTodayNoteFocus();
-        const paneVisible = pinned && tab !== "notes" && window.innerWidth >= PANE_MIN_WIDTH;
-        if (!paneVisible) setTab("notes");
-        setNoteFocusTick((n) => n + 1);
+        quickNote();
         return;
       }
       const index = Number(e.key) - 1;
@@ -122,11 +152,21 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pinned, tab]);
+  }, [quickNote]);
 
   // Stable across renders so memoized cards (ProjectCard) don't re-render every
   // time the dialog's live project updates on a keystroke.
   const openEdit = useCallback((p: Project) => setEditingId(p.id), []);
+
+  // 置顶小窗只显示今天的笔记；计时结束的处理在上面的 useFocusCompletion，照常生效。
+  if (getDesktop() && currentSettings().windowMode === "compact") {
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Toaster position="bottom-right" />
+        <CompactNotes />
+      </TooltipProvider>
+    );
+  }
 
   return (
     <TooltipProvider delayDuration={200}>

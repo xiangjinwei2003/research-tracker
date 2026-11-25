@@ -11,6 +11,9 @@ import {
 import { claudeRuntime } from './runtime'
 import { setDesktop } from './desktop'
 import { setSample } from './sample'
+import { readSettings, setCurrentSettings, type DesktopSettings } from './settings'
+import { applyWindowOptions } from './windowMode'
+import { pushNotice } from './desktopIntegration'
 
 /**
  * 桌面版的启动流程：拿到 desktop 能力 → 确认文件权限 → 打开数据文件 → 水合 store。
@@ -82,6 +85,7 @@ export async function requestFileAccess(desktop: ClaudeDesktop): Promise<BootPha
 }
 
 export async function openData(desktop: ClaudeDesktop): Promise<BootPhase> {
+  setDesktop(desktop)
   const fs = desktop.fs as DataFs
   const backend = new FileBackend(fs)
   attachFileBackend(backend)
@@ -98,6 +102,24 @@ export async function openData(desktop: ClaudeDesktop): Promise<BootPhase> {
   backend.markReady()
   if (result.value.version !== SCHEMA_VERSION) backend.write(persistedSnapshot())
   watchWindow()
+  return applyLocalSettings(desktop)
+}
+
+/**
+ * 读本机设置并应用窗口选项。设置文件读不出时按默认设置打开，并在应用渲染后提示；
+ * 窗口需要重建时平台会重新加载页面，这里停在加载页。
+ */
+async function applyLocalSettings(desktop: ClaudeDesktop): Promise<BootPhase> {
+  let settings: DesktopSettings = {}
+  try {
+    settings = await readSettings()
+  } catch (err) {
+    pushNotice(`${reasonOf(err)}，已按默认设置打开`)
+  }
+  setCurrentSettings(settings)
+  const applied = await applyWindowOptions(desktop, settings)
+  if (applied.reloading) return { kind: 'loading' }
+  if (applied.error) pushNotice(`窗口设置没有生效：${applied.error}`)
   return { kind: 'ready' }
 }
 

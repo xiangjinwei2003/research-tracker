@@ -263,6 +263,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   overflow: hidden;
 }
 
+/* 桌面版窗口的拖动区：隐藏标题栏后，侧栏顶部那一行、顶栏和小窗的标题行用来拖动窗口，
+   里面的控件不参与拖动。网页版不加这个类。 */
+.app-drag {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.app-drag :is(button, a, input, textarea, select, [role="button"], [role="timer"]) {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
 /* 固定在右侧的今天笔记：只在宽窗口出现，与左侧栏同色。 */
 .notes-pane {
   display: none;

@@ -6,6 +6,7 @@
  */
 
 import { LOGO_URL } from './logo'
+import { getDesktop } from '../platform/desktop'
 
 const PREF_KEY = 'rt-focus-reminder'
 
@@ -83,14 +84,30 @@ export function notifyState(): NotifyState {
   return typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
 }
 
-/** Ask once, from a user gesture. Returns the resulting (or existing) state. */
+/**
+ * Ask once, from a user gesture. Returns the resulting (or existing) state.
+ * 桌面版用 desktop 能力的 notifications 权限；已允许或已拒绝时不再弹窗。
+ */
 export async function requestNotifyPermission(): Promise<NotifyState> {
+  const desktop = getDesktop()
+  if (desktop) {
+    const states = await desktop.permissions.request(['notifications']).catch(() => null)
+    const state = states?.notifications
+    return state === 'granted' ? 'granted' : state === 'denied' ? 'denied' : 'default'
+  }
   if (typeof Notification === 'undefined') return 'unsupported'
   if (Notification.permission !== 'default') return Notification.permission
   return await Notification.requestPermission()
 }
 
 export function notifyFocusDone(body: string): void {
+  const desktop = getDesktop()
+  if (desktop) {
+    desktop.notification.show({ body: `专注完成：${body}`.slice(0, 300) }).catch((err) => {
+      console.warn('[research-tracker] 系统通知没有发出（可能未允许通知权限），已改用页面内提示。', err)
+    })
+    return
+  }
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
   try {
     // `tag` collapses repeats instead of stacking one banner per session.

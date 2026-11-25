@@ -9,7 +9,7 @@ const SRC = 'dist-artifact/index.html'
 const OUT = 'dist-artifact/research-tracker.html'
 
 // 桌面应用的权限清单：只列页面实际调用的权限（desktop.d.ts 的 Manifest 说明）。
-const MANIFEST = { permissions: ['full-access'] }
+const MANIFEST = { permissions: ["full-access", "shortcuts", "notifications", "menu-bar", "overlay"] }
 
 function fail(message) {
   console.error(`[artifact-page] ${message}`)

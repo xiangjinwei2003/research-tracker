@@ -1,4 +1,5 @@
 import {
+  AppWindow,
   Archive,
   CalendarDays,
   CircleCheck,
@@ -22,7 +23,9 @@ import type { AppState } from "@/lib/types";
 import { LOGO_URL } from "@/lib/logo";
 import { IN_ARTIFACT } from "@/platform/runtime";
 import { freePathInDownloads, getDesktop } from "@/platform/desktop";
+import { currentSettings } from "@/platform/settings";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { DesktopSettingsDialog } from "./DesktopSettingsDialog";
 import { FocusTimer } from "./FocusTimer";
 import {
   DropdownMenu,
@@ -55,6 +58,10 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<AppState | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [desktopSettingsOpen, setDesktopSettingsOpen] = useState(false);
+  const desktop = getDesktop();
+  // 桌面版隐藏了标题栏：红绿灯在侧栏顶部那一行，那一行和顶栏用来拖动窗口。
+  const hiddenTitleBar = !!desktop && !currentSettings().systemTitleBar;
   useEffect(() => {
     const tell = (health: ReturnType<typeof getPersistHealth>) => {
       if (health === "unreadable")
@@ -163,6 +170,12 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
         <Upload />
         从文件导入
       </DropdownMenuItem>
+      {desktop ? (
+        <DropdownMenuItem onSelect={() => setDesktopSettingsOpen(true)}>
+          <AppWindow />
+          桌面应用设置
+        </DropdownMenuItem>
+      ) : null}
       <DropdownMenuSeparator />
       <DropdownMenuItem destructive onSelect={onClear}>
         <Trash2 />
@@ -174,12 +187,16 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
   return (
     <div className="app-shell">
       <aside className="app-sidebar z-40 bg-sidebar">
-        <div className="flex h-12 shrink-0 items-center gap-2.5 px-5 max-[68.74rem]:justify-center max-[68.74rem]:px-0">
-          <img src={LOGO_URL} alt="" className="size-6 rounded-md" />
-          <span className="hidden truncate text-sm font-semibold text-secondary-foreground min-[68.75rem]:block">
-            Research Tracker
-          </span>
-        </div>
+        {hiddenTitleBar ? (
+          <div className="app-drag h-12 shrink-0" />
+        ) : (
+          <div className="flex h-12 shrink-0 items-center gap-2.5 px-5 max-[68.74rem]:justify-center max-[68.74rem]:px-0">
+            <img src={LOGO_URL} alt="" className="size-6 rounded-md" />
+            <span className="hidden truncate text-sm font-semibold text-secondary-foreground min-[68.75rem]:block">
+              Research Tracker
+            </span>
+          </div>
+        )}
         <nav className="space-y-px px-3 pt-4" aria-label="主导航">
           {TABS.map(({ id, label, icon: Icon, tint }) => (
             <button
@@ -218,7 +235,7 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
         </div>
       </aside>
       <div className="app-main" data-app-main>
-        <header className="sticky top-0 z-30 bg-background/85 backdrop-blur-md">
+        <header className={cn("sticky top-0 z-30 bg-background/85 backdrop-blur-md", desktop && "app-drag")}>
           <div className="flex min-h-12 min-w-0 max-w-full flex-wrap items-center gap-2 px-4 py-1.5 sm:px-6">
             <div className="flex items-center gap-2 md:hidden">
               <img src={LOGO_URL} alt="" className="size-6 rounded-md" />
@@ -288,6 +305,9 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
           if (pendingImport) applyImport(pendingImport);
         }}
       />
+      {desktop ? (
+        <DesktopSettingsDialog open={desktopSettingsOpen} onOpenChange={setDesktopSettingsOpen} />
+      ) : null}
       <ConfirmDialog
         open={confirmClear}
         onOpenChange={setConfirmClear}

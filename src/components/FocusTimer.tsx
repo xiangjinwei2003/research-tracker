@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bell, BellOff, Check, History, Timer, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import { today } from '@/lib/date'
 import { ManualSessionDialog } from './ManualSessionDialog'
 import { cn } from '@/lib/cn'
+import { fmtCountdown, timerEnd, timerLabel, timerRemaining } from '@/lib/timer'
+import { getDesktop } from '@/platform/desktop'
 import {
-  notifyFocusDone,
-  playChime,
   primeChime,
   reminderEnabled,
   requestNotifyPermission,
@@ -28,16 +28,9 @@ import {
   DropdownMenuSeparator,
 } from './ui/DropdownMenu'
 
-function fmtCountdown(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 1000))
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
-
 /**
- * App-wide focus countdown. Remaining time is derived from the persisted start
- * timestamp so reloads and long sleeps cannot drift the clock.
+ * 顶栏的专注计时：开始、显示倒计时、提前结束或取消。到点后的记录与提醒在应用根部的
+ * useFocusCompletion 里处理，置顶小窗模式下没有顶栏也照常结束。
  */
 export function FocusTimer() {
   const activeTimer = useStore((s) => s.activeTimer)
@@ -48,10 +41,6 @@ export function FocusTimer() {
   const [now, setNow] = useState(() => Date.now())
   const [remindOn, setRemindOn] = useState(reminderEnabled)
   const [manualDate, setManualDate] = useState<string | null>(null)
-  // One completion per countdown, even though the tick effect fires often.
-  const firedRef = useRef(false)
-
-  const end = activeTimer ? activeTimer.startedAt + activeTimer.plannedMin * 60_000 : 0
 
   /** Start from a real click: unlock audio now so the chime isn't blocked later. */
   const begin = (plannedMin: number) => {
@@ -77,14 +66,12 @@ export function FocusTimer() {
         state === 'granted'
           ? '结束时会响铃并弹出系统通知'
           : state === 'denied'
-            ? '浏览器已拦截通知权限，结束时只会响铃'
+            ? getDesktop()
+              ? '系统通知的权限已被拒绝，结束时只会响铃'
+              : '浏览器已拦截通知权限，结束时只会响铃'
             : '结束时会响铃提醒',
     })
   }
-
-  useEffect(() => {
-    firedRef.current = false
-  }, [activeTimer?.startedAt])
 
   // `now` may lag up to one interval right after a start; the clamps below make
   // that invisible (a fresh countdown legitimately shows its full duration).
@@ -98,37 +85,6 @@ export function FocusTimer() {
       document.removeEventListener('visibilitychange', tick)
     }
   }, [activeTimer])
-
-  // Completion — also heals a countdown that expired while the tab was closed
-  // (completeTimer clamps endedAt to the planned end, not "now").
-  useEffect(() => {
-    if (!activeTimer || firedRef.current || now < end) return
-    firedRef.current = true
-    const s = completeTimer()
-    if (!s) return
-    if (remindOn) {
-      // The chime + banner are what reach the user when this tab isn't in front.
-      playChime()
-      notifyFocusDone(
-        `${s.todoTitle || s.projectTitle || '自由专注'}，${s.plannedMin} 分钟已完成`,
-      )
-    }
-    toast({ message: `专注完成，已记录 ${s.plannedMin} 分钟` })
-  }, [now, end, activeTimer, completeTimer, remindOn])
-
-  // Show the countdown in the tab title while running; restore on stop.
-  useEffect(() => {
-    if (!activeTimer) return
-    const original = document.title
-    return () => {
-      document.title = original
-    }
-  }, [activeTimer])
-  useEffect(() => {
-    if (!activeTimer) return
-    const clamped = Math.min(activeTimer.plannedMin * 60_000, end - now)
-    document.title = `${fmtCountdown(clamped)} 专注中`
-  }, [activeTimer, end, now])
 
   const bellButton = (
     <button
@@ -176,14 +132,11 @@ export function FocusTimer() {
     )
   }
 
-  const durationMs = end - activeTimer.startedAt
-  const remaining = Math.min(durationMs, Math.max(0, end - now))
+  const durationMs = timerEnd(activeTimer) - activeTimer.startedAt
+  const remaining = timerRemaining(activeTimer, now)
   const remainingPct = Math.min(100, Math.max(0, (remaining / durationMs) * 100))
   const accent = activeTimer.color || 'var(--ring)'
-  const label =
-    activeTimer.todoTitle?.trim() ||
-    activeTimer.projectTitle?.trim() ||
-    (activeTimer.projectId ? '未命名项目' : '自由专注')
+  const label = timerLabel(activeTimer)
 
   const onFinishEarly = () => {
     const s = completeTimer({ early: true })

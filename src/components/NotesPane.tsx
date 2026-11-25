@@ -1,7 +1,10 @@
 import { useMemo } from 'react'
-import { PanelRightClose } from 'lucide-react'
+import { PanelRightClose, PictureInPicture2 } from 'lucide-react'
 import { noteDayLabel } from '@/lib/notes'
 import { today as todayIso } from '@/lib/date'
+import { toast } from '@/lib/toast'
+import { getDesktop } from '@/platform/desktop'
+import { switchWindowMode } from '@/platform/windowMode'
 import { NotesView } from './notes/NotesView'
 
 interface Props {
@@ -26,12 +29,30 @@ export function NotesPane({ onUnpin, onOpenPage, focusTick }: Props) {
           <span className="text-sm font-semibold text-secondary-foreground">今天</span>
           <span className="truncate text-xs text-muted-foreground">{noteDayLabel(today)}</span>
         </button>
+        {getDesktop() ? (
+          <button
+            type="button"
+            onClick={() => {
+              const desktop = getDesktop()
+              if (desktop) {
+                switchWindowMode(desktop, 'compact').catch((err: unknown) =>
+                  toast({ message: err instanceof Error ? err.message : String(err) }),
+                )
+              }
+            }}
+            aria-label="置顶笔记小窗"
+            title="置顶笔记小窗"
+            className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <PictureInPicture2 size={16} />
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onUnpin}
           aria-label="取消固定"
           title="取消固定"
-          className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={`${getDesktop() ? '' : 'ml-auto '}inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
         >
           <PanelRightClose size={16} />
         </button>
