@@ -234,7 +234,7 @@ export interface NoteEntry {
   sent?: NoteSent[]
 }
 
-/** 按申请计划分析的结果，结构对应导师周报的三节。 */
+/** 博士申请模块的点评结果：对照安排、各项目本周更新与点评、问题与建议、需要用户回答的问题。 */
 export interface AnalysisResult {
   summary: string
   plan: {
@@ -245,6 +245,8 @@ export interface AnalysisResult {
     status: string
     note: string
   }[]
+  /** 各项目本周更新与点评，Schema 10 起；更早的分析为空。 */
+  projects: { name: string; update: string; comment: string }[]
   issues: { phenomenon: string; impact: string; suggestion: string }[]
   questions: string[]
 }
@@ -257,8 +259,8 @@ export interface AnalysisRecord {
   weekStart: string
   /** 实际回答的模型档位。 */
   tier: string
-  /** 依据：周报文件名，改动扫描是否成功。 */
-  sources: { review: string | null; scan: 'ok' | 'failed'; scanNote?: string }
+  /** 依据：周报文件名，改动扫描是否成功，读到提交记录的项目目录数（Schema 10 起）。 */
+  sources: { review: string | null; scan: 'ok' | 'failed'; scanNote?: string; commits?: number }
   result: AnalysisResult
 }
 
@@ -271,7 +273,7 @@ export interface AppState {
   sessions: FocusSession[]
   /** 每日笔记，Schema 8 起。 */
   notes: NoteEntry[]
-  /** 按申请计划分析的结果，新的在前，Schema 9 起。 */
+  /** 博士申请模块的点评，新的在前，Schema 9 起。 */
   analyses: AnalysisRecord[]
   /** Schema version, for future migrations */
   version: number

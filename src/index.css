@@ -41,6 +41,8 @@
   --color-purple-11: #d19dff;
   /* Radix cyan dark 11，侧栏「笔记」图标 */
   --color-cyan-11: #4ccce6;
+  /* Radix pink dark 11，侧栏「博士申请」图标 */
+  --color-pink-11: #ff8dcc;
 }
 
 /* shadcn/ui 语义令牌 → Tailwind 工具类 */

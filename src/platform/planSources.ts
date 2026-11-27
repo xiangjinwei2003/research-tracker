@@ -1,4 +1,5 @@
-import { latestReviewName, roleSection } from '@/lib/planAnalysis'
+import { format } from 'date-fns'
+import { latestReviewName, roleSection, type CommitLog } from '@/lib/planAnalysis'
 import { getDesktop } from './desktop'
 import { expandHome } from './folders'
 
@@ -66,4 +67,45 @@ export async function readPlanSources(planDir: string): Promise<PlanSources> {
     review,
     scan,
   }
+}
+
+/** 一个项目目录最多读取的提交条数。 */
+const COMMITS_MAX = 30
+
+/**
+ * 读取各项目目录本周的 git 提交（只读），每条一行「日期 标题」，不含合并提交。
+ * 只处理设置了目录的项目；目录不是 git 仓库或命令失败时，那个项目记下原因，其余照常。
+ */
+export async function readProjectCommits(
+  projects: { id: string; folder?: string }[],
+  since: Date,
+): Promise<Record<string, CommitLog>> {
+  const desktop = getDesktop()
+  if (!desktop) throw new Error('只有桌面版可以读取项目目录')
+  const sinceIso = format(since, "yyyy-MM-dd'T'HH:mm:ss")
+  const out: Record<string, CommitLog> = {}
+  for (const p of projects) {
+    if (!p.folder) continue
+    try {
+      const cwd = await expandHome(p.folder)
+      const res = await desktop.childProcess.exec(
+        `/usr/bin/git log --since=${sinceIso} --no-merges --date=short --pretty=format:'%ad %s' -n ${COMMITS_MAX}`,
+        { cwd, timeout: 15_000 },
+      )
+      out[p.id] =
+        res.code === 0
+          ? { ok: true, lines: res.stdout.split('\n').map((l) => l.trim()).filter(Boolean) }
+          : { ok: false, reason: gitReason(res.stderr, res.code) }
+    } catch (err) {
+      out[p.id] = { ok: false, reason: err instanceof Error ? err.message : String(err) }
+    }
+  }
+  return out
+}
+
+/** git 的报错只留第一行；不是仓库时直接说明。 */
+export function gitReason(stderr: string, code: number | null): string {
+  if (/not a git repository/i.test(stderr)) return '目录不是 git 仓库'
+  const first = stderr.trim().split('\n')[0]
+  return (first || `退出码 ${code}`).slice(0, 200)
 }

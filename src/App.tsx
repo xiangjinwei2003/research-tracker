@@ -4,6 +4,8 @@ import { Dashboard } from "@/components/Dashboard";
 import { Board } from "@/components/Board";
 import { Timeline } from "@/components/Timeline";
 import { Review } from "@/components/Review";
+import { PhdReview } from "@/components/PhdReview";
+import { TAB_ORDER } from "@/lib/tabs";
 import { Notes } from "@/components/Notes";
 import { NotesPane } from "@/components/NotesPane";
 import { requestTodayNoteFocus } from "@/components/notes/focus";
@@ -151,9 +153,9 @@ export default function App() {
     return () => window.removeEventListener(QUICK_NOTE_EVENT, quickNote);
   }, [quickNote]);
 
-  // 1 到 5 切换分区，顺序与侧栏一致；M 记一条笔记。
+  // 数字键切换分区，顺序与侧栏一致；M 记一条笔记。
   useEffect(() => {
-    const order: Tab[] = ["dashboard", "notes", "timeline", "review", "archived"];
+    const order = TAB_ORDER;
     const onKey = (e: KeyboardEvent) => {
       if (!isBareShortcut(e, overlayIsOpen(document))) return;
       if (e.key === "m" || e.key === "M") {
@@ -209,6 +211,8 @@ export default function App() {
             <Timeline onEdit={openEdit} />
           ) : tab === "review" ? (
             <Review onGoBoard={() => setTab("dashboard")} />
+          ) : tab === "phd" ? (
+            <PhdReview />
           ) : (
             <Dashboard showArchived onEdit={openEdit} />
           )}

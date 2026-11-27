@@ -5,6 +5,7 @@ import {
   CircleCheck,
   Download,
   Ellipsis,
+  GraduationCap,
   NotebookPen,
   Timer,
   Trash2,
@@ -22,6 +23,7 @@ import { cn } from "@/lib/cn";
 import type { AppState } from "@/lib/types";
 import { LOGO_URL } from "@/lib/logo";
 import { IN_ARTIFACT } from "@/platform/runtime";
+import { TAB_ORDER, type Tab } from "@/lib/tabs";
 import { freePathInDownloads, getDesktop } from "@/platform/desktop";
 import { currentSettings } from "@/platform/settings";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -35,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/DropdownMenu";
 
-export type Tab = "dashboard" | "notes" | "timeline" | "review" | "archived";
+export type { Tab };
 interface Props {
   tab: Tab;
   onTabChange: (tab: Tab) => void;
@@ -49,8 +51,11 @@ const TABS = [
   { id: "notes", label: "笔记", icon: NotebookPen, tint: "text-cyan-11" },
   { id: "timeline", label: "日历", icon: CalendarDays, tint: "text-purple-11" },
   { id: "review", label: "专注回顾", icon: Timer, tint: "text-success" },
+  { id: "phd", label: "博士申请", icon: GraduationCap, tint: "text-pink-11" },
   { id: "archived", label: "归档", icon: Archive, tint: "text-muted-foreground" },
 ] satisfies { id: Tab; label: string; icon: typeof Archive; tint: string }[];
+/** 当前运行环境里出现的分区，顺序与数字快捷键一致。 */
+const NAV = TAB_ORDER.map((id) => TABS.find((t) => t.id === id)!);
 export function Header({ tab, onTabChange, children, aside }: Props) {
   const replaceState = useStore((s) => s.replaceState);
   const clearAll = useStore((s) => s.clearAll);
@@ -209,14 +214,14 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
           </div>
         )}
         <nav className="space-y-px px-3 pt-4" aria-label="主导航">
-          {TABS.map(({ id, label, icon: Icon, tint }) => (
+          {NAV.map(({ id, label, icon: Icon, tint }, index) => (
             <button
               key={id}
               type="button"
               onClick={() => onTabChange(id)}
               aria-current={tab === id ? "page" : undefined}
               aria-label={label}
-              aria-keyshortcuts={String(TABS.findIndex((t) => t.id === id) + 1)}
+              aria-keyshortcuts={String(index + 1)}
               title={label}
               className={cn(
                 "flex h-8 w-full items-center justify-center gap-2.5 rounded-md px-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[68.75rem]:justify-start",
@@ -255,7 +260,7 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
               className="order-3 flex w-full gap-1 md:hidden"
               aria-label="主导航"
             >
-              {TABS.map(({ id, label, icon: Icon, tint }) => (
+              {NAV.map(({ id, label, icon: Icon, tint }) => (
                 <button
                   key={id}
                   type="button"

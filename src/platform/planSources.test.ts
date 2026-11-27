@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { MemFs } from './memFs.ts'
 import { setDesktop } from './desktop.ts'
-import { isPlanDir, readPlanSources } from './planSources.ts'
+import { gitReason, isPlanDir, readPlanSources, readProjectCommits } from './planSources.ts'
 import { SETTINGS_FILE, readSettings, updateSettings } from './settings.ts'
 
 const PLAN = '/Users/me/Documents/Projects/plan'
@@ -62,4 +62,33 @@ test('本机设置：没有文件时为空；合并写回；内容不是 JSON �
   assert.deepEqual(await readSettings(), { planDir: PLAN })
   fs.files.set(SETTINGS_FILE, '{坏的')
   await assert.rejects(() => readSettings(), /不是有效的 JSON/)
+})
+
+test('项目提交：只读有目录的项目，在项目目录里运行 git log，每条一行；失败的项目记下原因', async () => {
+  execCalls.length = 0
+  execResult = { stdout: '2026-11-24 写完方法部分\n2026-11-23 加参与者表\n', stderr: '', code: 0 }
+  const since = new Date('2026-11-23T00:00:00')
+  const ok = await readProjectCommits(
+    [
+      { id: 'p1', folder: '~/Documents/Projects/proj-a' },
+      { id: 'p2' },
+    ],
+    since,
+  )
+  assert.deepEqual(ok, { p1: { ok: true, lines: ['2026-11-24 写完方法部分', '2026-11-23 加参与者表'] } })
+  assert.equal(execCalls.length, 1)
+  assert.equal(execCalls[0].cwd, '/Users/me/Documents/Projects/proj-a')
+  assert.match(execCalls[0].command, /^\/usr\/bin\/git log --since=2026-11-23T00:00:00 --no-merges /)
+  assert.doesNotMatch(execCalls[0].command, /proj-a/)
+
+  execResult = { stdout: '', stderr: 'fatal: not a git repository (or any of the parent directories): .git\n', code: 128 }
+  assert.deepEqual(await readProjectCommits([{ id: 'p1', folder: '/w/p1' }], since), {
+    p1: { ok: false, reason: '目录不是 git 仓库' },
+  })
+  execResult = new Error('EAGAIN: too many processes')
+  assert.deepEqual(await readProjectCommits([{ id: 'p1', folder: '/w/p1' }], since), {
+    p1: { ok: false, reason: 'EAGAIN: too many processes' },
+  })
+  assert.equal(gitReason('', 1), '退出码 1')
+  assert.equal(gitReason('error: bad\nsecond line', 2), 'error: bad')
 })

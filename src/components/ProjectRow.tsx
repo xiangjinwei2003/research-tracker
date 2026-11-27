@@ -13,6 +13,9 @@ import { cn } from "@/lib/cn";
 import { Checkbox } from "./Checkbox";
 import { DateButton } from "./DatePicker";
 import { ProgressPie } from "./ProgressPie";
+import { PromptMenuItem } from "./PromptMenuItem";
+import { TodoPromptDialog } from "./TodoPromptDialog";
+import { IN_ARTIFACT } from "@/platform/runtime";
 import {
   ContextMenu,
   ContextMenuCheckboxItem,
@@ -67,6 +70,8 @@ export const ProjectRow = memo(function ProjectRow({
   const addTodo = useStore((s) => s.addTodo);
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
+  /** 正在为哪个任务生成提示词。 */
+  const [promptTodoId, setPromptTodoId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   // Guards against a double insert: pressing Enter commits and then unmounts the
   // <input>, whose blur would otherwise fire commitDraft again from the stale
@@ -186,134 +191,157 @@ export const ProjectRow = memo(function ProjectRow({
   );
 
   return (
-    <li
-      onDragOver={drag ? (e) => drag.onDragOver(e, project.id) : undefined}
-      onDrop={drag ? (e) => drag.onDrop(e, project.id) : undefined}
-      className={cn(dimmed && "opacity-70", dragging && "opacity-40")}
-    >
-      {dimmed ? (
-        header
-      ) : (
-        <ContextMenu>
-          <ContextMenuTrigger asChild>{header}</ContextMenuTrigger>
-          <ContextMenuContent onCloseAutoFocus={onMenuCloseAutoFocus}>
-            <ContextMenuItem onSelect={() => (addAfterMenuRef.current = true)}>
-              <Plus /> 添加任务
-            </ContextMenuItem>
-            <ContextMenuItem onSelect={() => onEdit(project)}>
-              <ExternalLink /> 打开项目
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-            {PROJECT_TAG_ORDER.map((tag) => (
-              <ContextMenuCheckboxItem
-                key={tag}
-                checked={project.tags?.includes(tag) ?? false}
-                onCheckedChange={() => toggleProjectTag(project.id, tag)}
-              >
-                {PROJECT_TAG_META[tag].label}
-              </ContextMenuCheckboxItem>
-            ))}
-          </ContextMenuContent>
-        </ContextMenu>
-      )}
+    <>
+      <li
+        onDragOver={drag ? (e) => drag.onDragOver(e, project.id) : undefined}
+        onDrop={drag ? (e) => drag.onDrop(e, project.id) : undefined}
+        className={cn(dimmed && "opacity-70", dragging && "opacity-40")}
+      >
+        {dimmed ? (
+          header
+        ) : (
+          <ContextMenu>
+            <ContextMenuTrigger asChild>{header}</ContextMenuTrigger>
+            <ContextMenuContent onCloseAutoFocus={onMenuCloseAutoFocus}>
+              <ContextMenuItem onSelect={() => (addAfterMenuRef.current = true)}>
+                <Plus /> 添加任务
+              </ContextMenuItem>
+              <ContextMenuItem onSelect={() => onEdit(project)}>
+                <ExternalLink /> 打开项目
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              {PROJECT_TAG_ORDER.map((tag) => (
+                <ContextMenuCheckboxItem
+                  key={tag}
+                  checked={project.tags?.includes(tag) ?? false}
+                  onCheckedChange={() => toggleProjectTag(project.id, tag)}
+                >
+                  {PROJECT_TAG_META[tag].label}
+                </ContextMenuCheckboxItem>
+              ))}
+            </ContextMenuContent>
+          </ContextMenu>
+        )}
 
-      {open ? (
-        <div className="pb-3 pl-[25px] pr-2">
-          {todos.length ? (
-            <ul>
-              {todos.map((todo) => {
-                return (
-                  <li
-                    key={todo.id}
-                    draggable={draggableTodos || undefined}
-                    onDragStart={
-                      draggableTodos
-                        ? (e) => {
-                            e.dataTransfer.effectAllowed = "move";
-                            const payload = JSON.stringify({
-                              projectId: project.id,
-                              todoId: todo.id,
-                            });
-                            e.dataTransfer.setData(
-                              "application/x-rt-todo",
-                              payload,
-                            );
-                            e.dataTransfer.setData("text/plain", payload);
-                          }
-                        : undefined
-                    }
-                    title={
-                      draggableTodos
-                        ? "拖到上方任务列表，加入近期重点并设为该优先级"
-                        : undefined
-                    }
-                    className={cn(
-                      "group/date-row flex items-center gap-2.5 rounded-md px-1.5 py-1.5 text-sm hover:bg-hover",
-                      draggableTodos && "cursor-grab active:cursor-grabbing",
-                    )}
-                  >
-                    <Checkbox
-                      checked={false}
-                      onChange={() => completeTodo(project.id, todo.id, todo.title)}
-                      label={`标记「${todo.title}」为已完成`}
-                    />
-                    <span className="min-w-0 flex-1 truncate text-secondary-foreground">
-                      {todo.title || (
-                        <span className="italic text-muted-foreground">未命名</span>
-                      )}
-                    </span>
-                    <DateButton
-                      value={todo.endDate}
-                      todayIso={t}
-                      onChange={(d) =>
-                        updateTodo(project.id, todo.id, { endDate: d })
+        {open ? (
+          <div className="pb-3 pl-[25px] pr-2">
+            {todos.length ? (
+              <ul>
+                {todos.map((todo) => {
+                  const row = (
+                    <li
+                      key={todo.id}
+                      draggable={draggableTodos || undefined}
+                      onDragStart={
+                        draggableTodos
+                          ? (e) => {
+                              e.dataTransfer.effectAllowed = "move";
+                              const payload = JSON.stringify({
+                                projectId: project.id,
+                                todoId: todo.id,
+                              });
+                              e.dataTransfer.setData(
+                                "application/x-rt-todo",
+                                payload,
+                              );
+                              e.dataTransfer.setData("text/plain", payload);
+                            }
+                          : undefined
                       }
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="px-1.5 py-1 text-sm text-muted-foreground">
-              {total ? "所有任务已完成" : "还没有任务"}
-            </p>
-          )}
-
-          <div className="relative mt-0.5">
-            {adding ? (
-              <input
-                autoFocus
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (isSubmitEnter(e)) {
-                    commitAndContinue();
-                  } else if (e.key === "Escape") {
-                    committedRef.current = true; // discard: block a racing blur-commit
-                    setDraft("");
-                    setAdding(false);
-                  }
-                }}
-                onBlur={() => {
-                  commitDraft();
-                  setAdding(false);
-                }}
-                placeholder="任务标题，回车添加，Esc 结束"
-                aria-label={`为「${title}」添加任务`}
-                className="h-8 w-full rounded-md bg-muted px-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              />
+                      title={
+                        draggableTodos
+                          ? "拖到上方任务列表，加入近期重点并设为该优先级"
+                          : undefined
+                      }
+                      className={cn(
+                        "group/date-row flex items-center gap-2.5 rounded-md px-1.5 py-1.5 text-sm hover:bg-hover data-[state=open]:bg-hover",
+                        draggableTodos && "cursor-grab active:cursor-grabbing",
+                      )}
+                    >
+                      <Checkbox
+                        checked={false}
+                        onChange={() => completeTodo(project.id, todo.id, todo.title)}
+                        label={`标记「${todo.title}」为已完成`}
+                      />
+                      <span className="min-w-0 flex-1 truncate text-secondary-foreground">
+                        {todo.title || (
+                          <span className="italic text-muted-foreground">未命名</span>
+                        )}
+                      </span>
+                      <DateButton
+                        value={todo.endDate}
+                        todayIso={t}
+                        onChange={(d) =>
+                          updateTodo(project.id, todo.id, { endDate: d })
+                        }
+                      />
+                    </li>
+                  );
+                  // 网页版不能调用 Claude，任务行不加右键菜单，保留浏览器自己的菜单。
+                  if (!IN_ARTIFACT) return row;
+                  return (
+                    <ContextMenu key={todo.id}>
+                      <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <PromptMenuItem
+                          kind="context"
+                          separator={false}
+                          onSelect={() => setPromptTodoId(todo.id)}
+                        />
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  );
+                })}
+              </ul>
             ) : (
-              <button
-                type="button"
-                onClick={openAdd}
-                className="inline-flex h-8 items-center gap-2 rounded-md px-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Plus size={14} /> 添加任务
-              </button>
+              <p className="px-1.5 py-1 text-sm text-muted-foreground">
+                {total ? "所有任务已完成" : "还没有任务"}
+              </p>
             )}
+
+            <div className="relative mt-0.5">
+              {adding ? (
+                <input
+                  autoFocus
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (isSubmitEnter(e)) {
+                      commitAndContinue();
+                    } else if (e.key === "Escape") {
+                      committedRef.current = true; // discard: block a racing blur-commit
+                      setDraft("");
+                      setAdding(false);
+                    }
+                  }}
+                  onBlur={() => {
+                    commitDraft();
+                    setAdding(false);
+                  }}
+                  placeholder="任务标题，回车添加，Esc 结束"
+                  aria-label={`为「${title}」添加任务`}
+                  className="h-8 w-full rounded-md bg-muted px-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={openAdd}
+                  className="inline-flex h-8 items-center gap-2 rounded-md px-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Plus size={14} /> 添加任务
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        ) : null}
+      </li>
+      {promptTodoId ? (
+        <TodoPromptDialog
+          projectId={project.id}
+          todoId={promptTodoId}
+          onClose={() => setPromptTodoId(null)}
+        />
       ) : null}
-    </li>
+    </>
   );
 });

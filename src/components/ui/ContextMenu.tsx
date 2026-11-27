@@ -42,17 +42,21 @@ export function ContextMenuItem({
   children,
   onSelect,
   destructive,
+  disabled,
 }: {
   children: ReactNode
   onSelect?: () => void
   destructive?: boolean
+  disabled?: boolean
 }) {
   return (
     <Radix.Item
+      disabled={disabled}
       onSelect={onSelect}
       data-slot="context-menu-item"
       className={cn(
         "relative flex cursor-default select-none items-center gap-2 rounded-[5px] px-2 py-1.5 text-sm outline-hidden transition-colors [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         destructive
           ? 'text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-white [&_svg:not([class*=text-])]:text-current'
           : 'data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground [&_svg:not([class*=text-])]:text-muted-foreground data-[highlighted]:[&_svg]:text-current',
@@ -63,8 +67,16 @@ export function ContextMenuItem({
   )
 }
 
+export function ContextMenuLabel({ children }: { children: ReactNode }) {
+  return (
+    <Radix.Label className="px-2 pb-1 pt-1.5 text-xs font-medium text-muted-foreground">
+      {children}
+    </Radix.Label>
+  )
+}
+
 export function ContextMenuSeparator() {
-  return <Radix.Separator className="-mx-1 my-1 h-px bg-border" />
+  return <Radix.Separator className="-mx-1 my-1 border-t-[0.5px] border-border" />
 }
 
 /** 可勾选的菜单项。选中后菜单保持打开，便于连续勾选。 */

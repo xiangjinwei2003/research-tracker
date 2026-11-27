@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { ExternalLink, Ellipsis, Flag, Pin, StickyNote, Timer } from "lucide-react";
 import { useStore } from "@/lib/store";
 import {
@@ -19,7 +19,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/DropdownMenu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "./ui/ContextMenu";
 import { Checkbox } from "./Checkbox";
+import { TodoPromptDialog } from "./TodoPromptDialog";
+import { PromptMenuItem } from "./PromptMenuItem";
 import { cn } from "@/lib/cn";
 
 interface Props {
@@ -38,6 +48,25 @@ interface Props {
 /** 勾选后先显示完成态，再从列表移除，让完成动作有可见反馈。 */
 const COMPLETE_DELAY_MS = 420;
 
+/** 下拉菜单与右键菜单共用同一组菜单项，两套组件的属性一致。 */
+interface MenuParts {
+  Item: (props: { children: ReactNode; onSelect?: () => void; disabled?: boolean }) => ReactNode;
+  Separator: () => ReactNode;
+  Label: (props: { children: ReactNode }) => ReactNode;
+}
+
+const DROPDOWN_PARTS: MenuParts = {
+  Item: DropdownMenuItem,
+  Separator: DropdownMenuSeparator,
+  Label: DropdownMenuLabel,
+};
+
+const CONTEXT_PARTS: MenuParts = {
+  Item: ContextMenuItem,
+  Separator: ContextMenuSeparator,
+  Label: ContextMenuLabel,
+};
+
 export function TaskRow({
   project,
   todo,
@@ -51,6 +80,7 @@ export function TaskRow({
 }: Props) {
   const updateTodo = useStore((s) => s.updateTodo);
   const [checking, setChecking] = useState(false);
+  const [prompting, setPrompting] = useState(false);
   const timer = useRef<number | null>(null);
   useEffect(
     () => () => {
@@ -85,129 +115,158 @@ export function TaskRow({
     });
   };
 
-  return (
-    <li
-      draggable
-      data-project-id={project.id}
-      data-todo-id={todo.id}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      className={cn(
-        "group relative flex items-start gap-3 rounded-lg px-2 py-1.5 transition-[background-color,opacity] hover:bg-hover has-[[data-state=open]]:bg-hover",
-        dragging && "opacity-40",
-        checking && "opacity-60",
-      )}
-    >
-      <Checkbox
-        checked={checking}
-        onChange={complete}
-        label={`完成「${title}」`}
-        className="mt-[4px]"
-      />
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex min-w-0 flex-1 cursor-default flex-col rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring @3xl/pane:flex-row @3xl/pane:items-baseline @3xl/pane:gap-4"
-      >
-        <span
-          className={cn(
-            "block min-w-0 break-words text-base leading-6 text-foreground transition-colors @3xl/pane:flex-1",
-            checking && "text-muted-foreground line-through decoration-muted-foreground",
-            !todo.title && "italic text-muted-foreground",
-          )}
+  const manageItems = ({ Item, Separator, Label }: MenuParts) => (
+    <>
+      <Item onSelect={onOpenProject}>
+        <ExternalLink /> 打开所属项目
+      </Item>
+      <Item onSelect={() => setPinned(!todo.inWeek)}>
+        <Pin /> {todo.inWeek ? "取消手动加入" : "手动加入近期重点"}
+      </Item>
+      <Separator />
+      <Label>优先级</Label>
+      {PRIORITY_ORDER.map((p) => (
+        <Item
+          key={p}
+          onSelect={() => updateTodo(project.id, todo.id, { priority: p })}
+          disabled={!todo.pending && todoPriority(todo) === p}
         >
-          {title}
-        </span>
-        <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-sm leading-5 text-muted-foreground @3xl/pane:mt-0 @3xl/pane:max-w-[55%] @3xl/pane:flex-nowrap @3xl/pane:justify-end">
-          <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
-            <span
-              aria-hidden
-              className="size-2 shrink-0 rounded-full"
-              style={{ background: project.color }}
+          <span className={cn("size-2 rounded-full", PRIORITY_META[p].dot)} />
+          {PRIORITY_META[p].label}
+        </Item>
+      ))}
+    </>
+  );
+
+  return (
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <li
+            draggable
+            data-project-id={project.id}
+            data-todo-id={todo.id}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            className={cn(
+              "group relative flex items-start gap-3 rounded-lg px-2 py-1.5 transition-[background-color,opacity] hover:bg-hover data-[state=open]:bg-hover has-[[data-state=open]]:bg-hover",
+              dragging && "opacity-40",
+              checking && "opacity-60",
+            )}
+          >
+            <Checkbox
+              checked={checking}
+              onChange={complete}
+              label={`完成「${title}」`}
+              className="mt-[4px]"
             />
-            <span className="truncate">{project.title || "未命名项目"}</span>
-          </span>
-          {due ? (
-            <span
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1 tabular-nums",
-                due.tone === "overdue" && "text-destructive",
-                due.tone === "today" && "text-today",
-              )}
+            <button
+              type="button"
+              onClick={onOpen}
+              className="flex min-w-0 flex-1 cursor-default flex-col rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring @3xl/pane:flex-row @3xl/pane:items-baseline @3xl/pane:gap-4"
             >
-              {due.tone === "overdue" ? <Flag size={11} strokeWidth={2.4} /> : null}
-              {due.text}
-            </span>
-          ) : null}
-          {pinnedExtra ? (
-            <span
-              className="inline-flex shrink-0 items-center text-muted-foreground"
-              title="手动加入近期重点"
-              aria-label="手动加入近期重点"
-            >
-              <Pin size={11} />
-            </span>
-          ) : null}
-          {notes ? (
-            <span
-              className="inline-flex min-w-0 max-w-[24rem] items-center gap-1 text-muted-foreground"
-              title={notes}
-            >
-              <StickyNote size={11} className="shrink-0" />
-              <span className="truncate">{notes}</span>
-            </span>
-          ) : null}
-        </span>
-      </button>
-      <div className="-my-0.5 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover data-[state=open]:text-foreground"
-            aria-label={`专注「${title}」`}
-            title="开始专注"
-          >
-            <Timer size={15} />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onSelect={() => focus(30)}>
-              <Timer /> 30 分钟
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => focus(60)}>
-              <Timer /> 1 小时
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover data-[state=open]:text-foreground"
-            aria-label={`管理「${title}」`}
-          >
-            <Ellipsis size={16} />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onSelect={onOpenProject}>
-              <ExternalLink /> 打开所属项目
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setPinned(!todo.inWeek)}>
-              <Pin /> {todo.inWeek ? "取消手动加入" : "手动加入近期重点"}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>优先级</DropdownMenuLabel>
-            {PRIORITY_ORDER.map((p) => (
-              <DropdownMenuItem
-                key={p}
-                onSelect={() => updateTodo(project.id, todo.id, { priority: p })}
-                disabled={!todo.pending && todoPriority(todo) === p}
+              <span
+                className={cn(
+                  "block min-w-0 break-words text-base leading-6 text-foreground transition-colors @3xl/pane:flex-1",
+                  checking && "text-muted-foreground line-through decoration-muted-foreground",
+                  !todo.title && "italic text-muted-foreground",
+                )}
               >
-                <span
-                  className={cn("size-2 rounded-full", PRIORITY_META[p].dot)}
-                />
-                {PRIORITY_META[p].label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </li>
+                {title}
+              </span>
+              <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-sm leading-5 text-muted-foreground @3xl/pane:mt-0 @3xl/pane:max-w-[55%] @3xl/pane:flex-nowrap @3xl/pane:justify-end">
+                <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                  <span
+                    aria-hidden
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ background: project.color }}
+                  />
+                  <span className="truncate">{project.title || "未命名项目"}</span>
+                </span>
+                {due ? (
+                  <span
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-1 tabular-nums",
+                      due.tone === "overdue" && "text-destructive",
+                      due.tone === "today" && "text-today",
+                    )}
+                  >
+                    {due.tone === "overdue" ? <Flag size={11} strokeWidth={2.4} /> : null}
+                    {due.text}
+                  </span>
+                ) : null}
+                {pinnedExtra ? (
+                  <span
+                    className="inline-flex shrink-0 items-center text-muted-foreground"
+                    title="手动加入近期重点"
+                    aria-label="手动加入近期重点"
+                  >
+                    <Pin size={11} />
+                  </span>
+                ) : null}
+                {notes ? (
+                  <span
+                    className="inline-flex min-w-0 max-w-[24rem] items-center gap-1 text-muted-foreground"
+                    title={notes}
+                  >
+                    <StickyNote size={11} className="shrink-0" />
+                    <span className="truncate">{notes}</span>
+                  </span>
+                ) : null}
+              </span>
+            </button>
+            <div className="-my-0.5 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover data-[state=open]:text-foreground"
+                  aria-label={`专注「${title}」`}
+                  title="开始专注"
+                >
+                  <Timer size={15} />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => focus(30)}>
+                    <Timer /> 30 分钟
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => focus(60)}>
+                    <Timer /> 1 小时
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover data-[state=open]:text-foreground"
+                  aria-label={`管理「${title}」`}
+                >
+                  <Ellipsis size={16} />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <PromptMenuItem kind="dropdown" onSelect={() => setPrompting(true)} />
+                  {manageItems(DROPDOWN_PARTS)}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </li>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <PromptMenuItem kind="context" onSelect={() => setPrompting(true)} />
+          <ContextMenuItem onSelect={() => focus(30)}>
+            <Timer /> 专注 30 分钟
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={() => focus(60)}>
+            <Timer /> 专注 1 小时
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          {manageItems(CONTEXT_PARTS)}
+        </ContextMenuContent>
+      </ContextMenu>
+      {prompting ? (
+        <TodoPromptDialog
+          projectId={project.id}
+          todoId={todo.id}
+          onClose={() => setPrompting(false)}
+        />
+      ) : null}
+    </>
   );
 }

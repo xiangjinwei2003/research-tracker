@@ -6,22 +6,15 @@ import { today } from '@/lib/date'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/cn'
 import { CLAUDE_PROMPT_MAX, claudeCodeNewUrl, isAbsoluteFolder } from '@/lib/claudeLink'
-import {
-  buildPolishInput,
-  outlineText,
-  sampleErrorMessage,
-  taskFileContent,
-  taskFilePrompt,
-  taskFileTitle,
-} from '@/lib/promptDraft'
+import { outlineText, taskFileContent, taskFilePrompt, taskFileTitle } from '@/lib/promptDraft'
 import { getDesktop } from '@/platform/desktop'
-import { getSample } from '@/platform/sample'
 import { openClaudeLink } from '@/platform/claudeCode'
 import { expandHome, folderExists, writeTaskFile } from '@/platform/folders'
 import { Dialog } from '../ui/Dialog'
 import { Button } from '../ui/Button'
 import { Label } from '../ui/Input'
 import { FolderField } from '../FolderField'
+import { usePromptWriter } from '../usePromptWriter'
 
 interface Props {
   noteId: string
@@ -32,7 +25,7 @@ const reasonOf = (err: unknown) => (err instanceof Error ? err.message : String(
 
 /**
  * 把一条笔记（连同子条目）转成提示词，发送到 Claude 桌面应用的新会话。
- * 桌面版可以用 quick 档模型整理，也可以写成项目里的任务文件、只把路径发过去。
+ * 桌面版可以用内置的 Claude 把笔记整理清楚，也可以写成项目里的任务文件、只把路径发过去。
  */
 export function PromptComposer({ noteId, onClose }: Props) {
   const note = useStore((s) => s.notes.find((n) => n.id === noteId))
@@ -51,62 +44,33 @@ export function PromptComposer({ noteId, onClose }: Props) {
   })
   const [original, setOriginal] = useState<string | null>(null)
   const [asFile, setAsFile] = useState(false)
-  const [running, setRunning] = useState(false)
   const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [aiHidden, setAiHidden] = useState(false)
-  const ctl = useRef<AbortController | null>(null)
   const area = useRef<HTMLTextAreaElement>(null)
+  const ai = usePromptWriter()
+  const { running, error, setError } = ai
 
   const desktop = getDesktop()
-  const sample = aiHidden ? null : getSample()
   const over = prompt.length > CLAUDE_PROMPT_MAX
   const fileMode = !!desktop && (asFile || over)
   const title = taskFileTitle(prompt)
 
-  // 关闭对话框时停止正在进行的整理，不再为剩下的部分花额度。
-  useEffect(() => () => ctl.current?.abort(), [])
   useEffect(() => {
     if (!note) onClose()
   }, [note, onClose])
   if (!note) return null
 
   const polish = async () => {
-    if (!sample || running) return
+    if (!ai.available || running) return
     const before = prompt
-    const controller = new AbortController()
-    ctl.current = controller
-    setRunning(true)
-    setError(null)
-    try {
-      const { text } = await sample(
-        buildPolishInput({
-          note: before,
-          projectTitle: project?.title,
-          folder: folder.trim() || project?.folder,
-          todoTitle: todo?.title,
-          todoDue: todo?.endDate,
-          todoNotes: todo?.notes,
-        }),
-        {
-          modelTier: 'quick',
-          cache: false,
-          signal: controller.signal,
-          onText: ({ text: partial }) => setPrompt(partial),
-        },
-      )
-      setPrompt(text.trim())
+    const result = await ai.write(
+      { words: before, projectTitle: project?.title, todoTitle: todo?.title, todoDue: todo?.endDate },
+      setPrompt,
+    )
+    if (result.kind === 'done') {
+      setPrompt(result.text)
       setOriginal(before)
-    } catch (err) {
+    } else if (result.kind !== 'superseded') {
       setPrompt(before)
-      const { code, reason } = (err ?? {}) as { code?: string; reason?: string }
-      if (code !== 'cancelled') {
-        const shown = sampleErrorMessage(code, reason)
-        setError(shown.message)
-        if (shown.hide) setAiHidden(true)
-      }
-    } finally {
-      setRunning(false)
     }
   }
 
@@ -166,8 +130,7 @@ export function PromptComposer({ noteId, onClose }: Props) {
       <div className="grid gap-4">
         <div>
           <Label htmlFor="composer-folder">工作目录</Label>
-          {/* 放在弹层上的控件用高一阶的底色（Radix slate 4），否则和对话框同色、看不出是输入框。 */}
-          <FolderField id="composer-folder" value={folder} onChange={setFolder} className="bg-secondary hover:bg-input/60 focus-visible:bg-secondary" />
+          <FolderField id="composer-folder" value={folder} onChange={setFolder} />
         </div>
         <div>
           <Label htmlFor="composer-prompt">提示词</Label>
@@ -192,9 +155,9 @@ export function PromptComposer({ noteId, onClose }: Props) {
             )}
           />
           <div className="mt-1.5 flex min-h-7 items-center gap-1">
-            {sample ? (
+            {ai.available ? (
               running ? (
-                <Button variant="ghost" size="sm" onClick={() => ctl.current?.abort()}>
+                <Button variant="ghost" size="sm" onClick={ai.stop}>
                   <Square /> 停止整理
                 </Button>
               ) : (

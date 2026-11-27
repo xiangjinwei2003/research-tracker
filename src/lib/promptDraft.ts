@@ -1,5 +1,6 @@
-import type { NoteEntry } from './types'
+import type { NoteEntry, Todo } from './types'
 import { fmtMD } from './date'
+import { subtree } from './notes'
 
 /**
  * 笔记连同子条目拼成的提示词草稿：子条目按相对缩进每级两个空格，根条目不缩进，
@@ -21,43 +22,74 @@ export function outlineText(entries: NoteEntry[]): string {
     .join('\n')
 }
 
-export interface PolishContext {
-  note: string
+/** 写提示词时交给模型的材料。 */
+export interface PromptContext {
+  /** 用户自己的话：笔记连同子条目，或任务的备注与关联的笔记。可以为空。 */
+  words: string
   projectTitle?: string
-  folder?: string
   todoTitle?: string
   todoDue?: string
-  todoNotes?: string
 }
 
 /**
- * 交给 quick 档模型的整理指令。sample 每次调用不带记忆，指令、上下文和输出格式都放在这一段里。
- * 要求与用户级 CLAUDE.md 的表述规范一致：不加没提到的需求，不用破折号，不写客套话。
+ * 用户认为写得好的提示词，作为风格参照放进指令。前三条是用户收集的原句，
+ * 第四条由用户自己的一段要求压缩而成。
  */
-export function buildPolishInput(ctx: PolishContext): string {
+export const PROMPT_STYLE_EXAMPLES = [
+  '在我最近反复讨论的问题背后，有没有一个更深的问题，是我一直在绕着它走，却没有真正问出来的？',
+  '先读相关论文，找到当前方法真正卡住的问题；再跳出本领域，去其他方向寻找解决过类似结构问题的方法；最后把这些线索整理成完整的研究方案。',
+  '从第一性原理思考问题。',
+  '可以挑战现有文档和架构，有必要时完整重构，并自行测试。要从根本上解决问题，不要只解决跑出来的测试问题。我提的点只是我注意到的点，不要局限于这些。',
+] as const
+
+/**
+ * 交给模型的写提示词指令。sample 每次调用不带记忆，要求、风格参照、材料都放在这一段里。
+ * 用户的要求：提示词简单，不限制 Claude 的发挥，不涉及具体细节；
+ * 有用户自己的话时只把话整理清楚，只有任务名时写成根本性的提问或方向。
+ */
+export function buildPromptInput(ctx: PromptContext): string {
+  const words = ctx.words.trim()
   const context = [
     ctx.projectTitle ? `项目：${ctx.projectTitle}` : null,
-    ctx.folder ? `工作目录：${ctx.folder}` : null,
-    ctx.todoTitle
-      ? `相关任务：${ctx.todoTitle}${ctx.todoDue ? `（截止 ${fmtMD(ctx.todoDue)}）` : ''}`
-      : null,
-    ctx.todoNotes?.trim() ? `任务备注：${ctx.todoNotes.trim()}` : null,
+    ctx.todoTitle ? `任务：${ctx.todoTitle}${ctx.todoDue ? `（截止 ${fmtMD(ctx.todoDue)}）` : ''}` : null,
   ].filter((x): x is string => x !== null)
 
   return [
-    '把下面的随手笔记整理成一段交给 Claude Code 执行的中文提示词。',
+    '帮我写一段交给 Claude 开始工作的提示词，我会自己复制给 Claude。',
     '',
-    '要求：',
-    '1. 保留笔记的原意和全部具体要求，不增加笔记里没有的需求、技术方案或验收标准。',
-    '2. 第一句写目标；然后写背景，只用下面提供的项目与任务信息；然后用编号列出要做的事；最后列出笔记里出现的约束。笔记很短时可以只有目标和要做的事。',
-    '3. 笔记里没说清的地方写成「待确认：……」，不替用户决定。',
-    '4. 不用破折号和连字符连接句子，不用比喻，不写客套话。',
-    '5. 只输出提示词本身，不加标题，不加解释。',
+    '我对提示词的要求：',
+    '1. 简单。通常两到四句；我自己的话很长时，可以按我的话的长度来。',
+    '2. 不限制 Claude 的发挥。说清要做成什么、我真正关心什么，不规定步骤、方法、工具、文件和验收标准。',
+    '3. 不涉及具体细节。我没写的细节不要补，也不要猜项目里有什么。',
+    '4. 下面有「我的话」时，主要是把我的话整理清楚：保留全部意思和要求，理顺顺序，去掉重复和口误，不增加新的要求。',
+    '5. 只有任务名、没有我的话时，写成一个根本性的提问或方向：让 Claude 先弄清问题本身，从第一性原理出发，可以质疑现有的做法。',
+    '',
+    '我觉得好的提示词（只参照风格，不要照抄）：',
+    ...PROMPT_STYLE_EXAMPLES.map((x) => `- ${x}`),
+    '',
+    '写法：用我的口吻写；中文；不用破折号和连字符连接句子；不用比喻；不写客套话；不加标题、列表符号和解释；只输出提示词本身。',
     ...(context.length ? ['', ...context] : []),
-    '',
-    '笔记：',
-    ctx.note,
+    ...(words ? ['', '我的话：', words] : []),
   ].join('\n')
+}
+
+/** 任务关联的笔记最多取这么多条（按日期从早到晚，取最近的）。 */
+const TODO_NOTES_MAX = 12
+/** 任务备注与笔记合计的字数上限，超出的部分截断。 */
+const TODO_WORDS_MAX = 4000
+
+/**
+ * 任务上用户自己的话：任务备注，加上关联到这个任务的笔记（连同子条目），按日期从早到晚。
+ * 笔记只取最近的 TODO_NOTES_MAX 条。没有备注也没有笔记时为空串。
+ */
+export function todoWords(todo: Todo, notes: NoteEntry[]): string {
+  const roots = notes
+    .filter((n) => n.todoId === todo.id && n.text.trim() !== '')
+    .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
+    .slice(-TODO_NOTES_MAX)
+  const parts = [todo.notes?.trim() ?? '', ...roots.map((n) => outlineText(subtree(notes, n.id)))].filter(Boolean)
+  const text = parts.join('\n')
+  return text.length > TODO_WORDS_MAX ? text.slice(0, TODO_WORDS_MAX) : text
 }
 
 const FILE_UNSAFE = /[\\/:*?"<>|\n\r\t]+/g

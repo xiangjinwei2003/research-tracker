@@ -22,7 +22,7 @@ import {
 import { uid } from './id'
 import { today } from './date'
 
-export const SCHEMA_VERSION = 9
+export const SCHEMA_VERSION = 10
 
 const COLOR_FN = /^(oklch|oklab|lab|lch|rgb|rgba|hsl|hsla|hwb|color)\(/i
 const COLOR_BAD = /url\s*\(|image\s*\(|image-set\s*\(|-moz-binding/i
@@ -298,6 +298,7 @@ export function normalizeAnalyses(raw: unknown): AnalysisRecord[] {
         review: typeof src.review === 'string' ? src.review : null,
         scan: src.scan === 'ok' ? 'ok' : 'failed',
         ...(typeof src.scanNote === 'string' && src.scanNote ? { scanNote: src.scanNote } : {}),
+        ...(typeof src.commits === 'number' && Number.isFinite(src.commits) ? { commits: src.commits } : {}),
       },
       result: {
         summary: r.summary,
@@ -310,6 +311,9 @@ export function normalizeAnalyses(raw: unknown): AnalysisRecord[] {
             status: strOf(x.status),
             note: strOf(x.note),
           })),
+        projects: (Array.isArray(r.projects) ? r.projects : [])
+          .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
+          .map((x) => ({ name: strOf(x.name), update: strOf(x.update), comment: strOf(x.comment) })),
         issues: (Array.isArray(r.issues) ? r.issues : [])
           .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object')
           .map((x) => ({ phenomenon: strOf(x.phenomenon), impact: strOf(x.impact), suggestion: strOf(x.suggestion) })),

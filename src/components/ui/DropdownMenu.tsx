@@ -78,5 +78,5 @@ export function DropdownMenuLabel({ children }: { children: ReactNode }) {
 }
 
 export function DropdownMenuSeparator() {
-  return <Radix.Separator className="-mx-1 my-1 h-px bg-border" />
+  return <Radix.Separator className="-mx-1 my-1 border-t-[0.5px] border-border" />
 }

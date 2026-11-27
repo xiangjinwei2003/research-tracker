@@ -2,7 +2,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { CLAUDE_PROMPT_MAX, claudeCodeNewUrl, folderName, isAbsoluteFolder } from './claudeLink.ts'
 import {
-  buildPolishInput,
+  buildPromptInput,
+  PROMPT_STYLE_EXAMPLES,
+  todoWords,
   outlineText,
   sampleErrorMessage,
   taskFileContent,
@@ -59,23 +61,49 @@ test('草稿：子条目按相对缩进排列，每级两个空格，不加列�
   assert.equal(outlineText([]), '')
 })
 
-test('AI 整理的输入：有什么上下文写什么，最后是笔记', () => {
-  const full = buildPolishInput({
-    note: '把实验记录整理成表',
+test('写提示词的输入：用户的要求与风格参照在前，有什么材料写什么，最后是用户的话', () => {
+  const full = buildPromptInput({
+    words: '  把实验记录整理成表  ',
     projectTitle: 'proj-a',
-    folder: '/Users/me/proj-a',
     todoTitle: '写方法部分',
     todoDue: '2026-11-30',
-    todoNotes: '  先写参与者  ',
   })
-  assert.match(full, /项目：proj-a/)
-  assert.match(full, /工作目录：\/Users\/me\/proj-a/)
-  assert.match(full, /相关任务：写方法部分（截止 11月30日）/)
-  assert.match(full, /任务备注：先写参与者\n/)
-  assert.ok(full.endsWith('笔记：\n把实验记录整理成表'))
-  assert.match(full, /不增加笔记里没有的需求/)
-  const bare = buildPolishInput({ note: '随手一记' })
-  assert.doesNotMatch(bare, /项目：|工作目录：|相关任务：/)
+  assert.match(full, /不限制 Claude 的发挥/)
+  assert.match(full, /不涉及具体细节/)
+  for (const example of PROMPT_STYLE_EXAMPLES) assert.ok(full.includes(`- ${example}`))
+  assert.match(full, /项目：proj-a\n任务：写方法部分（截止 11月30日）/)
+  assert.ok(full.endsWith('我的话：\n把实验记录整理成表'))
+  const bare = buildPromptInput({ words: ' ', todoTitle: '读一篇相关论文' })
+  assert.doesNotMatch(bare, /项目：|我的话：/)
+  assert.ok(bare.endsWith('任务：读一篇相关论文'))
+})
+
+test('任务上用户自己的话：备注在前，关联这个任务的笔记连同子条目按日期从早到晚，只取最近 12 条', () => {
+  const todo = { id: 't1', title: '写方法部分', endDate: '', done: false, stage: 'literature', notes: ' 先写参与者 ' }
+  const linked = (id: string, date: string, text: string, extra: Partial<NoteEntry> = {}): NoteEntry => ({
+    id,
+    date,
+    text,
+    level: 0,
+    createdAt: `${date}T09:00:00.000Z`,
+    updatedAt: '',
+    projectId: 'p1',
+    todoId: 't1',
+    ...extra,
+  })
+  const notes: NoteEntry[] = [
+    linked('b', '2026-11-25', '第二天的想法'),
+    { ...linked('b1', '2026-11-25', '子条目'), level: 1, todoId: undefined, projectId: undefined },
+    linked('a', '2026-11-24', '第一天的想法'),
+    linked('x', '2026-11-24', '别的任务', { todoId: 't2' }),
+    linked('e', '2026-11-26', '   '),
+  ]
+  assert.equal(todoWords(todo, notes), '先写参与者\n第一天的想法\n第二天的想法\n  子条目')
+  assert.equal(todoWords({ ...todo, notes: undefined }, []), '')
+  const many = Array.from({ length: 15 }, (_, i) => linked(`n${i}`, `2026-11-${String(i + 1).padStart(2, '0')}`, `第 ${i + 1} 条`))
+  const words = todoWords({ ...todo, notes: undefined }, many).split('\n')
+  assert.equal(words.length, 12)
+  assert.equal(words[0], '第 4 条')
 })
 
 test('任务文件：标题取第一行、去掉列表符号与文件名不允许的字符，内容带改动记录', () => {
