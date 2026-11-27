@@ -11,7 +11,7 @@ import { MemFs } from './memFs.ts'
 }
 
 const { useStore, SCHEMA_VERSION, importJSON } = await import('../lib/store.ts')
-const { openData, createData, findBackups } = await import('./boot.ts')
+const { openData, createData, findBackups, requestFileAccess } = await import('./boot.ts')
 const { DATA_FILE, fileBackend } = await import('./fileStore.ts')
 const { IN_ARTIFACT } = await import('./runtime.ts')
 
@@ -123,4 +123,44 @@ test('首次运行页列出下载文件夹里网页版导出的备份，按修�
     (await findBackups(fs as unknown as ClaudeDesktop.Fs)).map((b) => b.name),
     ['research-tracker-2026-11-25 (1).json', 'research-tracker-2026-11-25.json', 'research-tracker-2026-11-20.json'],
   )
+})
+
+const deniedFs = (message: string) => ({
+  stat: async () => {
+    throw new Error(message)
+  },
+})
+
+test('权限读到 unavailable：用一次只读调用取得平台给出的原因', async () => {
+  const msg = 'ENOSYS: Your organization doesn\u2019t allow full access for apps.'
+  const desktop = {
+    fs: deniedFs(msg),
+    permissions: { request: async () => ({ 'full-access': 'unavailable' }) },
+  } as unknown as ClaudeDesktop
+  const phase = await requestFileAccess(desktop)
+  assert.equal(phase.kind, 'permission')
+  assert.equal(phase.kind === 'permission' && phase.reason, msg)
+})
+
+test('请求权限本身失败：失败原因显示在权限页', async () => {
+  const desktop = {
+    fs: deniedFs('不应调用'),
+    permissions: {
+      request: async () => {
+        throw new Error('ENOTSUP: window hidden')
+      },
+    },
+  } as unknown as ClaudeDesktop
+  const phase = await requestFileAccess(desktop)
+  assert.equal(phase.kind === 'permission' && phase.reason, 'ENOTSUP: window hidden')
+})
+
+test('权限被拒绝（denied）：不做探测调用，没有附加原因', async () => {
+  const desktop = {
+    fs: deniedFs('不应调用'),
+    permissions: { request: async () => ({ 'full-access': 'denied' }) },
+  } as unknown as ClaudeDesktop
+  const phase = await requestFileAccess(desktop)
+  assert.equal(phase.kind === 'permission' && phase.state, 'denied')
+  assert.equal(phase.kind === 'permission' && phase.reason, undefined)
 })

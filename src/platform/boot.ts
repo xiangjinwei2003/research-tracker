@@ -32,7 +32,7 @@ export interface BackupFile {
 export type BootPhase =
   | { kind: 'loading' }
   | { kind: 'install'; state: 'available' | 'installed' | 'unavailable'; desktop: ClaudeDesktop | null }
-  | { kind: 'permission'; state: FilePermission; desktop: ClaudeDesktop }
+  | { kind: 'permission'; state: FilePermission; desktop: ClaudeDesktop; reason?: string }
   | { kind: 'first-run'; backups: BackupFile[]; desktop: ClaudeDesktop }
   | { kind: 'unreadable'; reason: string; desktop: ClaudeDesktop }
   | { kind: 'failed'; reason: string }
@@ -70,19 +70,39 @@ export async function checkFileAccess(desktop: ClaudeDesktop): Promise<BootPhase
     await wait(1000)
     state = await desktop.permissions.state('full-access')
   }
-  if (state !== 'granted') return { kind: 'permission', state, desktop }
-  return openData(desktop)
+  return afterPermission(desktop, state)
 }
 
-/** 由点击触发：弹出系统的权限对话框。 */
+/** 由点击触发：弹出系统的权限对话框。request 自身失败时，失败原因显示在权限页。 */
 export async function requestFileAccess(desktop: ClaudeDesktop): Promise<BootPhase> {
   let state: ClaudeDesktop.PermissionState
   try {
     state = (await desktop.permissions.request(['full-access']))['full-access']
-  } catch {
-    state = 'unavailable'
+  } catch (err) {
+    return { kind: 'permission', state: 'unavailable', desktop, reason: reasonOf(err) }
   }
-  if (state !== 'granted') return { kind: 'permission', state, desktop }
+  return afterPermission(desktop, state)
+}
+
+async function afterPermission(
+  desktop: ClaudeDesktop,
+  state: ClaudeDesktop.PermissionState,
+): Promise<BootPhase> {
+  if (state === 'granted') return openData(desktop)
+  if (state !== 'unavailable') return { kind: 'permission', state, desktop }
+  return probeUnavailable(desktop)
+}
+
+/**
+ * `unavailable` 合并了多种情况（组织不允许、平台无法确认作者、页面版本未确认、权限未声明等），
+ * state() 不区分。对需要 full-access 的接口做一次只读调用，平台在拒绝时给出具体原因，原样显示。
+ */
+async function probeUnavailable(desktop: ClaudeDesktop): Promise<BootPhase> {
+  try {
+    await desktop.fs.stat('~')
+  } catch (err) {
+    return { kind: 'permission', state: 'unavailable', desktop, reason: reasonOf(err) }
+  }
   return openData(desktop)
 }
 
