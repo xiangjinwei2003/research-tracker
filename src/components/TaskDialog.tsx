@@ -7,6 +7,7 @@ import { deleteTodo } from "@/lib/todoActions";
 import { isSubmitEnter } from "@/lib/keyboard";
 import type { Project, Todo } from "@/lib/types";
 import { Dialog } from "./ui/Dialog";
+import { DateField } from "./DatePicker";
 import { Button } from "./ui/Button";
 import { Input, Label, Textarea } from "./ui/Input";
 import {
@@ -313,12 +314,7 @@ function TaskFields({
         </div>
         <div>
           <Label htmlFor="task-date">截止日期</Label>
-          <Input
-            id="task-date"
-            type="date"
-            value={endDate}
-            onChange={(e) => onEndDateChange(e.target.value)}
-          />
+          <DateField id="task-date" value={endDate} onChange={onEndDateChange} />
         </div>
       </div>
       <div>

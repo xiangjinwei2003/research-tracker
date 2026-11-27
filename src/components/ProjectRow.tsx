@@ -11,7 +11,7 @@ import { isSubmitEnter } from "@/lib/keyboard";
 import { completeTodo } from "@/lib/todoActions";
 import { cn } from "@/lib/cn";
 import { Checkbox } from "./Checkbox";
-import { DateButton } from "./DateButton";
+import { DateButton } from "./DatePicker";
 import { ProgressPie } from "./ProgressPie";
 import {
   ContextMenu,
@@ -218,7 +218,7 @@ export const ProjectRow = memo(function ProjectRow({
       )}
 
       {open ? (
-        <div className="pb-3 pl-[30px] pr-2">
+        <div className="pb-3 pl-[25px] pr-2">
           {todos.length ? (
             <ul>
               {todos.map((todo) => {
@@ -248,7 +248,7 @@ export const ProjectRow = memo(function ProjectRow({
                         : undefined
                     }
                     className={cn(
-                      "flex items-center gap-3 rounded-md px-1.5 py-1.5 text-sm hover:bg-hover",
+                      "group/date-row flex items-center gap-2.5 rounded-md px-1.5 py-1.5 text-sm hover:bg-hover",
                       draggableTodos && "cursor-grab active:cursor-grabbing",
                     )}
                   >

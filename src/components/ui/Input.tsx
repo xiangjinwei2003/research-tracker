@@ -3,9 +3,9 @@ import { cn } from '@/lib/cn'
 
 /** shadcn/ui field styling (tokens + focus ring), shared by input-like controls. */
 const fieldCls =
-  'flex w-full min-w-0 rounded-md border-[0.5px] border-transparent bg-muted px-2.5 py-1 text-sm outline-none transition-[background-color,box-shadow] hover:bg-input/60 ' +
+  'flex w-full min-w-0 rounded-md border-[0.5px] border-transparent bg-secondary px-2.5 py-1 text-sm outline-none transition-[background-color,box-shadow] hover:bg-input ' +
   'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground ' +
-  'focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring ' +
+  'focus-visible:bg-secondary focus-visible:ring-2 focus-visible:ring-ring ' +
   'disabled:cursor-not-allowed disabled:opacity-50 ' +
   'aria-invalid:border-destructive aria-invalid:ring-destructive/20'
 

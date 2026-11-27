@@ -4,6 +4,7 @@ import { manualSpan, recentLabels } from '@/lib/focus'
 import { today } from '@/lib/date'
 import { toast } from '@/lib/toast'
 import { Dialog } from './ui/Dialog'
+import { DateField } from './DatePicker'
 import { Button } from './ui/Button'
 import { Input, Label, Textarea } from './ui/Input'
 import {
@@ -102,13 +103,12 @@ function Form({ initialDate, onClose }: { initialDate: string; onClose: () => vo
       <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-3">
         <div>
           <Label htmlFor="manual-date">日期</Label>
-          <Input
+          <DateField
             id="manual-date"
-            type="date"
             max={todayIso}
+            clearable={false}
             value={iso}
-            onChange={(e) => setIso(e.target.value)}
-            className="mono"
+            onChange={setIso}
           />
         </div>
         <div>

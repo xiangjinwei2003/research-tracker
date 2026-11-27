@@ -7,13 +7,13 @@ import { cn } from '@/lib/cn'
  * (primary / secondary / ghost / danger · sm / md) so no call site changes.
  */
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium outline-none transition-[color,background-color,box-shadow,opacity] focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         primary: 'bg-primary text-primary-foreground hover:bg-primary-hover',
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-input/70',
+          'bg-secondary text-secondary-foreground hover:bg-input',
         ghost: 'text-muted-foreground hover:bg-hover hover:text-foreground',
         danger:
           'text-destructive hover:bg-destructive/12',

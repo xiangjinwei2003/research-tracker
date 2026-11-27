@@ -34,7 +34,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Collapsible } from './ui/Collapsible'
 import { PriorityButton } from './PriorityButton'
 import { Checkbox } from './Checkbox'
-import { DateButton } from './DateButton'
+import { DateButton } from './DatePicker'
 import { FolderField } from './FolderField'
 import { folderName, isAbsoluteFolder } from '@/lib/claudeLink'
 import { cn } from '@/lib/cn'
@@ -456,7 +456,7 @@ const TodoRow = memo(function TodoRow({
       onDrop={(e) => onDrop(e, id)}
       onDragEnd={onDragEnd}
       className={cn(
-        'group flex flex-col gap-1 rounded-md px-1 py-0.5 transition-colors hover:bg-hover sm:flex-row sm:items-center',
+        'group group/date-row flex flex-col gap-1 rounded-md px-1 py-0.5 transition-colors hover:bg-hover sm:flex-row sm:items-center',
         isDropTarget && 'bg-accent/50 shadow-[inset_0_0_0_1px_var(--ring)]',
         value.done && 'opacity-55',
       )}
@@ -480,7 +480,7 @@ const TodoRow = memo(function TodoRow({
         />
         <Input
           className={cn(
-            'min-w-0 flex-1 bg-transparent hover:bg-transparent focus-visible:bg-muted',
+            'min-w-0 flex-1 bg-transparent hover:bg-transparent focus-visible:bg-secondary',
             value.done && 'text-muted-foreground line-through',
           )}
           placeholder="任务内容"
