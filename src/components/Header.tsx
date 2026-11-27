@@ -11,7 +11,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { exportJSON, importJSON, useStore } from "@/lib/store";
 import {
   getPersistHealth,
@@ -36,6 +36,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/DropdownMenu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 export type { Tab };
 interface Props {
@@ -56,7 +57,50 @@ const TABS = [
 ] satisfies { id: Tab; label: string; icon: typeof Archive; tint: string }[];
 /** 当前运行环境里出现的分区，顺序与数字快捷键一致。 */
 const NAV = TAB_ORDER.map((id) => TABS.find((t) => t.id === id)!);
+
+/** 侧栏只显示图标的宽度区间，与 index.css 里 --sidebar-w 为 68px 的区间一致。 */
+const RAIL_QUERY = "(min-width: 48rem) and (max-width: 68.74rem)";
+
+function subscribeRail(onChange: () => void): () => void {
+  const query = window.matchMedia(RAIL_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+/** 侧栏是否只显示图标。只有图标时，悬停显示分区名与快捷键；有文字时不显示。 */
+function useRail(): boolean {
+  return useSyncExternalStore(
+    subscribeRail,
+    () => window.matchMedia(RAIL_QUERY).matches,
+    () => false,
+  );
+}
+
+/** 只有图标时给侧栏按钮加上右侧的提示；有文字时原样返回。 */
+function RailTip({
+  rail,
+  label,
+  shortcut,
+  children,
+}: {
+  rail: boolean;
+  label: string;
+  shortcut?: string;
+  children: ReactNode;
+}) {
+  if (!rail) return <>{children}</>;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={10}>
+        {label}
+        {shortcut ? <span className="ml-2 tabular-nums text-muted-foreground">{shortcut}</span> : null}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 export function Header({ tab, onTabChange, children, aside }: Props) {
+  const rail = useRail();
   const replaceState = useStore((s) => s.replaceState);
   const clearAll = useStore((s) => s.clearAll);
   const undo = useStore((s) => s.undo);
@@ -213,38 +257,44 @@ export function Header({ tab, onTabChange, children, aside }: Props) {
             </span>
           </div>
         )}
-        <nav className="space-y-px px-3 pt-4" aria-label="主导航">
+        <nav
+          className="flex flex-col items-center gap-2 px-3 pt-3 min-[68.75rem]:items-stretch min-[68.75rem]:gap-0.5"
+          aria-label="主导航"
+        >
           {NAV.map(({ id, label, icon: Icon, tint }, index) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onTabChange(id)}
-              aria-current={tab === id ? "page" : undefined}
-              aria-label={label}
-              aria-keyshortcuts={String(index + 1)}
-              title={label}
-              className={cn(
-                "flex h-8 w-full items-center justify-center gap-2.5 rounded-md px-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[68.75rem]:justify-start",
-                tab === id
-                  ? "bg-selected font-medium text-foreground"
-                  : "text-secondary-foreground hover:bg-hover",
-              )}
-            >
-              <Icon size={17} strokeWidth={2.1} className={tint} />
-              <span className="hidden min-[68.75rem]:inline">{label}</span>
-            </button>
+            <RailTip key={id} rail={rail} label={label} shortcut={String(index + 1)}>
+              <button
+                type="button"
+                onClick={() => onTabChange(id)}
+                aria-current={tab === id ? "page" : undefined}
+                aria-label={label}
+                aria-keyshortcuts={String(index + 1)}
+                className={cn(
+                  // 只有图标时是 40px 的方块，图标 20px；有文字时是 36px 高的整行。
+                  "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "min-[68.75rem]:h-9 min-[68.75rem]:w-full min-[68.75rem]:justify-start min-[68.75rem]:gap-3 min-[68.75rem]:px-3 min-[68.75rem]:text-sm",
+                  tab === id
+                    ? "bg-selected font-medium text-foreground"
+                    : "text-secondary-foreground hover:bg-hover",
+                )}
+              >
+                <Icon strokeWidth={2} aria-hidden className={cn("size-5 min-[68.75rem]:size-[18px]", tint)} />
+                <span className="hidden min-[68.75rem]:inline">{label}</span>
+              </button>
+            </RailTip>
           ))}
         </nav>
         <div className="mt-auto shrink-0 px-3 pb-3 pt-2">
-          <div className="flex items-center gap-1 max-[68.74rem]:justify-center">
+          <div className="flex items-center max-[68.74rem]:justify-center">
             <DropdownMenu>
-              <DropdownMenuTrigger
-                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover"
-                aria-label="数据管理"
-                title="数据管理"
-              >
-                <Ellipsis size={16} />
-              </DropdownMenuTrigger>
+              <RailTip rail={rail} label="数据管理">
+                <DropdownMenuTrigger
+                  className="flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover"
+                  aria-label="数据管理"
+                >
+                  <Ellipsis size={18} />
+                </DropdownMenuTrigger>
+              </RailTip>
               {dataMenu}
             </DropdownMenu>
           </div>
